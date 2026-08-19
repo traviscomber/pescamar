@@ -1,9 +1,11 @@
-import { Bell, Boxes, Camera, ChartNoAxesCombined, ChevronDown, ClipboardCheck, Gauge, Menu, Settings2, SlidersHorizontal, Users, X } from 'lucide-react'
+import { Bell, Blocks, Boxes, Camera, ChartNoAxesCombined, ChevronDown, ClipboardCheck, Factory, Gauge, Menu, Settings2, SlidersHorizontal, Users, X } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useState, type ReactNode } from 'react'
 
 const navigation = [
   { to:'/', label:'Centro de control', icon:Gauge },
+  { to:'/modulos', label:'Mapa de módulos', icon:Blocks },
+  { to:'/lineas', label:'Líneas productivas', icon:Factory },
   { to:'/recepciones', label:'Recepciones', icon:Boxes },
   { to:'/clasificacion', label:'Clasificación IA', icon:Camera },
   { to:'/trazabilidad', label:'Lotes y trazabilidad', icon:ClipboardCheck },
@@ -15,7 +17,7 @@ export function AppShell({ children, onNewReception }:{ children:ReactNode; onNe
   const [mobileOpen,setMobileOpen]=useState(false)
   return <div className="app-shell">
     <aside className={`sidebar ${mobileOpen?'is-open':''}`}>
-      <div className="brand"><span className="brand-mark">N3</span><div><strong>UniGrade</strong><small>Inteligencia operacional</small></div><button className="icon-btn mobile-close" onClick={()=>setMobileOpen(false)} aria-label="Cerrar menú"><X size={18}/></button></div>
+      <div className="brand"><span className="brand-mark">N3</span><div><strong>Pescamar ERP</strong><small>Operado por N3uralia</small></div><button className="icon-btn mobile-close" onClick={()=>setMobileOpen(false)} aria-label="Cerrar menú"><X size={18}/></button></div>
       <div className="plant-chip"><span className="live-dot"/><div><b>Planta Ancud</b><small>Operación en línea</small></div><ChevronDown size={15}/></div>
       <nav className="side-nav" aria-label="Navegación principal">{navigation.map(({to,label,icon:Icon})=><NavLink key={to} to={to} end={to==='/'} onClick={()=>setMobileOpen(false)}><Icon size={18}/><span>{label}</span></NavLink>)}</nav>
       <div className="sidebar-spacer"/>
