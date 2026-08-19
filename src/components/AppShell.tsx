@@ -1,10 +1,11 @@
-import { Bell, Blocks, Boxes, ChartNoAxesCombined, CheckCheck, ChevronDown, Database, Factory, Gauge, Menu, Settings2, X } from 'lucide-react'
+import { Bell, Blocks, Boxes, ChartNoAxesCombined, CheckCheck, ChevronDown, Database, Factory, Gauge, Landmark, Menu, Settings2, X } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useState, type ReactNode } from 'react'
 
 const navigation = [
   { to:'/', label:'Centro de control', icon:Gauge },
   { to:'/operacion-2025', label:'Operación 2025', icon:Database },
+  { to:'/creditos', label:'Créditos y anticipos', icon:Landmark },
   { to:'/aprobaciones', label:'Aprobaciones', icon:CheckCheck },
   { to:'/recepciones', label:'Recepciones', icon:Boxes },
   { to:'/lineas', label:'Producción', icon:Factory },
