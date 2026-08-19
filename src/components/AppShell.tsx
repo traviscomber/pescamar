@@ -1,9 +1,10 @@
-import { Bell, Blocks, Boxes, CheckCheck, ChevronDown, Database, Factory, Landmark, Menu, Settings2, X } from 'lucide-react'
+import { Bell, Blocks, Boxes, CheckCheck, ChevronDown, Database, Factory, Landmark, LayoutDashboard, Menu, Settings2, X } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useState, type ReactNode } from 'react'
 
 const navigation = [
-  { to:'/', label:'Operación 2025', icon:Database },
+  { to:'/', label:'Control de plantas', icon:LayoutDashboard },
+  { to:'/operacion-2025', label:'Operación 2025', icon:Database },
   { to:'/creditos', label:'Créditos y anticipos', icon:Landmark },
   { to:'/aprobaciones', label:'Aprobaciones', icon:CheckCheck },
   { to:'/recepciones', label:'Recepciones', icon:Boxes },
@@ -23,7 +24,7 @@ export function AppShell({ children, onNewReception }:{ children:ReactNode; onNe
       <NavLink className="settings-link" to="/modulos"><Settings2 size={18}/><span>Configuración modular</span></NavLink>
     </aside>
     <div className="workspace">
-      <header className="topbar"><button className="icon-btn menu-btn" onClick={()=>setMobileOpen(true)} aria-label="Abrir menú"><Menu size={20}/></button><div className="topbar-context"><span>Fuente canónica</span><b>Planilla de producción 2025</b></div><div className="topbar-actions"><button className="icon-btn notification" aria-label="Notificaciones"><Bell size={19}/></button><button className="user-menu"><span>PS</span><div><b>Sesión operativa</b><small>Sin identidad configurada</small></div><ChevronDown size={15}/></button></div></header>
+      <header className="topbar"><button className="icon-btn menu-btn" onClick={()=>setMobileOpen(true)} aria-label="Abrir menú"><Menu size={20}/></button><div className="topbar-context"><span>Centro de control</span><b>6 plantas conectadas por planillas</b></div><div className="topbar-actions"><button className="icon-btn notification" aria-label="Notificaciones"><Bell size={19}/></button><button className="user-menu"><span>PS</span><div><b>Sesión ejecutiva</b><small>Vista multiplanta</small></div><ChevronDown size={15}/></button></div></header>
       <main className="main-content">{children}</main>
     </div>
     <button className="floating-action" onClick={onNewReception}>+ Nueva recepción</button>
