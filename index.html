@@ -1,113 +1,14 @@
 <!doctype html>
 <html lang="es">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>N3uralia UniGrade</title>
-  <style>
-    :root{--navy:#082f3e;--ink:#12343e;--muted:#6c7e83;--line:#dce6e5;--ice:#f4f8f7;--white:#fff;--mint:#bce8dc;--teal:#167d76;--orange:#f29a57;--red:#d96152;--yellow:#f3c76a;--shadow:0 14px 35px rgba(6,47,62,.09)}
-    *{box-sizing:border-box}body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--ice);color:var(--ink)}button,input,select{font:inherit}
-    .app{min-height:100vh;display:grid;grid-template-columns:246px 1fr}.sidebar{background:var(--navy);color:#fff;padding:28px 20px;display:flex;flex-direction:column;gap:30px}.brand{display:flex;align-items:center;gap:12px}.mark{width:38px;height:38px;border-radius:12px;background:linear-gradient(145deg,var(--mint),#4cc0af);display:grid;place-items:center;color:var(--navy);font-weight:900}.brand b{font-size:16px}.brand small{display:block;color:#93b6bb;margin-top:2px}.nav{display:grid;gap:7px}.nav button{border:0;background:transparent;color:#a9c6ca;text-align:left;padding:11px 12px;border-radius:10px;cursor:pointer}.nav button.active,.nav button:hover{background:#124655;color:#fff}.pilot{margin-top:auto;background:#124655;border:1px solid #2a6170;border-radius:14px;padding:15px}.pilot strong{font-size:13px}.pilot p{font-size:12px;color:#a9c6ca;line-height:1.5;margin:7px 0 12px}.pilot span{font-size:11px;background:#1e5e6b;padding:6px 8px;border-radius:20px}
-    main{padding:28px 34px 44px;max-width:1500px;width:100%;margin:auto}.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:26px}.eyebrow{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--teal)}h1{font-size:28px;margin:4px 0 0;letter-spacing:-.03em}.top-actions{display:flex;gap:10px}.btn{border:1px solid var(--line);background:#fff;color:var(--ink);padding:10px 14px;border-radius:10px;font-weight:750;cursor:pointer}.btn.primary{background:var(--teal);border-color:var(--teal);color:#fff}.btn:hover{transform:translateY(-1px)}
-    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.metric,.card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}.metric{padding:18px}.metric .label{font-size:12px;color:var(--muted)}.metric .value{font-size:28px;font-weight:850;margin:8px 0 5px;letter-spacing:-.04em}.delta{font-size:12px;color:var(--teal);font-weight:700}.delta.warn{color:#b46b2a}.content{display:grid;grid-template-columns:1.45fr .8fr;gap:16px;margin-top:16px}.card{padding:20px}.card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:17px}.card h2{font-size:16px;margin:0}.tag{font-size:11px;padding:6px 9px;background:#e9f6f2;color:var(--teal);border-radius:20px;font-weight:800}
-    .flow{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.stage{border:1px solid var(--line);border-radius:12px;padding:14px}.stage b{font-size:18px;display:block}.stage span{font-size:11px;color:var(--muted)}.stage em{display:block;font-size:11px;font-style:normal;color:var(--teal);margin-top:8px}.bar{height:7px;background:#e4eceb;border-radius:5px;overflow:hidden;margin-top:10px}.bar i{display:block;height:100%;background:var(--teal);border-radius:5px}
-    .pantone{display:flex;gap:14px;align-items:center}.swatch{width:96px;height:118px;border-radius:12px;background:#e9964d;padding:10px;display:flex;align-items:end;color:#fff;font-size:11px;font-weight:800;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}.lab{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;flex:1}.lab div{background:var(--ice);border-radius:10px;padding:10px;text-align:center}.lab small{display:block;color:var(--muted);font-size:10px}.lab b{font-size:15px}.confidence{margin-top:15px;border-top:1px solid var(--line);padding-top:14px;display:flex;justify-content:space-between;font-size:12px}.confidence strong{color:var(--teal)}
-    .wide{grid-column:1/-1}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:12px}th{text-align:left;color:var(--muted);font-weight:700;padding:0 10px 11px;border-bottom:1px solid var(--line)}td{padding:13px 10px;border-bottom:1px solid #edf2f1}tbody tr:hover{background:#f8fbfa}.status{padding:5px 8px;border-radius:15px;font-weight:800;font-size:10px}.ok{background:#e5f5ef;color:#167864}.review{background:#fff2dc;color:#a26422}.risk{background:#fde9e6;color:#ad493e}.supplier{display:flex;align-items:center;gap:8px}.avatar{width:28px;height:28px;border-radius:9px;background:#d9eee8;display:grid;place-items:center;color:var(--teal);font-weight:850}.insights{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.insight{background:var(--ice);border-radius:12px;padding:13px}.insight b{font-size:13px}.insight p{font-size:11px;color:var(--muted);line-height:1.45;margin:6px 0 0}
-    .modal{position:fixed;inset:0;background:rgba(2,28,37,.55);display:none;place-items:center;padding:20px;z-index:10}.modal.open{display:grid}.panel{width:min(680px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:18px;padding:24px;box-shadow:0 30px 80px rgba(0,0,0,.25)}.panel-head{display:flex;justify-content:space-between;align-items:start}.close{border:0;background:var(--ice);width:34px;height:34px;border-radius:10px;cursor:pointer}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:20px}.field label{font-size:11px;color:var(--muted);font-weight:750;display:block;margin-bottom:6px}.field input,.field select{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;background:#fff}.camera{grid-column:1/-1;border:1px dashed #9ab6b8;background:#f5faf9;border-radius:13px;padding:18px;text-align:center}.camera b{display:block;font-size:13px}.camera span{font-size:11px;color:var(--muted)}.summary{grid-column:1/-1;background:#ecf7f3;border-radius:12px;padding:14px;display:flex;justify-content:space-between}.summary span{font-size:11px;color:var(--muted)}.summary b{display:block;font-size:18px}.panel-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}.toast{position:fixed;right:24px;bottom:24px;background:var(--navy);color:#fff;border-radius:12px;padding:13px 16px;display:none;box-shadow:var(--shadow);font-size:12px}.toast.show{display:block}
-    @media(max-width:1050px){.app{grid-template-columns:78px 1fr}.brand div:last-child,.nav button span,.pilot{display:none}.sidebar{padding:24px 13px}.nav button{text-align:center}.content{grid-template-columns:1fr}.grid{grid-template-columns:repeat(2,1fr)}}
-    @media(max-width:680px){.app{display:block}.sidebar{position:sticky;top:0;z-index:5;flex-direction:row;align-items:center;padding:10px 14px}.nav{display:flex;margin-left:auto}.nav button{padding:9px}.nav button:nth-child(n+4){display:none}main{padding:22px 16px}.top{align-items:flex-start}.top-actions .btn:first-child{display:none}.grid{grid-template-columns:1fr 1fr}.metric .value{font-size:22px}.flow{grid-template-columns:1fr 1fr}.content{display:block}.content>.card{margin-bottom:14px}.insights{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.camera,.summary{grid-column:auto}}
-  </style>
-</head>
-<body>
-<div class="app">
-  <aside class="sidebar">
-    <div class="brand"><div class="mark">N3</div><div><b>UniGrade</b><small>por N3uralia</small></div></div>
-    <nav class="nav" aria-label="Navegación principal">
-      <button class="active">◫ <span>Centro de control</span></button>
-      <button>⌁ <span>Recepciones</span></button>
-      <button>◉ <span>Clasificación</span></button>
-      <button>▦ <span>Lotes y trazabilidad</span></button>
-      <button>♢ <span>Proveedores</span></button>
-      <button>⚙ <span>Estándar Japón</span></button>
-    </nav>
-    <div class="pilot"><strong>Piloto · Temporada 2026</strong><p>Modelo operando en modo sombra. Las decisiones requieren confirmación humana.</p><span>12.480 imágenes</span></div>
-  </aside>
-  <main>
-    <header class="top">
-      <div><div class="eyebrow">Planta Pescamar · Ancud</div><h1>Control de calidad y rendimiento</h1></div>
-      <div class="top-actions"><button class="btn" id="standardBtn">Ver estándar Japón</button><button class="btn primary" id="newBtn">+ Nueva recepción</button></div>
-    </header>
-    <section class="grid" aria-label="Indicadores principales">
-      <article class="metric"><div class="label">Recibido hoy</div><div class="value">1.240 kg</div><div class="delta">↑ 8,4% vs. promedio</div></article>
-      <article class="metric"><div class="label">Peso neto aceptado</div><div class="value">1.048 kg</div><div class="delta">84,5% de recepción</div></article>
-      <article class="metric"><div class="label">Rendimiento gónada</div><div class="value">9,8%</div><div class="delta">↑ 0,7 puntos</div></article>
-      <article class="metric"><div class="label">Calidad Japón A</div><div class="value">68,2%</div><div class="delta warn">3 lotes en revisión</div></article>
-    </section>
-    <section class="content">
-      <article class="card">
-        <div class="card-head"><h2>Balance de masa · Turno mañana</h2><span class="tag">Actualizado 10:42</span></div>
-        <div class="flow">
-          <div class="stage"><span>Recepción</span><b>1.240 kg</b><div class="bar"><i style="width:100%"></i></div><em>100% registrado</em></div>
-          <div class="stage"><span>Aceptado</span><b>1.048 kg</b><div class="bar"><i style="width:84.5%"></i></div><em>−192 kg explicados</em></div>
-          <div class="stage"><span>Gónada limpia</span><b>102,7 kg</b><div class="bar"><i style="width:62%"></i></div><em>9,8% rendimiento</em></div>
-          <div class="stage"><span>Japón A</span><b>70,0 kg</b><div class="bar"><i style="width:68.2%"></i></div><em>68,2% premium</em></div>
-        </div>
-      </article>
-      <article class="card">
-        <div class="card-head"><h2>Lectura UniColor</h2><span class="tag">Japón A</span></div>
-        <div class="pantone"><div class="swatch">UNI ORANGE<br>JPN-A 04</div><div class="lab"><div><small>L*</small><b>67.4</b></div><div><small>a*</small><b>19.8</b></div><div><small>b*</small><b>48.2</b></div></div></div>
-        <div class="confidence"><span>Coincidencia con patrón</span><strong>94,7%</strong></div>
-      </article>
-      <article class="card wide">
-        <div class="card-head"><h2>Recepciones activas</h2><button class="btn" id="exportBtn">Exportar reporte</button></div>
-        <div class="table-wrap"><table><thead><tr><th>Lote</th><th>Proveedor</th><th>Bruto</th><th>Neto aceptado</th><th>Merma explicada</th><th>Rendimiento</th><th>Estado</th></tr></thead><tbody id="batchRows">
-          <tr><td><b>ER-260819-04</b></td><td><div class="supplier"><span class="avatar">JR</span>Juan Rain</div></td><td>312 kg</td><td>278 kg</td><td>10,9%</td><td>10,4%</td><td><span class="status ok">Clasificado</span></td></tr>
-          <tr><td><b>ER-260819-03</b></td><td><div class="supplier"><span class="avatar">MC</span>María Catrilef</div></td><td>284 kg</td><td>249 kg</td><td>12,3%</td><td>11,1%</td><td><span class="status ok">Clasificado</span></td></tr>
-          <tr><td><b>ER-260819-02</b></td><td><div class="supplier"><span class="avatar">AP</span>Alexis Paillán</div></td><td>365 kg</td><td>287 kg</td><td>21,4%</td><td>7,8%</td><td><span class="status review">Revisión</span></td></tr>
-          <tr><td><b>ER-260819-01</b></td><td><div class="supplier"><span class="avatar">CL</span>Coop. Lliuco</div></td><td>279 kg</td><td>234 kg</td><td>16,1%</td><td>9,9%</td><td><span class="status risk">Alerta calibre</span></td></tr>
-        </tbody></table></div>
-      </article>
-      <article class="card wide">
-        <div class="card-head"><h2>Inteligencia de temporada</h2><span class="tag">Aprendizaje activo</span></div>
-        <div class="insights">
-          <div class="insight"><b>Mejor rendimiento</b><p>Los lotes de Bahía de Ancud promedian 11,2% de gónada limpia esta semana.</p></div>
-          <div class="insight"><b>Merma recuperable</b><p>El escurrido estandarizado explica 74 kg que antes se registraban como merma general.</p></div>
-          <div class="insight"><b>Calidad japonesa</b><p>El patrón JPN-A 04 tiene una coincidencia del 92,8% con las últimas aprobaciones.</p></div>
-        </div>
-      </article>
-    </section>
-  </main>
-</div>
-
-<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-  <div class="panel">
-    <div class="panel-head"><div><div class="eyebrow">Recepción justa</div><h2 id="modalTitle">Registrar nueva entrega</h2></div><button class="close" id="closeBtn" aria-label="Cerrar">×</button></div>
-    <div class="form-grid">
-      <div class="field"><label>Proveedor</label><select id="supplier"><option>Juan Rain</option><option>María Catrilef</option><option>Alexis Paillán</option><option>Cooperativa Lliuco</option></select></div>
-      <div class="field"><label>Zona de extracción</label><select><option>Bahía de Ancud</option><option>Canal de Chacao</option><option>Quemchi</option><option>Quinchao</option></select></div>
-      <div class="field"><label>Peso bruto (kg)</label><input id="gross" type="number" value="100" min="0" step="0.1" /></div>
-      <div class="field"><label>Tara (kg)</label><input id="tare" type="number" value="6" min="0" step="0.1" /></div>
-      <div class="field"><label>Peso después de escurrido (kg)</label><input id="drained" type="number" value="87" min="0" step="0.1" /></div>
-      <div class="field"><label>Temperatura (°C)</label><input type="number" value="4.2" step="0.1" /></div>
-      <button class="camera" type="button" id="cameraBtn"><b>◉ Capturar evidencia visual</b><span>Cámara de recepción · vista superior y lateral</span></button>
-      <div class="summary"><div><span>Peso neto aceptado</span><b id="netValue">81,0 kg</b></div><div><span>Merma explicada</span><b id="lossValue">19,0%</b></div><div><span>Confianza</span><b>98,4%</b></div></div>
-    </div>
-    <div class="panel-actions"><button class="btn" id="cancelBtn">Cancelar</button><button class="btn primary" id="saveBtn">Crear lote y comprobante</button></div>
-  </div>
-</div>
-<div class="toast" id="toast">Lote creado y comprobante generado.</div>
-<script>
-  const modal=document.getElementById('modal'),toast=document.getElementById('toast');
-  const open=()=>{modal.classList.add('open');document.getElementById('supplier').focus()};
-  const close=()=>modal.classList.remove('open');
-  document.getElementById('newBtn').onclick=open;document.getElementById('closeBtn').onclick=close;document.getElementById('cancelBtn').onclick=close;
-  modal.onclick=e=>{if(e.target===modal)close()};document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
-  function recalc(){const g=+gross.value||0,t=+tare.value||0,d=+drained.value||0;const n=Math.max(0,d-t);netValue.textContent=n.toFixed(1)+' kg';lossValue.textContent=(g?((g-n)/g*100):0).toFixed(1)+'%'}
-  [gross,tare,drained].forEach(x=>x.addEventListener('input',recalc));
-  cameraBtn.onclick=()=>{cameraBtn.innerHTML='<b>✓ Evidencia capturada</b><span>2 imágenes calibradas · calidad correcta</span>'};
-  saveBtn.onclick=()=>{const name=supplier.value,initials=name.split(' ').map(x=>x[0]).slice(0,2).join('');const g=+gross.value||0,n=Math.max(0,(+drained.value||0)-(+tare.value||0));const loss=g?((g-n)/g*100):0;const id='ER-260819-'+String(document.querySelectorAll('#batchRows tr').length+1).padStart(2,'0');batchRows.insertAdjacentHTML('afterbegin',`<tr><td><b>${id}</b></td><td><div class="supplier"><span class="avatar">${initials}</span>${name}</div></td><td>${g.toFixed(1)} kg</td><td>${n.toFixed(1)} kg</td><td>${loss.toFixed(1)}%</td><td>—</td><td><span class="status review">Muestreo</span></td></tr>`);close();toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),2800)};
-  standardBtn.onclick=()=>{document.querySelector('.pantone').scrollIntoView({behavior:'smooth',block:'center'});toast.textContent='Estándar Japón JPN-A 04 seleccionado.';toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),2200)};
-  exportBtn.onclick=()=>{toast.textContent='Reporte de turno preparado para exportación.';toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),2200)};
-</script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#062f3c" />
+    <meta name="description" content="N3uralia UniGrade — inteligencia operacional para la industria del erizo." />
+    <title>N3uralia UniGrade</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>
