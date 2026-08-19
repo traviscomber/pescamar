@@ -1,16 +1,13 @@
-import { Bell, Blocks, Boxes, Camera, ChartNoAxesCombined, ChevronDown, ClipboardCheck, Factory, Gauge, Menu, Settings2, SlidersHorizontal, Users, X } from 'lucide-react'
+import { Bell, Blocks, Boxes, ChartNoAxesCombined, CheckCheck, ChevronDown, Factory, Gauge, Menu, Settings2, X } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useState, type ReactNode } from 'react'
 
 const navigation = [
   { to:'/', label:'Centro de control', icon:Gauge },
-  { to:'/modulos', label:'Mapa de módulos', icon:Blocks },
-  { to:'/lineas', label:'Líneas productivas', icon:Factory },
+  { to:'/aprobaciones', label:'Aprobaciones', icon:CheckCheck },
   { to:'/recepciones', label:'Recepciones', icon:Boxes },
-  { to:'/clasificacion', label:'Clasificación IA', icon:Camera },
-  { to:'/trazabilidad', label:'Lotes y trazabilidad', icon:ClipboardCheck },
-  { to:'/proveedores', label:'Proveedores', icon:Users },
-  { to:'/estandares', label:'Estándar Japón', icon:SlidersHorizontal }
+  { to:'/lineas', label:'Producción', icon:Factory },
+  { to:'/modulos', label:'Módulos', icon:Blocks }
 ]
 
 export function AppShell({ children, onNewReception }:{ children:ReactNode; onNewReception:()=>void }) {
@@ -21,7 +18,7 @@ export function AppShell({ children, onNewReception }:{ children:ReactNode; onNe
       <div className="plant-chip"><span className="live-dot"/><div><b>Planta Ancud</b><small>Operación en línea</small></div><ChevronDown size={15}/></div>
       <nav className="side-nav" aria-label="Navegación principal">{navigation.map(({to,label,icon:Icon})=><NavLink key={to} to={to} end={to==='/'} onClick={()=>setMobileOpen(false)}><Icon size={18}/><span>{label}</span></NavLink>)}</nav>
       <div className="sidebar-spacer"/>
-      <div className="pilot-card"><span className="overline">Piloto · Temporada 2026</span><b>Modelo en modo sombra</b><p>Las decisiones de calidad aún requieren confirmación humana.</p><div className="pilot-stat"><ChartNoAxesCombined size={16}/><span><strong>12.480</strong> imágenes etiquetadas</span></div></div>
+      <div className="pilot-card"><span className="overline">Control por excepción</span><b>5 responsables activos</b><p>El sistema automatiza el flujo y eleva solamente decisiones que necesitan criterio humano.</p><div className="pilot-stat"><ChartNoAxesCombined size={16}/><span><strong>3</strong> aprobaciones pendientes</span></div></div>
       <NavLink className="settings-link" to="/configuracion"><Settings2 size={18}/><span>Configuración</span></NavLink>
     </aside>
     <div className="workspace">
