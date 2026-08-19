@@ -1,10 +1,9 @@
-import { Bell, Blocks, Boxes, ChartNoAxesCombined, CheckCheck, ChevronDown, Database, Factory, Gauge, Landmark, Menu, Settings2, X } from 'lucide-react'
+import { Bell, Blocks, Boxes, CheckCheck, ChevronDown, Database, Factory, Landmark, Menu, Settings2, X } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useState, type ReactNode } from 'react'
 
 const navigation = [
-  { to:'/', label:'Centro de control', icon:Gauge },
-  { to:'/operacion-2025', label:'Operación 2025', icon:Database },
+  { to:'/', label:'Operación 2025', icon:Database },
   { to:'/creditos', label:'Créditos y anticipos', icon:Landmark },
   { to:'/aprobaciones', label:'Aprobaciones', icon:CheckCheck },
   { to:'/recepciones', label:'Recepciones', icon:Boxes },
@@ -20,11 +19,11 @@ export function AppShell({ children, onNewReception }:{ children:ReactNode; onNe
       <div className="plant-chip"><span className="live-dot"/><div><b>Planta Ancud</b><small>Operación en línea</small></div><ChevronDown size={15}/></div>
       <nav className="side-nav" aria-label="Navegación principal">{navigation.map(({to,label,icon:Icon})=><NavLink key={to} to={to} end={to==='/'} onClick={()=>setMobileOpen(false)}><Icon size={18}/><span>{label}</span></NavLink>)}</nav>
       <div className="sidebar-spacer"/>
-      <div className="pilot-card"><span className="overline">Control por excepción</span><b>5 responsables activos</b><p>El sistema automatiza el flujo y eleva solamente decisiones que necesitan criterio humano.</p><div className="pilot-stat"><ChartNoAxesCombined size={16}/><span><strong>3</strong> aprobaciones pendientes</span></div></div>
-      <NavLink className="settings-link" to="/configuracion"><Settings2 size={18}/><span>Configuración</span></NavLink>
+      <div className="pilot-card"><span className="overline">Control por excepción</span><b>Operación simplificada</b><p>El sistema eleva solamente decisiones que necesitan criterio humano.</p></div>
+      <NavLink className="settings-link" to="/modulos"><Settings2 size={18}/><span>Configuración modular</span></NavLink>
     </aside>
     <div className="workspace">
-      <header className="topbar"><button className="icon-btn menu-btn" onClick={()=>setMobileOpen(true)} aria-label="Abrir menú"><Menu size={20}/></button><div className="topbar-context"><span>Operación</span><b>Miércoles, 19 agosto 2026</b></div><div className="topbar-actions"><button className="icon-btn notification" aria-label="Notificaciones"><Bell size={19}/><i>3</i></button><button className="user-menu"><span>TC</span><div><b>Travis Comber</b><small>Administrador</small></div><ChevronDown size={15}/></button></div></header>
+      <header className="topbar"><button className="icon-btn menu-btn" onClick={()=>setMobileOpen(true)} aria-label="Abrir menú"><Menu size={20}/></button><div className="topbar-context"><span>Fuente canónica</span><b>Planilla de producción 2025</b></div><div className="topbar-actions"><button className="icon-btn notification" aria-label="Notificaciones"><Bell size={19}/></button><button className="user-menu"><span>PS</span><div><b>Sesión operativa</b><small>Sin identidad configurada</small></div><ChevronDown size={15}/></button></div></header>
       <main className="main-content">{children}</main>
     </div>
     <button className="floating-action" onClick={onNewReception}>+ Nueva recepción</button>
