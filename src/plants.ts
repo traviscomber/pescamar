@@ -1,5 +1,5 @@
 export type PlantMode='Propia'|'Maquila'|'Maquila y producto terminado'|'Producto terminado'
-export type Plant={id:string;name:string;location:string;mode:PlantMode;products:string[];sourceStatus:'unlinked'}
+export type Plant={id:string;name:string;location:string;mode:PlantMode;products:string[];sourceStatus:'unlinked'|'linked'}
 
 // Catálogo operacional por validar. No contiene KPI, alertas ni resultados productivos.
 export const plants:Plant[]=[

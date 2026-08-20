@@ -63,11 +63,12 @@ El estado general se calcula desde reglas y siempre presenta una causa legible.
 
 ### Hito 2 — Importación y normalización (semanas 4–7)
 
-- Plantilla Excel canónica.
-- Carga, validación por fila y vista previa.
+- [x] Plantilla canónica descargable en CSV compatible con Excel.
+- [x] Carga XLSX/XLS/CSV, validación por fila y vista previa.
+- [x] Publicación local de snapshots y recálculo inmediato de semáforos.
 - Normalización planta–producto–período.
-- Publicación y reversión de lotes de importación.
-- Archivo original, responsable y fecha de carga.
+- [x] Historial local de los últimos 10 lotes y reversión de la publicación más reciente.
+- [x] Archivo original, responsable y fecha de carga en la trazabilidad demostrativa.
 
 **Criterio de aceptación:** un archivo válido actualiza KPIs y semáforos; uno inválido entrega errores accionables sin alterar datos publicados.
 
@@ -99,4 +100,4 @@ El estado general se calcula desde reglas y siempre presenta una causa legible.
 
 ## Próximo incremento
 
-Construir el importador Excel y sustituir los datos demostrativos del Hito 1 por snapshots persistentes. Antes de iniciar se requieren planillas reales de las seis plantas y la definición aprobada de cada KPI.
+Persistir lotes de importación en backend, agregar historial/reversión y validar el contrato canónico contra planillas reales de las seis plantas. La persistencia actual en navegador sirve para la demostración, pero todavía no es multiusuario ni auditable.
