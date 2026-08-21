@@ -4,12 +4,12 @@
 
 **Estado:** Aprobado con observaciones
 
-El flujo ejecutivo y el gobierno de datos son honestos para una demostración local. El producto todavía no está aprobado para piloto multiusuario porque no existe persistencia compartida, autenticación ni almacenamiento del archivo original.
+El flujo ejecutivo y el gobierno de datos ya soportan persistencia compartida para el piloto. Aún faltan autenticación propia y almacenamiento del archivo original antes de considerarlo auditable de extremo a extremo.
 
 ## Resumen de severidad
 
 - Críticas: 0
-- Altas: 1 pendiente
+- Altas: 0 pendientes
 - Medias: 2 pendientes
 - Bajas: 1 pendiente
 
@@ -20,10 +20,10 @@ El flujo ejecutivo y el gobierno de datos son honestos para una demostración lo
 - **Severidad:** Alta
 - **Área:** Datos / Arquitectura
 - **Ruta o sección:** `/importaciones`
-- **Evidencia:** snapshots e historial se guardan en `localStorage`.
+- **Evidencia:** `api/plant-state.ts`, `src/plantApi.ts` y `db/schema.sql` persisten snapshots e historial compartidos; `localStorage` queda como fallback.
 - **Impacto:** dos usuarios pueden ver estados distintos y perder información al limpiar el navegador.
-- **Recomendación:** persistir lotes, filas, archivo original y reversión en backend con identidad del responsable.
-- **Estado:** Pendiente; la interfaz lo declara explícitamente.
+- **Recomendación:** completar la trazabilidad con archivo original, hash e identidad autenticada.
+- **Estado:** Corregido para estado, lotes y reversión; trazabilidad documental pasa al siguiente incremento.
 
 ### MT-02 Dos flujos de importación incompatibles
 
@@ -70,7 +70,7 @@ El flujo ejecutivo y el gobierno de datos son honestos para una demostración lo
 
 ## Próximo orden de ejecución
 
-1. Persistencia backend e identidad.
+1. Identidad y permisos.
 2. Archivo original y hash.
 3. Reglas configurables por planta y producto.
 4. Comparación temporal y métricas de uso.

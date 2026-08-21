@@ -100,4 +100,4 @@ El estado general se calcula desde reglas y siempre presenta una causa legible.
 
 ## Próximo incremento
 
-Persistir lotes, filas y archivos originales en backend; asociar identidad y hash a cada publicación; y validar el contrato canónico contra planillas reales de las seis plantas. La persistencia actual en navegador sirve para la demostración, pero todavía no es multiusuario ni auditable.
+Guardar el archivo original en almacenamiento privado, calcular su hash, asociar identidad real al responsable y validar el contrato canónico contra planillas reales de las seis plantas. El estado, los lotes y las reversiones ya cuentan con persistencia compartida en Neon cuando `DATABASE_URL` está configurada.

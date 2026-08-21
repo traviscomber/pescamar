@@ -40,7 +40,7 @@ export type ImportBatch = {
 export function createImportBatch(current: PlantState[], rows: ValidatedImport[], publishedBy='Sesión ejecutiva'): ImportBatch {
   const resultingPlants=applyImports(current,rows)
   return {
-    id:`IMP-${Date.now().toString(36).toUpperCase()}`,
+    id:`IMP-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().slice(0,8).toUpperCase()}`,
     fileName:rows[0]?.source??'Planilla sin nombre',
     periods:[...new Set(rows.map(row=>row.period))],
     plantIds:[...new Set(rows.flatMap(row=>row.plant?[row.plant.id]:[]))],
