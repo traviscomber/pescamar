@@ -1,4 +1,4 @@
-import { Bell, Blocks, Boxes, CheckCheck, ChevronDown, Database, Factory, FileSpreadsheet, Landmark, LayoutDashboard, Menu, Settings2, X } from 'lucide-react'
+import { Blocks, Boxes, CheckCheck, ChevronDown, Database, Factory, FileSpreadsheet, Landmark, LayoutDashboard, Menu, Settings2, ShieldCheck, X } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useState, type ReactNode } from 'react'
 
@@ -25,7 +25,7 @@ export function AppShell({ children, onNewReception }:{ children:ReactNode; onNe
       <NavLink className="settings-link" to="/modulos"><Settings2 size={18}/><span>Configuración modular</span></NavLink>
     </aside>
     <div className="workspace">
-      <header className="topbar"><button className="icon-btn menu-btn" onClick={()=>setMobileOpen(true)} aria-label="Abrir menú"><Menu size={20}/></button><div className="topbar-context"><span>Centro de control</span><b>Datos reales y fuentes auditables</b></div><div className="topbar-actions"><button className="icon-btn notification" aria-label="Notificaciones"><Bell size={19}/></button><button className="user-menu"><span>PS</span><div><b>Sesión operativa</b><small>Identidad por configurar</small></div><ChevronDown size={15}/></button></div></header>
+      <header className="topbar"><button className="icon-btn menu-btn" onClick={()=>setMobileOpen(true)} aria-label="Abrir menú"><Menu size={20}/></button><div className="topbar-context"><span>Centro de control</span><b>Datos reales y fuentes auditables</b></div><div className="topbar-actions"><div className="topbar-status"><ShieldCheck size={15}/><span><b>Modo piloto</b><small>Persistencia local</small></span></div><div className="user-menu" aria-label="Sesión operativa"><span>PS</span><div><b>Sesión operativa</b><small>Identidad por configurar</small></div></div></div></header>
       <main className="main-content">{children}</main>
     </div>
     <button className="floating-action" onClick={onNewReception}>+ Nueva recepción</button>

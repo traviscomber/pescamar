@@ -100,4 +100,4 @@ El estado general se calcula desde reglas y siempre presenta una causa legible.
 
 ## Próximo incremento
 
-Persistir lotes de importación en backend, agregar historial/reversión y validar el contrato canónico contra planillas reales de las seis plantas. La persistencia actual en navegador sirve para la demostración, pero todavía no es multiusuario ni auditable.
+Persistir lotes, filas y archivos originales en backend; asociar identidad y hash a cada publicación; y validar el contrato canónico contra planillas reales de las seis plantas. La persistencia actual en navegador sirve para la demostración, pero todavía no es multiusuario ni auditable.

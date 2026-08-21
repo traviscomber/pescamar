@@ -1,9 +1,8 @@
 import { AlertTriangle, ArrowLeft, ArrowRight, Boxes, Building2, CheckCircle2, Clock3, FileQuestion, FileSpreadsheet, History, Link2Off, PackageCheck, RotateCcw, Scale, TrendingUp } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { PlantImportModal } from '../components/PlantImportModal'
 import { PageHeader } from '../components/PageHeader'
-import { createImportBatch, isOperationalPlant, type ImportBatch, type PlantState, type ValidatedImport } from '../plantImport'
+import { isOperationalPlant, type ImportBatch, type PlantState } from '../plantImport'
 import { canonicalSource, plants as configuredPlants, type Plant } from '../plants'
 
 const kg=(value:number)=>`${value.toLocaleString('es-CL')} kg`
@@ -11,21 +10,19 @@ export function PlantControl(){
   const {plantId}=useParams()
   const [plants,setPlants]=useState<PlantState[]>(()=>{try{return JSON.parse(localStorage.getItem('pescamar.plants.v2')??'null')??configuredPlants}catch{return configuredPlants}})
   const [history,setHistory]=useState<ImportBatch[]>(()=>{try{return JSON.parse(localStorage.getItem('pescamar.imports.v2')??'null')??[]}catch{return []}})
-  const [importOpen,setImportOpen]=useState(false)
   useEffect(()=>localStorage.setItem('pescamar.plants.v2',JSON.stringify(plants)),[plants])
   useEffect(()=>localStorage.setItem('pescamar.imports.v2',JSON.stringify(history)),[history])
-  const publish=(rows:ValidatedImport[])=>setPlants(current=>{const batch=createImportBatch(current,rows);setHistory(items=>[batch,...items].slice(0,10));return batch.resultingPlants})
   const revertLatest=()=>{const batch=history.find(item=>!item.revertedAt);if(!batch)return;setPlants(batch.previousPlants);setHistory(items=>items.map(item=>item.id===batch.id?{...item,revertedAt:new Date().toISOString()}:item))}
   const selected=plants.find(plant=>plant.id===plantId)
-  if(selected)return <><PlantDetail plant={selected}/><PlantImportModal open={importOpen} plants={configuredPlants} onClose={()=>setImportOpen(false)} onPublish={publish}/></>
+  if(selected)return <PlantDetail plant={selected}/>
   const linked=plants.filter(isOperationalPlant)
   const totalProduction=linked.reduce((sum,plant)=>sum+plant.productionKg,0),totalTarget=linked.reduce((sum,plant)=>sum+plant.targetKg,0),totalInventory=linked.reduce((sum,plant)=>sum+plant.inventoryKg,0)
   const criticalCount=linked.reduce((sum,plant)=>sum+plant.alerts.filter(alert=>alert.severity==='Crítica').length,0),attentionCount=linked.reduce((sum,plant)=>sum+plant.alerts.filter(alert=>alert.severity==='Atención').length,0)
-  return <><PageHeader eyebrow="Centro de control multiplanta" title="Fuentes operacionales" description="El tablero solo publica indicadores provenientes de archivos validados y asignados a una planta." actions={<button className="button primary" onClick={()=>setImportOpen(true)}><FileSpreadsheet size={16}/>Importar resumen</button>}/>
+  return <><PageHeader eyebrow="Centro de control multiplanta" title="Fuentes operacionales" description="El tablero solo publica indicadores provenientes de archivos validados y asignados a una planta." actions={<Link className="button primary" to="/importaciones"><FileSpreadsheet size={16}/>Importar planilla</Link>}/>
     <section className="plant-summary"><Summary icon={<Building2/>} label="Plantas configuradas" value={String(plants.length)} note={`${linked.length} con datos publicados`}/><Summary icon={<Scale/>} label="Producción publicada" value={linked.length?kg(totalProduction):'—'} note={linked.length&&totalTarget?`${Math.round(totalProduction/totalTarget*100)}% de cumplimiento global`:'Sin datos calculados'}/><Summary icon={<Boxes/>} label="Inventario informado" value={linked.length?kg(totalInventory):'—'} note="Sólo fuentes publicadas"/><Summary icon={<AlertTriangle/>} label="Alertas abiertas" value={String(criticalCount+attentionCount)} note={`${criticalCount} críticas · ${attentionCount} de atención`} warning/></section>
     <article className="panel source-banner"><div className="source-icon"><FileSpreadsheet size={22}/></div><div><span className="overline teal">Fuente real disponible</span><h2>{canonicalSource.name}</h2><p>{canonicalSource.records} registros · {canonicalSource.period}</p></div><span className="status warning">{canonicalSource.status}</span><Link className="button secondary" to="/operacion-2025">Ver datos</Link></article>
     <section className="control-heading"><div><span className="overline teal">Red configurada</span><h2>Estado por planta</h2></div><div className="status-legend"><span><i className="healthy"/>Normal</span><span><i className="attention"/>Atención</span><span><i className="critical"/>Crítica</span><span><i className="offline"/>Sin fuente</span></div></section>
-    <section className="plant-grid">{plants.map(plant=><PlantCard plant={plant} key={plant.id}/>)}</section><ImportHistory history={history} onRevert={revertLatest}/><PlantImportModal open={importOpen} plants={configuredPlants} onClose={()=>setImportOpen(false)} onPublish={publish}/>
+    <section className="plant-grid">{plants.map(plant=><PlantCard plant={plant} key={plant.id}/>)}</section><ImportHistory history={history} onRevert={revertLatest}/>
   </>
 }
 
