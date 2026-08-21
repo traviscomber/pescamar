@@ -98,7 +98,7 @@ create table approval_actions (
   acted_at timestamptz not null default now()
 );
 
-create table plant_import_batches (
+create table if not exists plant_import_batches (
   id text primary key,
   file_name text not null,
   periods text[] not null default '{}',
@@ -111,7 +111,7 @@ create table plant_import_batches (
   reverted_at timestamptz
 );
 
-create table plant_current_state (
+create table if not exists plant_current_state (
   state_key text primary key check (state_key = 'current'),
   plants jsonb not null,
   latest_batch_id text references plant_import_batches(id),
@@ -122,7 +122,7 @@ create index receptions_supplier_received_idx on receptions (supplier_id, receiv
 create index credit_requests_account_status_idx on credit_requests (account_id, status, requested_at desc);
 create index credit_movements_account_date_idx on credit_movements (account_id, occurred_at desc);
 create index approval_actions_entity_idx on approval_actions (entity_type, entity_id, acted_at desc);
-create index plant_import_batches_published_at_idx on plant_import_batches (published_at desc);
+create index if not exists plant_import_batches_published_at_idx on plant_import_batches (published_at desc);
 
 create view credit_account_balances as
 select account_id,
