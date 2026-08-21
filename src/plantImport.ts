@@ -1,4 +1,5 @@
 import type { Plant } from './plants'
+import { readWorkbook } from './workbook'
 
 export type PlantStatus='healthy'|'attention'|'critical'|'offline'
 export type PlantAlert={id:string;severity:'Atención'|'Crítica'|'Información';title:string;detail:string}
@@ -71,10 +72,9 @@ const numberValue=(value:unknown)=>{
 }
 
 export async function readPlantWorkbook(file: File, plants: Plant[]): Promise<ValidatedImport[]> {
-  const XLSX=await import('xlsx')
-  const workbook=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true})
-  const sheet=workbook.Sheets[workbook.SheetNames[0]]
-  const raw=XLSX.utils.sheet_to_json<Record<string,unknown>>(sheet,{defval:''})
+  const workbook=await readWorkbook(file)
+  const [headers=[],...dataRows]=workbook.rows
+  const raw=dataRows.map(values=>Object.fromEntries(headers.map((header,index)=>[String(header??''),values[index]??''])))
   const rows=raw.map((record,index)=>{
     const mapped: Partial<ImportRow>={source:file.name}
     Object.entries(record).forEach(([header,value])=>{
