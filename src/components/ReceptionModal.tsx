@@ -13,7 +13,7 @@ export function ReceptionModal({
 }) {
   const [supplier, setSupplier] = useState(""),
     [zone, setZone] = useState("");
-  const [species] = useState<Species>("Erizo");
+  const [species, setSpecies] = useState<Species>("Erizo");
   const [gross, setGross] = useState(100),
     [tare, setTare] = useState(6),
     [drained, setDrained] = useState(87),
@@ -126,6 +126,29 @@ export function ReceptionModal({
               onChange={(e) => setZone(e.target.value)}
               placeholder="Zona declarada"
             />
+          </label>
+          <label>
+            Especie
+            <select
+              value={species}
+              onChange={(event) => setSpecies(event.target.value as Species)}
+            >
+              {(
+                [
+                  "Erizo",
+                  "Loco",
+                  "Jaiba",
+                  "Centolla",
+                  "Pulpo",
+                  "Pescado",
+                  "Algas",
+                ] as Species[]
+              ).map((item) => (
+                <option value={item} key={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             Peso bruto (kg)
