@@ -1,6 +1,6 @@
 import { getSql } from "./_db.js";
+import { isAdminAuthorized, isAdminConfigured } from "./_admin.js";
 
-declare const process: { env: Record<string, string | undefined> };
 type Request = {
   method?: string;
   body?: unknown;
@@ -15,29 +15,16 @@ type OperatorInput = { name?: unknown; email?: unknown; role?: unknown };
 const roles = new Set(["admin", "operations", "finance", "quality", "viewer"]);
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function authorized(request: Request) {
-  const expected = process.env.ADMIN_SETUP_TOKEN;
-  const header = request.headers?.authorization;
-  const supplied =
-    (Array.isArray(header) ? header[0] : header)?.replace(/^Bearer\s+/i, "") ??
-    "";
-  if (!expected || expected.length < 24 || !supplied) return false;
-  let difference = expected.length ^ supplied.length;
-  for (let index = 0; index < expected.length; index++)
-    difference |= expected.charCodeAt(index) ^ (supplied.charCodeAt(index) || 0);
-  return difference === 0;
-}
-
 export default async function handler(request: Request, response: Response) {
   response.setHeader("Cache-Control", "no-store");
-  if (!process.env.ADMIN_SETUP_TOKEN || process.env.ADMIN_SETUP_TOKEN.length < 24)
+  if (!isAdminConfigured())
     return response
       .status(503)
       .json({
         ok: false,
         error: "Panel de operadores pendiente de activación",
       });
-  if (!authorized(request))
+  if (!isAdminAuthorized(request))
     return response
       .status(401)
       .json({ ok: false, error: "Autorización administrativa inválida" });
