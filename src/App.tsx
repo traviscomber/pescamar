@@ -11,6 +11,7 @@ import { Imports } from "./pages/Imports";
 import { PlantControl } from "./pages/PlantControl";
 import { ProductionLines } from "./pages/ProductionLines";
 import { Receptions } from "./pages/Receptions";
+import { Operators } from "./pages/Operators";
 import { useLots } from "./store";
 export default function App() {
   const [modalOpen, setModalOpen] = useState(false);
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="/creditos" element={<Credits />} />
         <Route path="/aprobaciones" element={<Approvals />} />
         <Route path="/modulos" element={<Modules />} />
+        <Route path="/operadores" element={<Operators />} />
         <Route path="/lineas" element={<ProductionLines />} />
         <Route
           path="/recepciones"

@@ -98,6 +98,16 @@ create table approval_actions (
   acted_at timestamptz not null default now()
 );
 
+create table operators (
+  id uuid primary key default gen_random_uuid(),
+  full_name text not null check (length(trim(full_name)) >= 2),
+  email text not null,
+  role text not null check (role in ('admin', 'operations', 'finance', 'quality', 'viewer')),
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists plant_import_batches (
   id text primary key,
   file_name text not null,
@@ -122,6 +132,7 @@ create index receptions_supplier_received_idx on receptions (supplier_id, receiv
 create index credit_requests_account_status_idx on credit_requests (account_id, status, requested_at desc);
 create index credit_movements_account_date_idx on credit_movements (account_id, occurred_at desc);
 create index approval_actions_entity_idx on approval_actions (entity_type, entity_id, acted_at desc);
+create unique index operators_email_unique_idx on operators (lower(email));
 create index if not exists plant_import_batches_published_at_idx on plant_import_batches (published_at desc);
 
 create view credit_account_balances as
