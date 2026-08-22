@@ -2,6 +2,7 @@ import { Building2, ShieldCheck, UserPlus, Users } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "../auth";
 import { PageHeader } from "../components/PageHeader";
+import { SecurityAudit } from "../components/SecurityAudit";
 import { plants } from "../plants";
 import "./operator-permissions.css";
 
@@ -105,7 +106,7 @@ export function Operators() {
       <PageHeader
         eyebrow="Administración"
         title="Operadores y permisos"
-        description="Identidad, rol y alcance por planta aplicados por el servidor."
+        description="Identidad, rol, alcance por planta y actividad de acceso aplicados por el servidor."
       />
       <section className="operator-layout">
         <form className="panel operator-form" onSubmit={add}>
@@ -121,7 +122,7 @@ export function Operators() {
           </label>
           <label>
             Contraseña temporal
-            <input type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={12} />
+            <input type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={12} maxLength={256} />
           </label>
           <label>
             Rol
@@ -204,6 +205,7 @@ export function Operators() {
           )}
         </section>
       </section>
+      <SecurityAudit />
     </>
   );
 }
