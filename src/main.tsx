@@ -8,4 +8,5 @@ import './premium.css'
 import './control.css'
 import './planning.css'
 import './login-premium.css'
+import './frida.css'
 createRoot(document.getElementById('root')!).render(<StrictMode><AuthProvider><BrowserRouter><App /></BrowserRouter></AuthProvider></StrictMode>)
