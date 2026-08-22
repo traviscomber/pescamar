@@ -2,32 +2,13 @@
 
 ## Objetivo
 
-Construir en 12 semanas un centro de control ejecutivo para visualizar el estado de las seis plantas de Pescamar a partir de importaciones periódicas de Excel. El MVP no reemplaza los sistemas operacionales: normaliza sus planillas y transforma los datos en producción, inventario y alertas comparables.
+Construir un centro de control ejecutivo y operacional para las seis plantas de Pescamar, con PostgreSQL/Neon como persistencia canónica, importaciones auditables, recepción trazable, decisiones por excepción y separación efectiva de permisos.
 
 ## Promesa del producto
 
-> Toda la operación de Pescamar, en una sola pantalla.
+> Toda la operación autorizada de Pescamar, en una sola pantalla.
 
-Cada semáforo debe explicar qué ocurre, por qué ocurre, desde cuándo y cuál fue el archivo que originó el dato.
-
-## Alcance del MVP
-
-- Mosaico ejecutivo de seis plantas con semáforos explicables.
-- Detalle por planta y producto.
-- Producción, cumplimiento de meta e inventario resumido.
-- Alertas de operación, calidad y vigencia de datos.
-- Importación Excel con validación, vista previa e historial.
-- Comparación multiplanta y filtros por período.
-- Trazabilidad de archivo, fecha y responsable.
-- Autenticación y permisos básicos.
-
-## Fuera del MVP
-
-- ERP financiero, facturación, compras y ventas.
-- Inventario transaccional por movimiento.
-- Órdenes de producción operadas desde el sistema.
-- IoT, maquinaria, Sernapesca y UniGrade productivo.
-- HACCP completo, logística y aprobaciones complejas.
+Cada estado debe explicar qué ocurre, por qué ocurre, desde cuándo y cuál fue la evidencia que originó el dato.
 
 ## Plantas iniciales
 
@@ -40,75 +21,76 @@ Cada semáforo debe explicar qué ocurre, por qué ocurre, desde cuándo y cuál
 | Aqua Austral | Producto terminado | Merluza austral, congrio, salmón de cultivo |
 | Natales | Producto terminado | Erizos, centolla, centollón, ostiones |
 
-## Semáforos
+## Estado de ingeniería
 
-- **Verde:** datos vigentes, cumplimiento dentro de rango y sin alertas críticas.
-- **Amarillo:** desviación moderada, inventario bajo, alerta pendiente o actualización atrasada.
-- **Rojo:** incumplimiento crítico, detención, bloqueo de calidad o desviación grave.
-- **Gris:** sin datos vigentes o importación fallida.
+### Persistencia y trazabilidad
 
-El estado general se calcula desde reglas y siempre presenta una causa legible.
+- [x] PostgreSQL/Neon como persistencia operacional.
+- [x] Importación XLSX/XLS/CSV con validación, preview, historial y rollback controlado.
+- [x] Snapshot compartido multiplanta.
+- [x] Recepciones con planta, guía, peso bruto, tara, drenado, kilos aceptados y evidencia HTTPS trazable.
+- [x] Filtrado de snapshots, recepciones, liquidaciones e historial por alcance de planta.
+- [x] Recepciones históricas sin planta confirmada restringidas a Administración.
 
-## Plan de 12 semanas
+### Finanzas y decisiones
 
-### Hito 1 — Centro de control (semanas 1–3)
-
-- Modelo inicial de plantas, productos, KPIs y alertas.
-- Mosaico ejecutivo responsive.
-- Semáforos explicables y última actualización.
-- Detalle básico de cada planta.
-- Datos demostrativos coherentes para presentación.
-
-**Criterio de aceptación:** desde la portada se identifican en menos de diez segundos las plantas que requieren atención y la causa principal.
-
-### Hito 2 — Importación y normalización (semanas 4–7)
-
-- [x] Plantilla canónica descargable en CSV compatible con Excel.
-- [x] Carga XLSX/XLS/CSV, validación por fila y vista previa.
-- [x] Publicación local de snapshots y recálculo inmediato de semáforos.
-- Normalización planta–producto–período.
-- [x] Historial local de los últimos 10 lotes y reversión de la publicación más reciente.
-- [x] Archivo original, responsable y fecha de carga en la trazabilidad demostrativa.
-
-**Criterio de aceptación:** un archivo válido actualiza KPIs y semáforos; uno inválido entrega errores accionables sin alterar datos publicados.
-
-### Hito 3 — Inteligencia operacional (semanas 8–10)
-
-- Reglas configurables de cumplimiento, rendimiento, merma e inventario.
-- Alertas con gravedad, causa y estado.
-- Comparador entre plantas y períodos.
-- Tendencias y filtros ejecutivos.
-
-**Criterio de aceptación:** cada alerta se puede rastrear hasta su indicador y archivo de origen.
-
-### Hito 4 — Piloto y salida controlada (semanas 11–12)
-
-- Autenticación y permisos básicos.
-- Pruebas con planillas de las seis plantas.
-- Auditoría, respaldo y observabilidad.
-- Capacitación, documentación y despliegue.
-
-**Criterio de aceptación:** piloto estable con las seis plantas, importaciones reproducibles y responsables capacitados.
-
-## Riesgos principales
-
-1. Variaciones entre las planillas reales de cada planta.
-2. Definiciones distintas de producción, inventario y rendimiento.
-3. Ausencia de metas para calcular los semáforos.
-4. Datos atrasados o sin responsable identificable.
-5. Expansión del alcance hacia un ERP completo durante el MVP.
-
-## Estado actual
-
-- [x] Persistencia operacional en PostgreSQL/Neon.
-- [x] Recepciones con peso guía, peso recibido, tara, drenado y kilos aceptados.
 - [x] Créditos y anticipos vinculados a proveedores, con movimientos auditables.
 - [x] Liquidaciones desde recepciones aprobadas, precio por kilo y descuentos.
-- [x] Recuperación automática de anticipos al aprobar una liquidación.
-- [x] Bandeja única de decisiones con aprobación o rechazo y comentario obligatorio.
-- [x] Operadores y roles para separar operación, finanzas y administración.
-- [x] Importación y consulta de la fuente canónica 2025.
+- [x] Recuperación automática e idempotente de anticipos al aprobar una liquidación.
+- [x] Bandeja de decisiones con comentario obligatorio e identidad derivada de la sesión.
+- [x] Visibilidad de decisiones separada por rol: recepción para Operaciones/Calidad; anticipos y liquidaciones para Finanzas/Administración.
 
-## Próximo incremento
+### Identidad y autorización
 
-Cerrar el piloto con identidad individual, matriz de permisos por planta, evidencia documental y pruebas de aceptación con los cinco operadores reales. Después del piloto, incorporar clasificación visual por calibre y color como un módulo independiente, sin mezclarlo con el flujo financiero ya estabilizado.
+- [x] Login individual y sesiones con cookie segura.
+- [x] Roles `admin`, `operations`, `quality`, `finance` y `viewer`.
+- [x] Matriz efectiva de permisos por planta aplicada por servidor.
+- [x] Administración de alcance por planta desde Operadores.
+- [x] Navegación y acciones de la UI alineadas con rol como defensa adicional; el servidor sigue siendo la autoridad.
+- [x] Bootstrap de primer administrador de una sola vez.
+- [x] Throttling de login y auditoría de autenticación sin almacenar IP/correo en texto claro.
+
+### Calidad y release
+
+- [x] Build de producción incluye TypeScript frontend y Vercel Functions.
+- [x] GitHub Actions ejecuta `npm ci`, ESLint y build en PRs y `main`.
+- [x] Lockfile reproducible; el primer gate ya detectó y obligó a corregir errores React reales.
+- [x] `npm ci` reporta 0 vulnerabilidades conocidas en el gate actual.
+- [x] Vercel Preview se usa como gate de integración antes de mergear.
+
+## Migraciones canónicas
+
+El esquema versionado actual llega hasta:
+
+1. `001_core.sql`
+2. `002_settlement_workflow.sql`
+3. `003_operator_auth.sql`
+4. `004_reception_plant_evidence.sql`
+5. `005_auth_abuse_audit.sql`
+
+Las compatibilidades idempotentes de runtime para cambios aditivos permiten un arranque seguro, pero no sustituyen la confirmación explícita de las migraciones canónicas en Neon.
+
+## Gate de piloto
+
+La ingeniería desplegada no equivale todavía a aceptación humana del piloto. El checklist autoritativo está en `PILOT_ACCEPTANCE.md`.
+
+Pendiente antes de declarar el piloto **PASS**:
+
+- [ ] Confirmar en Neon que 001–005 están aplicadas canónicamente.
+- [ ] Confirmar o crear el primer administrador real.
+- [ ] Crear al menos cinco identidades reales para Administración, Operaciones, Calidad, Finanzas y Lectura/Gerencia.
+- [ ] Asignar roles y plantas según definición entregada por Pescamar, sin inferirlos.
+- [ ] Ejecutar pruebas cruzadas de autorización por rol y planta.
+- [ ] Ejecutar el escenario de rate-limit con una cuenta de QA autorizada, no con una cuenta operativa.
+- [ ] Completar un flujo real recepción → aprobación → liquidación → recuperación de anticipo.
+- [ ] Verificar que no existan errores runtime nuevos después de la prueba de aceptación.
+
+**Estado de release:** `HOLD — ingeniería desplegada y gates automáticos verdes; aceptación autenticada del piloto pendiente`.
+
+## Backlog posterior al piloto
+
+- Clasificación visual por calibre y color como módulo separado del flujo financiero.
+- Reglas configurables de rendimiento, merma e inventario con evidencia canónica.
+- Comparador multiplanta y tendencias históricas cuando exista cobertura de datos suficiente.
+- Integraciones adicionales sólo cuando exista fuente real y contrato de datos verificable.
+- Optimización del bundle de Excel (`exceljs`) sin ocultar el warning actual.
