@@ -1,8 +1,10 @@
 import {
   AlertTriangle,
   ArrowLeft,
+  ArrowRight,
   Boxes,
   CheckCircle2,
+  Clock3,
   FileSpreadsheet,
   Link2Off,
   PackageCheck,
@@ -98,21 +100,12 @@ export function PlantControl() {
         </div>
       ) : null}
       <PageHeader
-        eyebrow="Contexto de trabajo"
-        title="Selecciona tu planta"
-        description="La aplicación mostrará únicamente la operación del centro seleccionado. Puedes cambiarlo si tu perfil tiene acceso a más de uno."
+        eyebrow="Red operacional"
+        title="Plantas"
+        description="Selecciona una planta para revisar su operación, productos y alertas."
       />
-      <section className="panel plant-scope-gate">
-        <PlantScopeSelector plants={plants} value="" onChange={(id) => {
-          localStorage.setItem("pescamar-active-plant", id);
-          navigate(`/plantas/${id}`);
-        }} />
-        <div>
-          <span className="overline teal">Acceso corporativo</span>
-          <h2>Una operación a la vez</h2>
-          <p>El alcance definitivo quedará ligado al operador autenticado. La vista consolidada se reserva para Gerencia.</p>
-        </div>
-        <Link className="button secondary" to="/importaciones"><FileSpreadsheet size={16}/>Administrar fuentes</Link>
+      <section className="plant-grid corporate-plant-grid">
+        {plants.map((plant) => <PlantCard plant={plant} key={plant.id} />)}
       </section>
       <PlantImportModal
         open={importOpen}
@@ -122,6 +115,24 @@ export function PlantControl() {
       />
     </>
   );
+}
+
+function PlantCard({ plant }: { plant: PlantState }) {
+  const operational = isOperationalPlant(plant);
+  const progress = operational && plant.targetKg
+    ? Math.min(100, Math.round((plant.productionKg / plant.targetKg) * 100))
+    : null;
+  return <Link className={`panel plant-card corporate-plant-card status-${operational ? plant.status : "offline"}`} to={`/plantas/${plant.id}`}>
+    <header>
+      <div className={`plant-signal ${operational ? plant.status : "offline"}`}><span /></div>
+      <div><span className="overline">{plant.mode}</span><h2>{plant.name}</h2><small>{plant.location}</small></div>
+      <ArrowRight size={18} />
+    </header>
+    <div className="plant-status-copy"><b>{operational ? plant.statusLabel : "Sin datos publicados"}</b><span>{operational ? plant.statusReason : "Fuente operacional pendiente de vinculación."}</span></div>
+    {operational ? <div className="plant-kpis"><div><small>Producción</small><b>{kg(plant.productionKg)}</b></div><div><small>Cumplimiento</small><b>{progress}%</b></div><div><small>Alertas</small><b>{plant.alerts.length}</b></div></div> : null}
+    <div className="product-tags">{plant.products.slice(0,3).map((product)=><span key={product}>{product}</span>)}</div>
+    <footer><span>{operational ? <><Clock3 size={13}/>{plant.updatedAt}</> : <><Link2Off size={13}/>Fuente no vinculada</>}</span><span>Ver planta <ArrowRight size={13}/></span></footer>
+  </Link>
 }
 
 function PlantScopeSelector({plants,value,onChange}:{plants:PlantState[];value:string;onChange:(id:string)=>void}) {
