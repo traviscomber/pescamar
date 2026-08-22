@@ -14,7 +14,8 @@ export function ReceptionModal({
   const [supplier, setSupplier] = useState(""),
     [zone, setZone] = useState("");
   const [species, setSpecies] = useState<Species>("Erizo");
-  const [gross, setGross] = useState(100),
+  const [guide, setGuide] = useState(100),
+    [gross, setGross] = useState(100),
     [tare, setTare] = useState(6),
     [drained, setDrained] = useState(87),
     [temperature, setTemperature] = useState(4.2),
@@ -44,6 +45,7 @@ export function ReceptionModal({
         supplier,
         initials,
         zone,
+        guide,
         gross,
         tare,
         drained,
@@ -151,6 +153,19 @@ export function ReceptionModal({
             </select>
           </label>
           <label>
+            Peso guía (kg)
+            <div className="input-icon">
+              <Scale size={16} />
+              <input
+                type="number"
+                min="0"
+                step=".1"
+                value={guide}
+                onChange={(e) => setGuide(+e.target.value)}
+              />
+            </div>
+          </label>
+          <label>
             Peso bruto (kg)
             <div className="input-icon">
               <Scale size={16} />
@@ -218,6 +233,10 @@ export function ReceptionModal({
           <div>
             <small>Merma calculada</small>
             <b className={loss > 18 ? "negative" : ""}>{loss.toFixed(1)}%</b>
+          </div>
+          <div>
+            <small>Diferencia sobre guía</small>
+            <b className={accepted < guide ? "negative" : ""}>{(accepted - guide).toFixed(1)} kg</b>
           </div>
           <div>
             <small>Validación</small>
