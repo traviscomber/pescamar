@@ -36,7 +36,7 @@
 .panel{padding:20px}
 .button{min-height:40px;border-radius:7px;padding:9px 14px;box-shadow:none!important}
 .button.primary:hover{transform:none}
-.button:focus-visible,.icon-btn:focus-visible,.side-nav a:focus-visible,.queue-row:focus-visible,.alert-row:focus-visible,.data-table button:focus-visible,.command-action:focus-visible{outline:none;box-shadow:var(--frida-focus)}
+.button:focus-visible,.icon-btn:focus-visible,.side-nav a:focus-visible,.queue-row:focus-visible,.alert-row:focus-visible,.data-table button:focus-visible,.command-action:focus-visible,.planning-candidates button:focus-visible,.compact-ledger button:focus-visible,.approval-card input:focus-visible{outline:none;box-shadow:var(--frida-focus)}
 
 /* Operational home: one dominant answer, secondary evidence quiet */
 .command-deck{border-radius:12px!important;box-shadow:none!important}
@@ -71,7 +71,7 @@
 /* Dense operational workspaces: put work before analysis */
 .production-workspace{margin-top:0;order:-1}
 .balance-panel,.insight-pair{margin-top:20px}
-.balance-panel{background:color-mix(in srgb,var(--surface) 94%,var(--surface-2));}
+.balance-panel{background:color-mix(in srgb,var(--surface) 94%,var(--surface-2))}
 .insight-pair .panel{background:transparent}
 .insight-pair{border-top:1px solid var(--frida-rule);padding-top:20px}
 .production-line-list{display:grid;gap:8px}
@@ -85,12 +85,58 @@
 .summary-strip small{font-size:8px;text-transform:uppercase;letter-spacing:.07em}
 .summary-strip b{font-size:16px;margin-top:3px}
 
+/* Compact context strip used by planning and executive flows */
+.operational-strip{display:grid;grid-template-columns:minmax(120px,.7fr) minmax(160px,1fr) minmax(240px,1.4fr);gap:0;margin:0 0 18px;border-top:1px solid var(--frida-rule);border-bottom:1px solid var(--frida-rule)}
+.operational-strip>div{padding:13px 20px 13px 0;margin-right:20px;border-right:1px solid var(--frida-rule);display:grid;align-content:center;gap:3px;min-width:0}
+.operational-strip>div:last-child{border-right:0;margin-right:0}
+.operational-strip small{font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.operational-strip b{font-size:18px;letter-spacing:-.025em}
+.operational-strip span{font-size:9px;color:var(--muted);line-height:1.4}
+.planning-workspace{padding-top:18px}
+.planning-order{border-color:var(--frida-rule)!important;box-shadow:none!important}
+.planning-order>header{padding-bottom:12px}
+.planning-candidates button{min-height:62px;border-radius:7px!important;box-shadow:none!important;transition:background-color .12s ease}
+.planning-candidates button:hover{background:color-mix(in srgb,var(--surface-2) 72%,transparent)}
+
 /* Inventory: locations are the work; totals are supporting context */
 .signal-grid{gap:8px;margin:12px 0 18px}
 .signal-card{padding:14px 16px;gap:5px;background:transparent}
 .signal-card>b{font-size:21px}
 .signal-card>small{line-height:1.4}
 .compact-ledger button{min-height:56px}
+
+/* Decisions: one clear object, one required rationale, two explicit outcomes */
+.decision-toolbar{border-top:1px solid var(--frida-rule);border-bottom:1px solid var(--frida-rule);padding:10px 0!important;margin-bottom:16px!important;background:transparent!important}
+.approval-list{display:grid;gap:10px}
+.approval-card-v2{grid-template-columns:32px minmax(0,1fr)!important;padding:18px!important}
+.approval-symbol{width:30px!important;height:30px!important;border-radius:6px!important}
+.approval-copy header{align-items:flex-start!important}
+.approval-copy h2{font-size:16px!important;letter-spacing:-.02em}
+.approval-copy>p{max-width:780px;line-height:1.5}
+.approval-meta{padding:8px 0!important;border-top:1px solid var(--frida-rule);border-bottom:1px solid var(--frida-rule)}
+.decision-comment{margin-top:12px}
+.decision-actions{justify-content:flex-end!important;padding-top:10px}
+.decision-actions .decision{min-height:38px;border-radius:7px!important}
+
+/* Credits: accounting reads as a ledger, not a card wall */
+.credit-summary{display:flex!important;gap:0!important;border-top:1px solid var(--frida-rule);border-bottom:1px solid var(--frida-rule);margin-bottom:18px;overflow:auto}
+.credit-summary>article{min-width:190px;flex:1;padding:12px 18px 12px 0!important;margin-right:18px;border:0!important;border-right:1px solid var(--frida-rule)!important;border-radius:0!important;box-shadow:none!important;background:transparent!important}
+.credit-summary>article:last-child{border-right:0!important;margin-right:0}
+.credit-summary svg{width:16px;height:16px}
+.credit-summary b{font-size:17px!important;letter-spacing:-.02em}
+.credit-summary em{font-size:8px!important}
+.credit-layout{align-items:start}
+.settlement-card{background:transparent!important;box-shadow:none!important}
+.credit-policy{margin-top:14px;background:transparent!important;box-shadow:none!important}
+
+/* Daily close: result first, evidence second, closing action unmistakable */
+.close-grid{gap:10px!important}
+.close-grid>.panel{box-shadow:none!important}
+.close-lines p{min-height:38px;border-bottom-color:var(--frida-rule)!important}
+.daily-close-action{margin-top:12px;border-width:1px 0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
+.daily-close-action h2{font-size:18px;letter-spacing:-.02em}
+.daily-close-action p{max-width:680px;line-height:1.5}
+.close-form textarea{min-height:78px}
 
 /* Timeline: reduce card feeling and make the sequence dominant */
 .timeline-overview{gap:1px!important;background:var(--frida-rule);border:1px solid var(--frida-rule);border-radius:9px!important;overflow:hidden}
@@ -125,15 +171,18 @@ label{line-height:1.35}
   .topbar{padding:0 16px;height:58px}
   .page-header{display:grid;gap:14px;margin-bottom:18px}
   .page-header h1{font-size:31px}
-  .page-actions{width:100%}
+  .page-actions{width:100%;flex-wrap:wrap}
   .page-actions .button{flex:1}
   .command-deck{padding:20px!important}
   .command-metrics{grid-template-columns:repeat(3,minmax(0,1fr))!important;width:100%}
   .rule-note{display:none}
   .data-table th,.data-table td{padding-left:12px;padding-right:12px}
   .summary-strip div{min-width:132px}
+  .operational-strip{grid-template-columns:1fr 1fr}
+  .operational-strip>div:last-child{grid-column:1/-1;border-top:1px solid var(--frida-rule);border-right:0}
   .timeline-overview{grid-template-columns:1fr 1fr!important}
   .timeline-toolbar{align-items:flex-start!important}
+  .credit-layout,.close-grid{grid-template-columns:1fr!important}
 }
 @media(max-width:620px){
   .main-content{padding:18px 14px 88px}
@@ -147,6 +196,17 @@ label{line-height:1.35}
   .signal-card{grid-template-columns:1fr auto;align-items:center}
   .signal-card>span,.signal-card>small{grid-column:1}
   .signal-card>b{grid-column:2;grid-row:1/3;text-align:right}
+  .operational-strip{grid-template-columns:1fr;margin-bottom:14px}
+  .operational-strip>div{border-right:0;border-bottom:1px solid var(--frida-rule);margin-right:0;padding:10px 0}
+  .operational-strip>div:last-child{grid-column:auto;border-bottom:0;border-top:0}
+  .planning-order>header{display:grid!important;gap:6px}
+  .planning-candidates button{grid-template-columns:28px minmax(0,1fr) auto!important}
+  .planning-candidates button em{grid-column:2!important}
+  .approval-card-v2{grid-template-columns:1fr!important}
+  .approval-symbol{display:none!important}
+  .decision-actions{display:grid!important;grid-template-columns:1fr 1fr}
+  .credit-summary{margin-left:-2px;margin-right:-2px}
+  .credit-summary>article{min-width:165px}
   .timeline-overview{grid-template-columns:1fr!important}
   .timeline-overview article:nth-child(n+3){display:none}
   .timeline-event{grid-template-columns:32px minmax(0,1fr)!important}
