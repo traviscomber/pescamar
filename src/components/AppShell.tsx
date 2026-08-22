@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   Menu,
   Moon,
+  ReceiptText,
   Settings2,
   Sun,
   X,
@@ -27,6 +28,7 @@ const navigation = [
       { to: "/aprobaciones", label: "Decisiones", icon: CheckCheck },
       { to: "/recepciones", label: "Recepciones", icon: Boxes },
       { to: "/creditos", label: "Créditos y anticipos", icon: Landmark },
+      { to: "/liquidaciones", label: "Liquidaciones", icon: ReceiptText },
     ],
   },
 ];
@@ -74,6 +76,8 @@ export function AppShell({
               ? "Producción"
               : pathname.startsWith("/creditos")
                 ? "Créditos y anticipos"
+                : pathname.startsWith("/liquidaciones")
+                  ? "Liquidaciones"
                 : pathname.startsWith("/importaciones")
                   ? "Importaciones"
                   : pathname.startsWith("/operacion-2025")
