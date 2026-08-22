@@ -10,7 +10,7 @@ const access:Record<string,AppRole[]|"all">={
   "/creditos":["admin","finance"],
   "/liquidaciones":["admin","finance"],
   "/importaciones":["admin","operations"],
-  "/operadores":["admin"],
+  "/operadores":["admin","operations"],
   "/modulos":["admin"],
 };
 
