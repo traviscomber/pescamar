@@ -1,23 +1,11 @@
 import {createContext,useContext,useEffect,useMemo,useState,type ReactNode} from 'react'
 import {HistoricalLotDrawer,type HistoricalRecord} from './HistoricalLotDrawer'
+import {LiveLotDrawer} from './LiveLotDrawer'
 
 export type HistorySummary={total:string|number;operational:string|number;voids:string|number;flagged?:string|number;guide_kg:string|number|null;received_kg:string|number|null;first_event_date:string|null;last_event_date:string|null}
 type HistoryPayload={records?:HistoricalRecord[];summary?:HistorySummary;error?:string}
-type Lot360ContextValue={records:HistoricalRecord[];summary:HistorySummary|null;loading:boolean;error:string;openRecord:(record:HistoricalRecord)=>void;openBySourceRow:(sourceRow:number)=>void;close:()=>void}
+type Lot360ContextValue={records:HistoricalRecord[];summary:HistorySummary|null;loading:boolean;error:string;openRecord:(record:HistoricalRecord)=>void;openBySourceRow:(sourceRow:number)=>void;openLive:(receptionId:string)=>void;close:()=>void}
 const Lot360Context=createContext<Lot360ContextValue|null>(null)
-
 async function fetchHistory(){const response=await fetch('/api/history'),payload=await response.json() as HistoryPayload;if(!response.ok)throw new Error(payload.error??'No fue posible cargar la historia');return payload}
-
-export function Lot360Provider({children}:{children:ReactNode}){
-  const [records,setRecords]=useState<HistoricalRecord[]>([])
-  const [summary,setSummary]=useState<HistorySummary|null>(null)
-  const [loading,setLoading]=useState(true)
-  const [error,setError]=useState('')
-  const [selected,setSelected]=useState<HistoricalRecord|null>(null)
-  useEffect(()=>{let active=true;fetchHistory().then(payload=>{if(active){setRecords(payload.records??[]);setSummary(payload.summary??null)}}).catch(reason=>{if(active)setError(reason instanceof Error?reason.message:'No fue posible cargar la historia')}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[])
-  const bySourceRow=useMemo(()=>new Map(records.map(record=>[record.source_row,record])),[records])
-  const value=useMemo<Lot360ContextValue>(()=>({records,summary,loading,error,openRecord:setSelected,openBySourceRow:(sourceRow)=>{const record=bySourceRow.get(sourceRow);if(record)setSelected(record)},close:()=>setSelected(null)}),[records,summary,loading,error,bySourceRow])
-  return <Lot360Context.Provider value={value}>{children}<HistoricalLotDrawer record={selected} onClose={()=>setSelected(null)}/></Lot360Context.Provider>
-}
-
+export function Lot360Provider({children}:{children:ReactNode}){const [records,setRecords]=useState<HistoricalRecord[]>([]),[summary,setSummary]=useState<HistorySummary|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[selected,setSelected]=useState<HistoricalRecord|null>(null),[liveId,setLiveId]=useState<string|null>(null);useEffect(()=>{let active=true;fetchHistory().then(payload=>{if(active){setRecords(payload.records??[]);setSummary(payload.summary??null)}}).catch(reason=>{if(active)setError(reason instanceof Error?reason.message:'No fue posible cargar la historia')}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[]);const bySourceRow=useMemo(()=>new Map(records.map(record=>[record.source_row,record])),[records]);const close=()=>{setSelected(null);setLiveId(null)};const value=useMemo<Lot360ContextValue>(()=>({records,summary,loading,error,openRecord:(record)=>{setLiveId(null);setSelected(record)},openBySourceRow:(sourceRow)=>{const record=bySourceRow.get(sourceRow);if(record){setLiveId(null);setSelected(record)}},openLive:(receptionId)=>{setSelected(null);setLiveId(receptionId)},close}),[records,summary,loading,error,bySourceRow]);return <Lot360Context.Provider value={value}>{children}<HistoricalLotDrawer record={selected} onClose={close}/><LiveLotDrawer receptionId={liveId} onClose={close}/></Lot360Context.Provider>}
 export function useLot360(){const context=useContext(Lot360Context);if(!context)throw new Error('useLot360 debe usarse dentro de Lot360Provider');return context}
