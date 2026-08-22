@@ -1,0 +1,48 @@
+import { ArrowRight, Calculator, CheckCircle2, Landmark, LoaderCircle, LockKeyhole, ReceiptText } from "lucide-react";
+import { useMemo, useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
+import { PageHeader } from "../components/PageHeader";
+
+type Settlement = {id:string;status:'pending'|'approved'|'rejected';gross_amount_clp:string;other_deductions_clp:string;credit_recovery_clp:string;net_amount_clp:string|null;price_per_kg_clp:string;created_at:string;settled_at:string|null;created_by:string;approved_by:string|null;reception_number:string;guide_kg:string;accepted_kg:string;species:string;supplier:string};
+type Eligible = {id:string;reception_number:string;guide_kg:string;accepted_kg:string;species:string;received_at:string;supplier:string;credit_balance_clp:string};
+type Operator = {id:string;full_name:string;role:string};
+type Payload = {ok?:boolean;settlements?:Settlement[];eligible?:Eligible[];operators?:Operator[];error?:string};
+const money=(value:number)=>value.toLocaleString("es-CL",{style:"currency",currency:"CLP",maximumFractionDigits:0});
+const statusLabel={pending:"Pendiente",approved:"Aprobada",rejected:"Rechazada"} as const;
+
+export function Settlements(){
+  const [token,setToken]=useState(""),[unlocked,setUnlocked]=useState(false),[loading,setLoading]=useState(false),[saving,setSaving]=useState(false),[error,setError]=useState("");
+  const [settlements,setSettlements]=useState<Settlement[]>([]),[eligible,setEligible]=useState<Eligible[]>([]),[operators,setOperators]=useState<Operator[]>([]);
+  const [receptionId,setReceptionId]=useState(""),[price,setPrice]=useState(0),[deductions,setDeductions]=useState(0),[operatorId,setOperatorId]=useState(""),[comment,setComment]=useState("");
+  const selected=eligible.find(item=>item.id===receptionId);
+  const gross=selected?Math.round(Number(selected.accepted_kg)*price):0;
+  const payable=Math.max(0,gross-deductions);
+  const totals=useMemo(()=>settlements.reduce((acc,item)=>({gross:acc.gross+Number(item.gross_amount_clp),recovery:acc.recovery+Number(item.credit_recovery_clp),net:acc.net+Number(item.net_amount_clp??0)}),{gross:0,recovery:0,net:0}),[settlements]);
+
+  async function load(currentToken=token){
+    setLoading(true);setError("");
+    try{const response=await fetch("/api/settlements",{headers:{Authorization:`Bearer ${currentToken}`}});const payload=await response.json() as Payload;if(!response.ok)throw new Error(payload.error??"No fue posible cargar liquidaciones");setSettlements(payload.settlements??[]);setEligible(payload.eligible??[]);setOperators(payload.operators??[]);setReceptionId(current=>(payload.eligible??[]).some(item=>item.id===current)?current:(payload.eligible?.[0]?.id??""));setOperatorId(current=>(payload.operators??[]).some(item=>item.id===current)?current:(payload.operators?.[0]?.id??""));setUnlocked(true)}catch(cause){setError(cause instanceof Error?cause.message:"No fue posible cargar liquidaciones")}finally{setLoading(false)}
+  }
+  async function unlock(event:FormEvent){event.preventDefault();await load(token)}
+  async function submit(event:FormEvent){event.preventDefault();setSaving(true);setError("");try{const response=await fetch("/api/settlements",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${token}`},body:JSON.stringify({receptionId,pricePerKg:price,otherDeductions:deductions,operatorId,comment})});const payload=await response.json() as Payload;if(!response.ok)throw new Error(payload.error??"No fue posible crear la liquidación");setPrice(0);setDeductions(0);setComment("");await load()}catch(cause){setError(cause instanceof Error?cause.message:"No fue posible crear la liquidación")}finally{setSaving(false)}}
+
+  return <>
+    <PageHeader eyebrow="Cierre económico" title="Liquidaciones" description="Convierte recepciones aprobadas en pagos trazables y recupera anticipos sin modificar pesos ni precios."/>
+    {!unlocked?<section className="panel operator-unlock"><LockKeyhole/><div><h2>Acceso financiero protegido</h2><p>Las liquidaciones contienen precios, descuentos y saldos de pescadores.</p></div><form onSubmit={unlock}><input type="password" value={token} onChange={event=>setToken(event.target.value)} placeholder="Clave de administración" autoComplete="off" required/><button className="button primary" disabled={loading}>{loading?"Validando…":"Abrir liquidaciones"}</button></form>{error?<p className="form-error" role="alert">{error}</p>:null}</section>:
+    <>
+      <section className="settlement-summary"><Summary label="Liquidaciones" value={String(settlements.length)}/><Summary label="Monto bruto" value={money(totals.gross)}/><Summary label="Anticipos recuperados" value={money(totals.recovery)}/><Summary label="Pago neto aprobado" value={money(totals.net)}/></section>
+      {error?<div className="notice error" role="alert">{error}</div>:null}
+      <section className="settlement-layout">
+        <form className="panel settlement-builder" onSubmit={submit}><header className="panel-header"><div><span className="overline teal">Nueva liquidación</span><h2>Calcular desde recepción</h2></div><Calculator size={20}/></header>
+          {eligible.length?<><div className="form-grid"><label className="full-field">Recepción aprobada<select required value={receptionId} onChange={event=>setReceptionId(event.target.value)}>{eligible.map(item=><option value={item.id} key={item.id}>REC-{item.reception_number} · {item.supplier} · {Number(item.accepted_kg).toLocaleString("es-CL")} kg</option>)}</select></label><label>Precio por kg (CLP)<input type="number" min="1" step="1" required value={price||""} onChange={event=>setPrice(Number(event.target.value))}/></label><label>Otros descuentos (CLP)<input type="number" min="0" step="1" value={deductions||""} onChange={event=>setDeductions(Number(event.target.value))}/></label><label>Responsable financiero<select required value={operatorId} onChange={event=>setOperatorId(event.target.value)}>{operators.map(operator=><option value={operator.id} key={operator.id}>{operator.full_name}</option>)}</select></label><label>Comentario de cálculo<input required minLength={3} value={comment} onChange={event=>setComment(event.target.value)} placeholder="Precio acordado y respaldo"/></label></div>
+            <div className="settlement-calculation"><div><small>Peso guía</small><b>{Number(selected?.guide_kg??0).toLocaleString("es-CL")} kg</b></div><div><small>Peso aceptado</small><b>{Number(selected?.accepted_kg??0).toLocaleString("es-CL")} kg</b></div><div><small>Monto bruto</small><b>{money(gross)}</b></div><div><small>Antes de anticipo</small><b>{money(payable)}</b></div><div><small>Saldo documentado</small><b>{money(Number(selected?.credit_balance_clp??0))}</b></div></div>
+            <button className="button primary full" disabled={saving||!operators.length}>{saving?"Enviando…":"Enviar a aprobación"}<ArrowRight size={15}/></button></>:<div className="empty-state"><CheckCircle2 size={28}/><h3>Sin recepciones por liquidar</h3><p>Solo aparecen recepciones aprobadas que todavía no tienen liquidación.</p></div>}
+        </form>
+        <article className="panel settlement-history"><header className="panel-header"><h2>Historial real</h2><span>{loading?"Actualizando…":`${settlements.length} registros`}</span></header>{loading?<div className="empty-state"><LoaderCircle className="spin"/></div>:settlements.length?<div className="settlement-list">{settlements.map(item=><div key={item.id}><span className={`settlement-status ${item.status}`}><ReceiptText size={15}/></span><div><b>LIQ-{item.reception_number} · {item.supplier}</b><small>{item.species} · {money(Number(item.gross_amount_clp))} bruto</small></div><div className="numeric"><b>{item.net_amount_clp==null?"Por aprobar":money(Number(item.net_amount_clp))}</b><small>Recuperación {money(Number(item.credit_recovery_clp))}</small></div><em className={`status ${item.status==='pending'?'warning':item.status==='approved'?'success':'danger'}`}>{statusLabel[item.status]}</em></div>)}</div>:<div className="empty-state"><Landmark/><h3>Sin liquidaciones</h3><p>El historial comienza con la primera recepción aprobada y valorizada.</p></div>}</article>
+      </section>
+      <div className="settlement-next"><p>Las liquidaciones pendientes requieren aprobación y comentario de Finanzas o Administración.</p><Link className="button secondary" to="/aprobaciones">Ir a decisiones <ArrowRight size={14}/></Link></div>
+    </>}
+  </>
+}
+
+function Summary({label,value}:{label:string;value:string}){return <article><small>{label}</small><b>{value}</b></article>}
