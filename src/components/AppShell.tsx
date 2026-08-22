@@ -9,6 +9,7 @@ import {
   FileSpreadsheet,
   Landmark,
   LayoutDashboard,
+  LogOut,
   Menu,
   Moon,
   ReceiptText,
@@ -18,6 +19,7 @@ import {
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useEffect, useState, type ReactNode } from "react";
+import { useAuth } from "../auth";
 import { usePlatformStatus } from "../hooks/usePlatformStatus";
 
 const navigation = [
@@ -41,6 +43,14 @@ const secondaryNavigation = [
   { to: "/operadores", label: "Operadores", icon: Settings2 },
 ];
 
+const roleLabels = {
+  admin: "Administrador",
+  operations: "Operaciones",
+  finance: "Finanzas",
+  quality: "Calidad",
+  viewer: "Lectura",
+} as const;
+
 export function AppShell({
   children,
   onNewReception,
@@ -56,13 +66,16 @@ export function AppShell({
       ? "dark"
       : "light";
   });
-  const { pathname } = useLocation(),
-    { status } = usePlatformStatus();
+  const { operator, logout } = useAuth();
+  const { pathname } = useLocation();
+  const { status } = usePlatformStatus();
+
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     document.documentElement.style.colorScheme = theme;
     localStorage.setItem("pescamar-theme", theme);
   }, [theme]);
+
   const context =
     pathname === "/"
       ? "Operación de hoy"
@@ -78,13 +91,21 @@ export function AppShell({
                 ? "Créditos y anticipos"
                 : pathname.startsWith("/liquidaciones")
                   ? "Liquidaciones"
-                : pathname.startsWith("/importaciones")
-                  ? "Importaciones"
-                  : pathname.startsWith("/operacion-2025")
-                    ? "Fuente canónica"
-                    : pathname.startsWith("/operadores")
-                      ? "Operadores"
-                      : "Configuración";
+                  : pathname.startsWith("/importaciones")
+                    ? "Importaciones"
+                    : pathname.startsWith("/operacion-2025")
+                      ? "Fuente canónica"
+                      : pathname.startsWith("/operadores")
+                        ? "Operadores"
+                        : "Configuración";
+
+  const initials = operator?.fullName
+    .split(" ")
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase() || "PS";
+
   return (
     <div className="app-shell">
       <aside className={`sidebar ${mobileOpen ? "is-open" : ""}`}>
@@ -135,11 +156,16 @@ export function AppShell({
             </section>
           ))}
           <details className="nav-more">
-            <summary><Blocks size={18} /><span>Más módulos</span><ChevronDown size={14} /></summary>
+            <summary>
+              <Blocks size={18} />
+              <span>Más módulos</span>
+              <ChevronDown size={14} />
+            </summary>
             <div>
               {secondaryNavigation.map(({ to, label, icon: Icon }) => (
                 <NavLink key={to} to={to} onClick={() => setMobileOpen(false)}>
-                  <Icon size={18} /><span>{label}</span>
+                  <Icon size={18} />
+                  <span>{label}</span>
                 </NavLink>
               ))}
             </div>
@@ -149,9 +175,7 @@ export function AppShell({
         <div className="pilot-card">
           <span className="overline">Control por excepción</span>
           <b>Operación simplificada</b>
-          <p>
-            El sistema eleva solamente decisiones que necesitan criterio humano.
-          </p>
+          <p>El sistema eleva solamente decisiones que necesitan criterio humano.</p>
           <span className="n3-signature">N3URALIA / INTELLIGENCE SYSTEM</span>
         </div>
         <NavLink className="settings-link" to="/modulos">
@@ -189,19 +213,23 @@ export function AppShell({
               <span>
                 <b>{status?.ok ? "Plataforma activa" : "Conexión pendiente"}</b>
                 <small>
-                  {status?.persistence.database
-                    ? "Base conectada"
-                    : "PostgreSQL pendiente"}
+                  {status?.persistence.database ? "Base conectada" : "PostgreSQL pendiente"}
                 </small>
               </span>
             </NavLink>
-            <div className="operator-state">
-              <span>PS</span>
+            <button
+              className="operator-state operator-session-button"
+              type="button"
+              onClick={() => void logout()}
+              title="Cerrar sesión"
+            >
+              <span>{initials}</span>
               <div>
-                <b>Sesión operativa</b>
-                <small>Identidad por configurar</small>
+                <b>{operator?.fullName ?? "Sesión operativa"}</b>
+                <small>{operator ? roleLabels[operator.role] : "Operador"}</small>
               </div>
-            </div>
+              <LogOut size={14} />
+            </button>
           </div>
         </header>
         <main className="main-content">{children}</main>
