@@ -3,6 +3,7 @@ export type AppRole="admin"|"operations"|"finance"|"quality"|"viewer";
 const access:Record<string,AppRole[]|"all">={
   "/":"all",
   "/timeline":"all",
+  "/planificacion":["admin","operations","finance","viewer"],
   "/plantas":"all",
   "/lineas":"all",
   "/operacion-2025":"all",
@@ -10,6 +11,7 @@ const access:Record<string,AppRole[]|"all">={
   "/despachos-ventas":"all",
   "/ordenes-venta":["admin","operations","finance","viewer"],
   "/inventario":"all",
+  "/costos-transformacion":["admin","operations","finance","viewer"],
   "/cierre-diario":["admin","operations","finance","viewer"],
   "/aprobaciones":["admin","operations","finance","quality"],
   "/creditos":["admin","finance","operations"],
