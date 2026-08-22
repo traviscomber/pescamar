@@ -1,38 +1,28 @@
 import {
   AlertTriangle,
   ArrowLeft,
-  ArrowRight,
   Boxes,
-  Building2,
   CheckCircle2,
-  Clock3,
-  FileQuestion,
   FileSpreadsheet,
-  History,
   Link2Off,
   PackageCheck,
-  RotateCcw,
-  Scale,
   TrendingUp,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { PlantImportModal } from "../components/PlantImportModal";
 import { PageHeader } from "../components/PageHeader";
 import {
   fetchSharedPlantState,
   publishSharedPlantState,
-  revertSharedPlantState,
 } from "../plantApi";
 import {
   createImportBatch,
   isOperationalPlant,
-  type ImportBatch,
   type PlantState,
   type ValidatedImport,
 } from "../plantImport";
 import {
-  canonicalSource,
   plants as configuredPlants,
   type Plant,
 } from "../plants";
@@ -40,8 +30,8 @@ import {
 const kg = (value: number) => `${value.toLocaleString("es-CL")} kg`;
 export function PlantControl() {
   const { plantId } = useParams();
+  const navigate = useNavigate();
   const [plants, setPlants] = useState<PlantState[]>(configuredPlants);
-  const [history, setHistory] = useState<ImportBatch[]>([]);
   const [importOpen, setImportOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -51,7 +41,6 @@ export function PlantControl() {
       .then((state) => {
         if (!active) return;
         setPlants(state.plants ?? configuredPlants);
-        setHistory(state.history);
       })
       .catch((cause: unknown) => {
         if (active)
@@ -75,32 +64,20 @@ export function PlantControl() {
     const batch = createImportBatch(plants, rows, operator);
     await publishSharedPlantState(batch);
     setPlants(batch.resultingPlants);
-    setHistory((items) => [batch, ...items].slice(0, 10));
     setError("");
-  };
-  const revertLatest = async () => {
-    const batch = history.find((item) => !item.revertedAt);
-    if (!batch) return;
-    try {
-      const result = await revertSharedPlantState(batch.id);
-      setPlants(result.plants);
-      setHistory((items) =>
-        items.map((item) =>
-          item.id === batch.id
-            ? { ...item, revertedAt: new Date().toISOString() }
-            : item,
-        ),
-      );
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "No fue posible revertir",
-      );
-    }
   };
   const selected = plants.find((plant) => plant.id === plantId);
   if (selected)
     return (
       <>
+        <PlantScopeSelector
+          plants={plants}
+          value={selected.id}
+          onChange={(id) => {
+            localStorage.setItem("pescamar-active-plant", id);
+            navigate(`/plantas/${id}`);
+          }}
+        />
         <PlantDetail plant={selected} />
         <PlantImportModal
           open={importOpen}
@@ -109,25 +86,6 @@ export function PlantControl() {
           onPublish={publish}
         />
       </>
-    );
-  const linked = plants.filter(isOperationalPlant);
-  const totalProduction = linked.reduce(
-      (sum, plant) => sum + plant.productionKg,
-      0,
-    ),
-    totalTarget = linked.reduce((sum, plant) => sum + plant.targetKg, 0),
-    totalInventory = linked.reduce((sum, plant) => sum + plant.inventoryKg, 0);
-  const criticalCount = linked.reduce(
-      (sum, plant) =>
-        sum +
-        plant.alerts.filter((alert) => alert.severity === "Crítica").length,
-      0,
-    ),
-    attentionCount = linked.reduce(
-      (sum, plant) =>
-        sum +
-        plant.alerts.filter((alert) => alert.severity === "Atención").length,
-      0,
     );
   return (
     <>
@@ -140,96 +98,22 @@ export function PlantControl() {
         </div>
       ) : null}
       <PageHeader
-        eyebrow="Centro de control multiplanta"
-        title="Fuentes operacionales"
-        description="El tablero solo publica indicadores provenientes de archivos validados y asignados a una planta."
-        actions={
-          <button
-            className="button primary"
-            onClick={() => setImportOpen(true)}
-          >
-            <FileSpreadsheet size={16} />
-            Importar resumen
-          </button>
-        }
+        eyebrow="Contexto de trabajo"
+        title="Selecciona tu planta"
+        description="La aplicación mostrará únicamente la operación del centro seleccionado. Puedes cambiarlo si tu perfil tiene acceso a más de uno."
       />
-      <section className="plant-summary">
-        <Summary
-          icon={<Building2 />}
-          label="Plantas configuradas"
-          value={String(plants.length)}
-          note={`${linked.length} con datos publicados`}
-        />
-        <Summary
-          icon={<Scale />}
-          label="Producción publicada"
-          value={linked.length ? kg(totalProduction) : "—"}
-          note={
-            linked.length && totalTarget
-              ? `${Math.round((totalProduction / totalTarget) * 100)}% de cumplimiento global`
-              : "Sin datos calculados"
-          }
-        />
-        <Summary
-          icon={<Boxes />}
-          label="Inventario informado"
-          value={linked.length ? kg(totalInventory) : "—"}
-          note="Sólo fuentes publicadas"
-        />
-        <Summary
-          icon={<AlertTriangle />}
-          label="Alertas abiertas"
-          value={String(criticalCount + attentionCount)}
-          note={`${criticalCount} críticas · ${attentionCount} de atención`}
-          warning
-        />
-      </section>
-      <article className="panel source-banner">
-        <div className="source-icon">
-          <FileSpreadsheet size={22} />
-        </div>
+      <section className="panel plant-scope-gate">
+        <PlantScopeSelector plants={plants} value="" onChange={(id) => {
+          localStorage.setItem("pescamar-active-plant", id);
+          navigate(`/plantas/${id}`);
+        }} />
         <div>
-          <span className="overline teal">Fuente real disponible</span>
-          <h2>{canonicalSource.name}</h2>
-          <p>
-            {canonicalSource.records} registros · {canonicalSource.period}
-          </p>
+          <span className="overline teal">Acceso corporativo</span>
+          <h2>Una operación a la vez</h2>
+          <p>El alcance definitivo quedará ligado al operador autenticado. La vista consolidada se reserva para Gerencia.</p>
         </div>
-        <span className="status warning">{canonicalSource.status}</span>
-        <Link className="button secondary" to="/operacion-2025">
-          Ver datos
-        </Link>
-      </article>
-      <section className="control-heading">
-        <div>
-          <span className="overline teal">Red configurada</span>
-          <h2>Estado por planta</h2>
-        </div>
-        <div className="status-legend">
-          <span>
-            <i className="healthy" />
-            Normal
-          </span>
-          <span>
-            <i className="attention" />
-            Atención
-          </span>
-          <span>
-            <i className="critical" />
-            Crítica
-          </span>
-          <span>
-            <i className="offline" />
-            Sin fuente
-          </span>
-        </div>
+        <Link className="button secondary" to="/importaciones"><FileSpreadsheet size={16}/>Administrar fuentes</Link>
       </section>
-      <section className={`plant-grid ${linked.length ? "" : "all-offline"}`}>
-        {plants.map((plant) => (
-          <PlantCard plant={plant} key={plant.id} />
-        ))}
-      </section>
-      <ImportHistory history={history} onRevert={revertLatest} />
       <PlantImportModal
         open={importOpen}
         plants={configuredPlants}
@@ -240,113 +124,8 @@ export function PlantControl() {
   );
 }
 
-function PlantCard({ plant }: { plant: PlantState }) {
-  if (!isOperationalPlant(plant))
-    return (
-      <Link
-        className="panel plant-card status-offline"
-        to={`/plantas/${plant.id}`}
-      >
-        <header>
-          <div className="plant-signal offline">
-            <span />
-          </div>
-          <div>
-            <span className="overline">{plant.mode}</span>
-            <h2>{plant.name}</h2>
-            <small>{plant.location}</small>
-          </div>
-          <ArrowRight size={18} />
-        </header>
-        <div className="plant-status-copy">
-          <b>Sin datos publicados</b>
-          <span>
-            No existe una importación validada y asignada a esta planta.
-          </span>
-        </div>
-        <div className="plant-kpis">
-          <div>
-            <small>Producción</small>
-            <b>—</b>
-          </div>
-          <div>
-            <small>Cumplimiento</small>
-            <b>—</b>
-          </div>
-          <div>
-            <small>Inventario</small>
-            <b>—</b>
-          </div>
-        </div>
-        <div className="product-tags">
-          {plant.products.slice(0, 3).map((product) => (
-            <span key={product}>{product}</span>
-          ))}
-        </div>
-        <footer>
-          <span>
-            <Link2Off size={13} />
-            Fuente no vinculada
-          </span>
-          <span>0 alertas</span>
-        </footer>
-      </Link>
-    );
-  const progress = Math.min(
-    100,
-    Math.round((plant.productionKg / plant.targetKg) * 100),
-  );
-  return (
-    <Link
-      className={`panel plant-card status-${plant.status}`}
-      to={`/plantas/${plant.id}`}
-    >
-      <header>
-        <div className={`plant-signal ${plant.status}`}>
-          <span />
-        </div>
-        <div>
-          <span className="overline">{plant.mode}</span>
-          <h2>{plant.name}</h2>
-          <small>{plant.location}</small>
-        </div>
-        <ArrowRight size={18} />
-      </header>
-      <div className="plant-status-copy">
-        <b>{plant.statusLabel}</b>
-        <span>{plant.statusReason}</span>
-      </div>
-      <div className="plant-kpis">
-        <div>
-          <small>Producción</small>
-          <b>{kg(plant.productionKg)}</b>
-        </div>
-        <div>
-          <small>Cumplimiento</small>
-          <b>{progress}%</b>
-        </div>
-        <div>
-          <small>Inventario</small>
-          <b>{kg(plant.inventoryKg)}</b>
-        </div>
-      </div>
-      <div className="plant-progress">
-        <i style={{ width: `${progress}%` }} />
-      </div>
-      <div className="product-tags">
-        {plant.products.slice(0, 3).map((product) => (
-          <span key={product}>{product}</span>
-        ))}
-      </div>
-      <footer>
-        <span>
-          <Clock3 size={13} />
-          {plant.updatedAt}
-        </span>
-        <span>{plant.alerts.length} alertas</span>
-      </footer>
-    </Link>
-  );
+function PlantScopeSelector({plants,value,onChange}:{plants:PlantState[];value:string;onChange:(id:string)=>void}) {
+  return <label className="plant-scope-selector"><span>Centro operativo</span><select value={value} onChange={(event)=>onChange(event.target.value)}><option value="" disabled>Seleccionar planta</option>{plants.map((plant)=><option value={plant.id} key={plant.id}>{plant.name} · {plant.location}</option>)}</select></label>
 }
 
 function PlantDetail({ plant }: { plant: PlantState }) {
@@ -517,30 +296,6 @@ function ProductCatalog({ plant }: { plant: Plant }) {
     </article>
   );
 }
-function Summary({
-  icon,
-  label,
-  value,
-  note,
-  warning = false,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  note: string;
-  warning?: boolean;
-}) {
-  return (
-    <article className={warning ? "warning" : ""}>
-      <span>{icon}</span>
-      <div>
-        <small>{label}</small>
-        <b>{value}</b>
-        <em>{note}</em>
-      </div>
-    </article>
-  );
-}
 function DetailMetric({
   icon,
   label,
@@ -559,77 +314,5 @@ function DetailMetric({
       <strong>{value}</strong>
       <small>{note}</small>
     </article>
-  );
-}
-function ImportHistory({
-  history,
-  onRevert,
-}: {
-  history: ImportBatch[];
-  onRevert: () => void;
-}) {
-  const latest = history.find((item) => !item.revertedAt);
-  return (
-    <section className="panel local-import-history">
-      <header className="panel-header">
-        <div>
-          <span className="overline teal">Trazabilidad compartida</span>
-          <h2>Publicaciones de resumen</h2>
-        </div>
-        <span>{history.length} lotes</span>
-      </header>
-      {history.length ? (
-        <div className="history-list">
-          {history.slice(0, 5).map((batch) => (
-            <article
-              key={batch.id}
-              className={batch.revertedAt ? "reverted" : ""}
-            >
-              <span className="history-icon">
-                <History />
-              </span>
-              <div>
-                <b>{batch.fileName}</b>
-                <small>
-                  {batch.id} · {batch.periods.join(", ")} · {batch.rowCount}{" "}
-                  plantas
-                </small>
-              </div>
-              <div>
-                <b>
-                  {new Date(batch.publishedAt).toLocaleString("es-CL", {
-                    dateStyle: "short",
-                    timeStyle: "short",
-                  })}
-                </b>
-                <small>{batch.publishedBy}</small>
-              </div>
-              <em>{batch.revertedAt ? "Revertida" : "Publicada"}</em>
-            </article>
-          ))}
-        </div>
-      ) : (
-        <div className="history-empty">
-          <FileQuestion />
-          <span>
-            <b>Sin resúmenes publicados</b>
-            <small>
-              La carga cruda en Gobierno de datos se mantiene separada.
-            </small>
-          </span>
-        </div>
-      )}
-      <footer>
-        <span>Se conservan los últimos 10 lotes publicados en PostgreSQL.</span>
-        <button
-          className="button secondary"
-          disabled={!latest}
-          onClick={onRevert}
-        >
-          <RotateCcw size={14} />
-          Revertir última
-        </button>
-      </footer>
-    </section>
   );
 }
