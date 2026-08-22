@@ -95,10 +95,17 @@ export function AppShell({
     <div className="app-shell">
       <aside className={`sidebar ${mobileOpen ? "is-open" : ""}`}>
         <div className="brand">
-          <span className="brand-mark">N3</span>
-          <div>
-            <strong>Pescamar ERP</strong>
-            <small>Operado por N3uralia</small>
+          <span className="pescamar-symbol" aria-hidden="true">
+            <svg viewBox="0 0 52 34" role="img">
+              <path d="M4 17c8-8 17-12 27-10 5 1 10 4 15 10-5 6-10 9-15 10-10 2-19-2-27-10Z" />
+              <path d="M36 11c4-4 8-6 12-6-1 5-1 8 0 12-4 0-8-2-12-6Z" />
+              <circle cx="14" cy="15" r="1.35" />
+              <path className="brand-wave" d="M3 27c8-3 15-3 22 0s15 3 24-1" />
+            </svg>
+          </span>
+          <div className="brand-copy">
+            <strong className="brand-name">Pescamar</strong>
+            <small className="brand-product">Control operacional</small>
           </div>
           <button
             className="icon-btn mobile-close"
@@ -141,6 +148,7 @@ export function AppShell({
           <p>
             El sistema eleva solamente decisiones que necesitan criterio humano.
           </p>
+          <span className="n3-signature">N3URALIA / INTELLIGENCE SYSTEM</span>
         </div>
         <NavLink className="settings-link" to="/modulos">
           <Settings2 size={18} />
