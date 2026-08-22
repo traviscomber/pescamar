@@ -10,12 +10,16 @@ type SettlementInput = { receptionId?: unknown; pricePerKg?: unknown; otherDeduc
 export default async function handler(request: Request, response: Response) {
   response.setHeader("Cache-Control", "no-store");
   try {
-    const operator = await requireOperator(request, ["admin", "finance"]);
+    const operator = await requireOperator(request);
     if (!operator)
-      return response.status(401).json({ ok: false, error: "Sesión de Finanzas o Administración requerida" });
+      return response.status(401).json({ ok: false, error: "Sesión requerida" });
     await ensureReceptionSchema();
     if (request.method === "GET") return await listSettlements(response, operator);
-    if (request.method === "POST") return await createSettlement(request.body, response, operator);
+    if (request.method === "POST") {
+      if (!["admin", "finance"].includes(operator.role))
+        return response.status(403).json({ ok: false, error: "Solo Finanzas o Administración pueden crear liquidaciones" });
+      return await createSettlement(request.body, response, operator);
+    }
     response.setHeader("Allow", "GET, POST");
     return response.status(405).json({ ok: false, error: "Método no permitido" });
   } catch (error) {
