@@ -1,4 +1,6 @@
 import { requireOperator, type SessionOperator } from './_auth.js'
+import { hasPlantAccess } from './_plants.js'
+import { ensureReceptionSchema } from './_reception-schema.js'
 import { getSql } from './_db.js'
 
 type Request={method?:string;body?:unknown;headers?:Record<string,string|string[]|undefined>}
@@ -10,7 +12,8 @@ export default async function handler(request:Request,response:Response){
   try{
     const operator=await requireOperator(request,['admin','operations','finance','quality'])
     if(!operator)return response.status(401).json({ok:false,error:'Sesión autorizada requerida'})
-    if(request.method==='GET')return await listPending(response)
+    await ensureReceptionSchema()
+    if(request.method==='GET')return await listPending(response,operator)
     if(request.method==='POST')return await decide(request.body,response,operator)
     response.setHeader('Allow','GET, POST')
     return response.status(405).json({ok:false,error:'Método no permitido'})
@@ -21,20 +24,41 @@ export default async function handler(request:Request,response:Response){
   }
 }
 
-async function listPending(response:Response){
-  const rows=await getSql()`
+async function listPending(response:Response,operator:SessionOperator){
+  const rows=(await getSql()`
     select 'credit_request' as entity_type, cr.id as entity_id, 'ANT-'||cr.request_number as reference,
       'Anticipo solicitado' as title, p.legal_name||' · $'||to_char(cr.amount_clp,'FM999G999G999') as detail,
-      'Créditos' as module, cr.requested_by as owner, cr.requested_at as created_at
+      'Créditos' as module, cr.requested_by as owner, cr.requested_at as created_at, null::text as plant_id
     from credit_requests cr join credit_accounts ca on ca.id=cr.account_id join parties p on p.id=ca.party_id where cr.status='pending'
     union all
-    select 'reception',r.id,'REC-'||r.reception_number,'Recepción pendiente',p.legal_name||' · guía '||r.guide_kg||' kg · aceptado '||r.accepted_kg||' kg','Recepción',r.source,r.created_at
+    select 'reception',r.id,'REC-'||r.reception_number,'Recepción pendiente',p.legal_name||' · guía '||r.guide_kg||' kg · aceptado '||r.accepted_kg||' kg','Recepción',r.source,r.created_at,r.plant_id
     from receptions r join parties p on p.id=r.supplier_id where r.status='pending'
     union all
-    select 'settlement',s.id,'LIQ-'||r.reception_number,'Liquidación pendiente',p.legal_name||' · $'||to_char(s.gross_amount_clp,'FM999G999G999'),'Liquidaciones',s.created_by,s.created_at
+    select 'settlement',s.id,'LIQ-'||r.reception_number,'Liquidación pendiente',p.legal_name||' · $'||to_char(s.gross_amount_clp,'FM999G999G999'),'Liquidaciones',s.created_by,s.created_at,r.plant_id
     from settlements s join receptions r on r.id=s.reception_id join parties p on p.id=s.supplier_id where s.status='pending'
-    order by created_at asc limit 200`
-  return response.status(200).json({ok:true,items:rows})
+    order by created_at asc limit 300`) as Array<Record<string,unknown>>
+  const visible=rows.filter((row)=>{
+    const entityType=String(row.entity_type??'')
+    if(entityType==='credit_request')return ['admin','finance'].includes(operator.role)
+    if(entityType==='settlement'&&!['admin','finance'].includes(operator.role))return false
+    if(entityType==='reception'&&!['admin','operations','quality'].includes(operator.role))return false
+    if(operator.role==='admin')return true
+    return typeof row.plant_id==='string'&&hasPlantAccess(operator,row.plant_id)
+  }).slice(0,200)
+  return response.status(200).json({ok:true,items:visible})
+}
+
+async function entityPlantId(entityType:string,entityId:string){
+  const sql=getSql()
+  if(entityType==='reception'){
+    const rows=await sql`select plant_id from receptions where id=${entityId}::uuid limit 1`
+    return Array.isArray(rows)?(rows[0] as {plant_id?:unknown}|undefined)?.plant_id:undefined
+  }
+  if(entityType==='settlement'){
+    const rows=await sql`select r.plant_id from settlements s join receptions r on r.id=s.reception_id where s.id=${entityId}::uuid limit 1`
+    return Array.isArray(rows)?(rows[0] as {plant_id?:unknown}|undefined)?.plant_id:undefined
+  }
+  return undefined
 }
 
 async function decide(body:unknown,response:Response,operator:SessionOperator){
@@ -44,6 +68,10 @@ async function decide(body:unknown,response:Response,operator:SessionOperator){
   if(entityType==='credit_request'&&!['admin','finance'].includes(operator.role))return response.status(403).json({ok:false,error:'Solo Administración o Finanzas puede decidir anticipos'})
   if(entityType==='reception'&&!['admin','operations','quality'].includes(operator.role))return response.status(403).json({ok:false,error:'Tu rol no puede decidir recepciones'})
   if(entityType==='settlement'&&!['admin','finance'].includes(operator.role))return response.status(403).json({ok:false,error:'Solo Administración o Finanzas puede decidir liquidaciones'})
+  if(entityType!=='credit_request'&&operator.role!=='admin'){
+    const plantId=await entityPlantId(entityType,entityId)
+    if(typeof plantId!=='string'||!hasPlantAccess(operator,plantId))return response.status(403).json({ok:false,error:'La decisión está fuera de tu alcance de planta'})
+  }
   const sql=getSql()
   if(entityType==='credit_request')await sql`with changed as (update credit_requests set status=${decision}::workflow_status,approved_at=case when ${decision}='approved' then now() else null end where id=${entityId}::uuid and status='pending' returning id,account_id,amount_clp),movement as (insert into credit_movements(account_id,credit_request_id,kind,amount_clp,comment,created_by) select account_id,id,'advance',amount_clp,${comment},${operator.fullName} from changed where ${decision}='approved' on conflict(credit_request_id) where kind='advance' do nothing) insert into approval_actions(entity_type,entity_id,action,comment,acted_by) select ${entityType},id,${decision}::workflow_status,${comment},${operator.fullName} from changed`
   else if(entityType==='reception')await sql`with changed as (update receptions set status=${decision}::workflow_status where id=${entityId}::uuid and status='pending' returning id) insert into approval_actions(entity_type,entity_id,action,comment,acted_by) select ${entityType},id,${decision}::workflow_status,${comment},${operator.fullName} from changed`
