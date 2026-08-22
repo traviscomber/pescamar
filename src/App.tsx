@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
+import { LoginScreen, useAuth } from "./auth";
 import { AppShell } from "./components/AppShell";
 import { ReceptionModal } from "./components/ReceptionModal";
 import { Approvals } from "./pages/Approvals";
@@ -14,45 +15,5 @@ import { Receptions } from "./pages/Receptions";
 import { Settlements } from "./pages/Settlements";
 import { Operators } from "./pages/Operators";
 import { useLots } from "./store";
-export default function App() {
-  const [modalOpen, setModalOpen] = useState(false);
-  const { lots, loading, error, addLot } = useLots();
-  const open = () => setModalOpen(true);
-  return (
-    <AppShell onNewReception={open}>
-      {loading ? (
-        <div className="system-banner">Sincronizando recepciones…</div>
-      ) : error ? (
-        <div className="system-banner error" role="alert">
-          {error}
-        </div>
-      ) : null}
-      <Routes>
-        <Route
-          path="/"
-          element={<Dashboard lots={lots} onNewReception={open} />}
-        />
-        <Route path="/plantas" element={<PlantControl />} />
-        <Route path="/plantas/:plantId" element={<PlantControl />} />
-        <Route path="/importaciones" element={<Imports />} />
-        <Route path="/operacion-2025" element={<Canonical2025 />} />
-        <Route path="/creditos" element={<Credits />} />
-        <Route path="/liquidaciones" element={<Settlements />} />
-        <Route path="/aprobaciones" element={<Approvals />} />
-        <Route path="/modulos" element={<Modules />} />
-        <Route path="/operadores" element={<Operators />} />
-        <Route path="/lineas" element={<ProductionLines />} />
-        <Route
-          path="/recepciones"
-          element={<Receptions lots={lots} onNew={open} />}
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-      <ReceptionModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSave={addLot}
-      />
-    </AppShell>
-  );
-}
+export default function App(){const {operator,loading:authLoading}=useAuth();if(authLoading)return <div className="login-shell"><div className="system-banner">Validando sesión…</div></div>;if(!operator)return <LoginScreen/>;return <AuthenticatedApp/>}
+function AuthenticatedApp(){const [modalOpen,setModalOpen]=useState(false);const {lots,loading,error,addLot}=useLots();const open=()=>setModalOpen(true);return <AppShell onNewReception={open}>{loading?<div className="system-banner">Sincronizando recepciones…</div>:error?<div className="system-banner error" role="alert">{error}</div>:null}<Routes><Route path="/" element={<Dashboard lots={lots} onNewReception={open}/>}/><Route path="/plantas" element={<PlantControl/>}/><Route path="/plantas/:plantId" element={<PlantControl/>}/><Route path="/importaciones" element={<Imports/>}/><Route path="/operacion-2025" element={<Canonical2025/>}/><Route path="/creditos" element={<Credits/>}/><Route path="/liquidaciones" element={<Settlements/>}/><Route path="/aprobaciones" element={<Approvals/>}/><Route path="/modulos" element={<Modules/>}/><Route path="/operadores" element={<Operators/>}/><Route path="/lineas" element={<ProductionLines/>}/><Route path="/recepciones" element={<Receptions lots={lots} onNew={open}/>}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes><ReceptionModal open={modalOpen} onClose={()=>setModalOpen(false)} onSave={addLot}/></AppShell>}
