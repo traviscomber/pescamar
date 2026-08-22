@@ -164,8 +164,8 @@ function PlantDetail({ plant }: { plant: PlantState }) {
           title={plant.name}
           description="Centro configurado, pendiente de conexión con una fuente operacional validada."
         />
-        <section className="plant-offline-layout">
-          <article className="panel plant-offline-state">
+        <section className="plant-activation-dashboard">
+          <article className="panel plant-activation-hero">
             <span className="plant-offline-icon"><Link2Off size={24} /></span>
             <div>
               <span className="overline">Estado de datos</span>
@@ -176,8 +176,33 @@ function PlantDetail({ plant }: { plant: PlantState }) {
               <FileSpreadsheet size={16} />
               Asignar fuente
             </Link>
+            <div className="plant-activation-facts" aria-label="Resumen de activación">
+              <div><small>Conectividad</small><b>No vinculada</b></div>
+              <div><small>Productos configurados</small><b>{plant.products.length}</b></div>
+              <div><small>Indicadores publicados</small><b>0</b></div>
+            </div>
           </article>
-          <ProductCatalog plant={plant} />
+          <article className="panel plant-activation-progress">
+            <header className="panel-header">
+              <div><span className="overline">Puesta en marcha</span><h2>Preparación operacional</h2></div>
+              <span>1 de 4</span>
+            </header>
+            <ol>
+              <li className="complete"><span><CheckCircle2 size={15}/></span><div><b>Centro configurado</b><small>Planta y catálogo disponibles</small></div></li>
+              <li className="current"><span>02</span><div><b>Asignar fuente</b><small>Selecciona la planilla operacional</small></div></li>
+              <li><span>03</span><div><b>Validar estructura</b><small>Revisión previa a publicación</small></div></li>
+              <li><span>04</span><div><b>Publicar indicadores</b><small>Dashboard habilitado con datos reales</small></div></li>
+            </ol>
+          </article>
+          <article className="panel plant-activation-products">
+            <header className="panel-header">
+              <div><span className="overline">Alcance productivo</span><h2>Productos configurados</h2></div>
+              <span>{plant.products.length} categorías</span>
+            </header>
+            <div className="plant-product-dashboard">
+              {plant.products.map((product, index) => <div key={product}><span>{String(index + 1).padStart(2, "0")}</span><b>{product}</b><small>Configuración por validar</small></div>)}
+            </div>
+          </article>
         </section>
       </>
     );
