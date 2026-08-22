@@ -21,7 +21,11 @@ export default async function handler(request:Request,response:Response){
   response.setHeader("Cache-Control","no-store");
   const operator=await requireOperator(request);
   if(!operator)return response.status(401).json({ok:false,error:"Sesión requerida"});
-  if(request.method!=="POST"){response.setHeader("Allow","POST");return response.status(405).json({ok:false,error:"Método no permitido"})}
+  if(request.method==="GET"){
+    await ensureReceptionSchema();
+    return response.status(200).json({ok:true,configured:Boolean(process.env.OPENAI_API_KEY),model:process.env.OPENAI_VISION_MODEL||"gpt-4o-mini"});
+  }
+  if(request.method!=="POST"){response.setHeader("Allow","GET, POST");return response.status(405).json({ok:false,error:"Método no permitido"})}
   if(!["admin","operations","quality"].includes(operator.role))return response.status(403).json({ok:false,error:"Tu rol no puede registrar evidencia"});
 
   const input=(request.body??{}) as Input;
