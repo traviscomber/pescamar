@@ -97,6 +97,12 @@ body,.workspace,.topbar,.sidebar,.panel,.metric,.button,.system-health,.secondar
 [data-theme="dark"] .notice.error,[data-theme="dark"] .system-banner.error,[data-theme="dark"] .form-error{background:#291716;color:#f0a8a1;border-color:#663631}
 [data-theme="dark"] .inspection-result{background:#10211c;border-color:#28483d}
 [data-theme="dark"] .inspection-result.invalid{background:#291916;border-color:#63372e}
+[data-theme="dark"] .canonical-exceptions>div{background:var(--surface-2);border:1px solid var(--line)}
+[data-theme="dark"] .canonical-exceptions b{color:var(--text)}
+[data-theme="dark"] .canonical-exceptions small{color:var(--muted)}
+[data-theme="dark"] .canonical-exceptions em{color:#e0bf89}
+[data-theme="dark"] .canonical-exceptions em.critical{color:#f0a8a1}
+[data-theme="dark"] .metric-icon.warning{background:#2b2111;color:#e5ba72}
 [data-theme="dark"] .plant-detail-banner.healthy{background:#10211c}
 [data-theme="dark"] .plant-detail-banner.attention,[data-theme="dark"] .detail-alerts>div{background:#281f12}
 [data-theme="dark"] .plant-detail-banner.critical,[data-theme="dark"] .detail-alerts>div.critical{background:#291716}
