@@ -1,28 +1,31 @@
-import { useState, type ReactNode } from "react";
+import { lazy, Suspense, useState, type ReactNode } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { canAccessPath, canCreateReception } from "./access";
 import { LoginScreen, useAuth } from "./auth";
 import { AppShell } from "./components/AppShell";
 import { Lot360Provider } from "./components/Lot360Context";
 import { ReceptionModal } from "./components/ReceptionModal";
-import { Approvals } from "./pages/Approvals";
-import { Commercial } from "./pages/Commercial";
-import { Credits } from "./pages/Credits";
-import { DailyClose } from "./pages/DailyClose";
 import { Dashboard } from "./pages/Dashboard";
-import { Inventory } from "./pages/Inventory";
-import { Modules } from "./pages/Modules";
-import { Imports } from "./pages/Imports";
-import { Planning } from "./pages/Planning";
-import { PlantControl } from "./pages/PlantControl";
-import { ProductionLines } from "./pages/ProductionLines";
-import { Receptions } from "./pages/Receptions";
-import { SalesOrders } from "./pages/SalesOrders";
-import { Settlements } from "./pages/Settlements";
-import { TransformationCosts } from "./pages/TransformationCosts";
-import { Operators } from "./pages/Operators";
-import { Timeline } from "./pages/Timeline";
 import { useLots } from "./store";
+
+const Approvals=lazy(()=>import("./pages/Approvals").then(module=>({default:module.Approvals})));
+const Commercial=lazy(()=>import("./pages/Commercial").then(module=>({default:module.Commercial})));
+const Credits=lazy(()=>import("./pages/Credits").then(module=>({default:module.Credits})));
+const DailyClose=lazy(()=>import("./pages/DailyClose").then(module=>({default:module.DailyClose})));
+const Inventory=lazy(()=>import("./pages/Inventory").then(module=>({default:module.Inventory})));
+const Modules=lazy(()=>import("./pages/Modules").then(module=>({default:module.Modules})));
+const Imports=lazy(()=>import("./pages/Imports").then(module=>({default:module.Imports})));
+const Planning=lazy(()=>import("./pages/Planning").then(module=>({default:module.Planning})));
+const PlantControl=lazy(()=>import("./pages/PlantControl").then(module=>({default:module.PlantControl})));
+const ProductionLines=lazy(()=>import("./pages/ProductionLines").then(module=>({default:module.ProductionLines})));
+const Receptions=lazy(()=>import("./pages/Receptions").then(module=>({default:module.Receptions})));
+const SalesOrders=lazy(()=>import("./pages/SalesOrders").then(module=>({default:module.SalesOrders})));
+const Settlements=lazy(()=>import("./pages/Settlements").then(module=>({default:module.Settlements})));
+const TransformationCosts=lazy(()=>import("./pages/TransformationCosts").then(module=>({default:module.TransformationCosts})));
+const Operators=lazy(()=>import("./pages/Operators").then(module=>({default:module.Operators})));
+const Timeline=lazy(()=>import("./pages/Timeline").then(module=>({default:module.Timeline})));
+
+function RouteFallback(){return <div className="system-banner">Cargando módulo…</div>}
 
 export default function App(){
   const {operator,loading:authLoading}=useAuth();
@@ -41,28 +44,30 @@ function AuthenticatedApp(){
   const gate=(path:string,node:ReactNode)=>canAccessPath(operator.role,path)?node:<Navigate to="/" replace/>;
   return <Lot360Provider><AppShell onNewReception={open}>
     {loading?<div className="system-banner">Sincronizando recepciones…</div>:error?<div className="system-banner error" role="alert">{error}</div>:null}
-    <Routes>
-      <Route path="/" element={<Dashboard lots={lots} onNewReception={open}/>}/>
-      <Route path="/timeline" element={<Timeline/>}/>
-      <Route path="/operacion-2025" element={<Navigate to="/timeline" replace/>}/>
-      <Route path="/planificacion" element={gate("/planificacion",<Planning/>)}/>
-      <Route path="/plantas" element={<PlantControl/>}/>
-      <Route path="/plantas/:plantId" element={<PlantControl/>}/>
-      <Route path="/importaciones" element={gate("/importaciones",<Imports/>)}/>
-      <Route path="/creditos" element={gate("/creditos",<Credits/>)}/>
-      <Route path="/liquidaciones" element={gate("/liquidaciones",<Settlements/>)}/>
-      <Route path="/despachos-ventas" element={gate("/despachos-ventas",<Commercial/>)}/>
-      <Route path="/ordenes-venta" element={gate("/ordenes-venta",<SalesOrders/>)}/>
-      <Route path="/inventario" element={gate("/inventario",<Inventory/>)}/>
-      <Route path="/costos-transformacion" element={gate("/costos-transformacion",<TransformationCosts/>)}/>
-      <Route path="/cierre-diario" element={gate("/cierre-diario",<DailyClose/>)}/>
-      <Route path="/aprobaciones" element={gate("/aprobaciones",<Approvals/>)}/>
-      <Route path="/modulos" element={gate("/modulos",<Modules/>)}/>
-      <Route path="/operadores" element={gate("/operadores",<Operators/>)}/>
-      <Route path="/lineas" element={<ProductionLines lots={lots}/>}/>
-      <Route path="/recepciones" element={<Receptions lots={lots} onNew={open}/>}/>
-      <Route path="*" element={<Navigate to="/" replace/>}/>
-    </Routes>
+    <Suspense fallback={<RouteFallback/>}>
+      <Routes>
+        <Route path="/" element={<Dashboard lots={lots} onNewReception={open}/>}/>
+        <Route path="/timeline" element={<Timeline/>}/>
+        <Route path="/operacion-2025" element={<Navigate to="/timeline" replace/>}/>
+        <Route path="/planificacion" element={gate("/planificacion",<Planning/>)}/>
+        <Route path="/plantas" element={<PlantControl/>}/>
+        <Route path="/plantas/:plantId" element={<PlantControl/>}/>
+        <Route path="/importaciones" element={gate("/importaciones",<Imports/>)}/>
+        <Route path="/creditos" element={gate("/creditos",<Credits/>)}/>
+        <Route path="/liquidaciones" element={gate("/liquidaciones",<Settlements/>)}/>
+        <Route path="/despachos-ventas" element={gate("/despachos-ventas",<Commercial/>)}/>
+        <Route path="/ordenes-venta" element={gate("/ordenes-venta",<SalesOrders/>)}/>
+        <Route path="/inventario" element={gate("/inventario",<Inventory/>)}/>
+        <Route path="/costos-transformacion" element={gate("/costos-transformacion",<TransformationCosts/>)}/>
+        <Route path="/cierre-diario" element={gate("/cierre-diario",<DailyClose/>)}/>
+        <Route path="/aprobaciones" element={gate("/aprobaciones",<Approvals/>)}/>
+        <Route path="/modulos" element={gate("/modulos",<Modules/>)}/>
+        <Route path="/operadores" element={gate("/operadores",<Operators/>)}/>
+        <Route path="/lineas" element={<ProductionLines lots={lots}/>}/>
+        <Route path="/recepciones" element={<Receptions lots={lots} onNew={open}/>}/>
+        <Route path="*" element={<Navigate to="/" replace/>}/>
+      </Routes>
+    </Suspense>
     {mayCreate?<ReceptionModal open={modalOpen} onClose={()=>setModalOpen(false)} onSave={addLot}/>:null}
   </AppShell></Lot360Provider>;
 }
