@@ -42,9 +42,14 @@ async function createCredit(body:unknown,response:Response){
   if(recoveryKind==='percentage'&&(!(recoveryValue&&recoveryValue>0&&recoveryValue<=100)))return response.status(400).json({ok:false,error:'El porcentaje debe estar entre 0 y 100'})
   if(recoveryKind==='fixed_amount'&&(!(recoveryValue&&recoveryValue>0)))return response.status(400).json({ok:false,error:'El monto fijo debe ser mayor que cero'})
   const rows=await getSql()`
-    with party as (
-      insert into parties (kind, legal_name) values ('fisher', ${fisher})
-      on conflict (kind, legal_name) do update set updated_at=now() returning id
+    with existing_party as (
+      select id from parties where lower(trim(legal_name))=lower(trim(${fisher})) order by created_at asc limit 1
+    ), inserted_party as (
+      insert into parties (kind, legal_name)
+      select 'fisher', ${fisher} where not exists (select 1 from existing_party)
+      returning id
+    ), party as (
+      select id from existing_party union all select id from inserted_party
     ), account as (
       insert into credit_accounts (party_id) select id from party
       on conflict (party_id) do update set currency=excluded.currency returning id
