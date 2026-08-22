@@ -13,11 +13,13 @@ import { Dashboard } from "./pages/Dashboard";
 import { Inventory } from "./pages/Inventory";
 import { Modules } from "./pages/Modules";
 import { Imports } from "./pages/Imports";
+import { Planning } from "./pages/Planning";
 import { PlantControl } from "./pages/PlantControl";
 import { ProductionLines } from "./pages/ProductionLines";
 import { Receptions } from "./pages/Receptions";
 import { SalesOrders } from "./pages/SalesOrders";
 import { Settlements } from "./pages/Settlements";
+import { TransformationCosts } from "./pages/TransformationCosts";
 import { Operators } from "./pages/Operators";
 import { Timeline } from "./pages/Timeline";
 import { useLots } from "./store";
@@ -43,6 +45,7 @@ function AuthenticatedApp(){
       <Route path="/" element={<Dashboard lots={lots} onNewReception={open}/>}/>
       <Route path="/timeline" element={<Timeline/>}/>
       <Route path="/operacion-2025" element={<Navigate to="/timeline" replace/>}/>
+      <Route path="/planificacion" element={gate("/planificacion",<Planning/>)}/>
       <Route path="/plantas" element={<PlantControl/>}/>
       <Route path="/plantas/:plantId" element={<PlantControl/>}/>
       <Route path="/importaciones" element={gate("/importaciones",<Imports/>)}/>
@@ -51,6 +54,7 @@ function AuthenticatedApp(){
       <Route path="/despachos-ventas" element={gate("/despachos-ventas",<Commercial/>)}/>
       <Route path="/ordenes-venta" element={gate("/ordenes-venta",<SalesOrders/>)}/>
       <Route path="/inventario" element={gate("/inventario",<Inventory/>)}/>
+      <Route path="/costos-transformacion" element={gate("/costos-transformacion",<TransformationCosts/>)}/>
       <Route path="/cierre-diario" element={gate("/cierre-diario",<DailyClose/>)}/>
       <Route path="/aprobaciones" element={gate("/aprobaciones",<Approvals/>)}/>
       <Route path="/modulos" element={gate("/modulos",<Modules/>)}/>
