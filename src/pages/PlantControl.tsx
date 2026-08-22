@@ -89,6 +89,7 @@ export function PlantControl() {
         />
       </>
     );
+  const linkedCount=plants.filter(isOperationalPlant).length;
   return (
     <>
       {loading ? (
@@ -102,8 +103,15 @@ export function PlantControl() {
       <PageHeader
         eyebrow="Red operacional"
         title="Plantas"
-        description="Selecciona una planta para revisar su operación, productos y alertas."
+        description="Selecciona un centro para revisar su operación. La información consolidada permanece separada del trabajo por planta."
+        actions={<Link className="button secondary" to="/importaciones"><FileSpreadsheet size={16}/>Gestionar fuentes</Link>}
       />
+      <section className="plant-directory-summary" aria-label="Resumen de la red">
+        <div><small>Centros configurados</small><b>{plants.length}</b></div>
+        <div><small>Con fuente operacional</small><b>{linkedCount}</b></div>
+        <div className={plants.length-linkedCount?"attention":""}><small>Pendientes de vincular</small><b>{plants.length-linkedCount}</b></div>
+        <p>Los indicadores aparecen únicamente después de publicar una fuente validada.</p>
+      </section>
       <section className="plant-grid corporate-plant-grid">
         {plants.map((plant) => <PlantCard plant={plant} key={plant.id} />)}
       </section>
@@ -124,14 +132,13 @@ function PlantCard({ plant }: { plant: PlantState }) {
     : null;
   return <Link className={`panel plant-card corporate-plant-card status-${operational ? plant.status : "offline"}`} to={`/plantas/${plant.id}`}>
     <header>
-      <div className={`plant-signal ${operational ? plant.status : "offline"}`}><span /></div>
       <div><span className="overline">{plant.mode}</span><h2>{plant.name}</h2><small>{plant.location}</small></div>
       <ArrowRight size={18} />
     </header>
-    <div className="plant-status-copy"><b>{operational ? plant.statusLabel : "Sin datos publicados"}</b><span>{operational ? plant.statusReason : "Fuente operacional pendiente de vinculación."}</span></div>
+    <div className={`plant-card-state ${operational ? plant.status : "offline"}`}><i/><span><b>{operational ? plant.statusLabel : "Fuente pendiente"}</b><small>{operational ? plant.statusReason : "Sin indicadores publicados"}</small></span></div>
     {operational ? <div className="plant-kpis"><div><small>Producción</small><b>{kg(plant.productionKg)}</b></div><div><small>Cumplimiento</small><b>{progress}%</b></div><div><small>Alertas</small><b>{plant.alerts.length}</b></div></div> : null}
-    <div className="product-tags">{plant.products.slice(0,3).map((product)=><span key={product}>{product}</span>)}</div>
-    <footer><span>{operational ? <><Clock3 size={13}/>{plant.updatedAt}</> : <><Link2Off size={13}/>Fuente no vinculada</>}</span><span>Ver planta <ArrowRight size={13}/></span></footer>
+    <div className="plant-products"><small>Productos</small><p>{plant.products.slice(0,3).join(" · ")}{plant.products.length>3?` · +${plant.products.length-3}`:""}</p></div>
+    <footer><span>{operational ? <><Clock3 size={13}/>{plant.updatedAt}</> : <><Link2Off size={13}/>No vinculada</>}</span><span>Abrir planta <ArrowRight size={13}/></span></footer>
   </Link>
 }
 
