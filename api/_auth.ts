@@ -8,6 +8,14 @@ export type SessionOperator = { id: string; fullName: string; email: string; rol
 
 const COOKIE = "pescamar_session";
 const SESSION_DAYS = 7;
+const TEMPORARY_AUTH_BYPASS = true;
+const TEMPORARY_OPERATOR: SessionOperator = {
+  id: "1604b454-ef8a-448a-8788-136f6b224168",
+  fullName: "Sebastián",
+  email: "sebastian@pescamarchile.cl",
+  role: "operations",
+  plantIds: ["ancud", "quellon", "iquique", "piedra-azul", "aqua-austral", "natales"],
+};
 
 function header(request: AuthRequest, name: string) {
   const entry = Object.entries(request.headers ?? {}).find(([key]) => key.toLowerCase() === name.toLowerCase())?.[1];
@@ -47,6 +55,7 @@ export async function createSession(operatorId: string) {
 }
 
 export async function destroySession(request: AuthRequest) {
+  if (TEMPORARY_AUTH_BYPASS) return;
   const token = cookieToken(request);
   if (token) await getSql()`delete from operator_sessions where token_hash=${tokenHash(token)}`;
 }
@@ -60,6 +69,11 @@ export function clearSessionCookie() {
 }
 
 export async function requireOperator(request: AuthRequest, roles?: OperatorRole[]) {
+  if (TEMPORARY_AUTH_BYPASS) {
+    if (roles && !roles.includes(TEMPORARY_OPERATOR.role)) return null;
+    return TEMPORARY_OPERATOR;
+  }
+
   const token = cookieToken(request);
   if (!token) return null;
   const rows = await getSql()`
