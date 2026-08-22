@@ -11,13 +11,20 @@ psql "$DATABASE_URL" -f db/migrations/001_core.sql
 psql "$DATABASE_URL" -f db/migrations/002_settlement_workflow.sql
 psql "$DATABASE_URL" -f db/migrations/003_operator_auth.sql
 psql "$DATABASE_URL" -f db/migrations/004_reception_plant_evidence.sql
+psql "$DATABASE_URL" -f db/migrations/005_auth_abuse_audit.sql
 ```
 
-`002_settlement_workflow.sql` incorpora peso guía, cálculo de liquidaciones y recuperación auditable de anticipos. `003_operator_auth.sql` agrega credenciales individuales, alcance por planta y sesiones. `004_reception_plant_evidence.sql` vincula cada nueva recepción a una planta y agrega evidencia documental trazable.
+`002_settlement_workflow.sql` incorpora peso guía, cálculo de liquidaciones y recuperación auditable de anticipos. `003_operator_auth.sql` agrega credenciales individuales, alcance por planta y sesiones. `004_reception_plant_evidence.sql` vincula cada nueva recepción a una planta y agrega evidencia documental trazable. `005_auth_abuse_audit.sql` incorpora límites de intentos y una bitácora mínima de autenticación sin almacenar IP ni correo en texto claro.
 
 La migración 004 es aditiva. Las recepciones históricas pueden conservar `plant_id` nulo hasta que exista evidencia suficiente para asignarlas sin inventar procedencia. Por seguridad, esas filas heredadas sólo son visibles para Administración mientras no tengan planta confirmada.
 
-Las funciones operacionales ejecutan una compatibilidad idempotente mínima para crear las estructuras aditivas de 004 si aún no existen. La migración versionada sigue siendo la fuente canónica y debe aplicarse explícitamente en una operación de mantenimiento para instalar también sus constraints de dominio.
+Las funciones operacionales ejecutan compatibilidad idempotente mínima para las estructuras aditivas de 004 y 005 si aún no existen. Las migraciones versionadas siguen siendo la fuente canónica y deben aplicarse explícitamente en una operación de mantenimiento para instalar todos los constraints e índices documentados.
+
+## Seguridad de acceso
+
+El login limita intentos fallidos por combinación IP/correo y también por IP agregada dentro de una ventana de 15 minutos. Los identificadores usados para control y auditoría se guardan mediante SHA-256; la interfaz administrativa sólo expone conteos y nombres de operador cuando la identidad fue confirmada.
+
+La contraseña aceptada por la API debe tener entre 12 y 256 caracteres. El límite superior evita cargas de cómputo desproporcionadas sobre el derivador `scrypt`.
 
 ## Primera activación
 
