@@ -50,7 +50,7 @@ export function AppShell({children,onNewReception}:{children:ReactNode;onNewRece
         {visibleSecondary.length?<details className="nav-more"><summary><Blocks size={18}/><span>Gestión y datos</span></summary><div>{visibleSecondary.map(({to,label,icon:Icon})=><NavLink key={to} to={to} onClick={()=>setMobileOpen(false)}><Icon size={18}/><span>{label}</span></NavLink>)}</div></details>:null}
       </nav>
       <div className="sidebar-spacer"/>
-      <div className="pilot-card"><span className="overline">Continuidad operacional</span><b>Una historia, sin cortes</b><p>La base 2025 y cada evento nuevo viven en la misma línea de tiempo. Los módulos alimentan la continuidad.</p><span className="n3-signature">PESCAMAR · CONTROL OPERACIONAL</span></div>
+      <div className="pilot-card"><span className="overline">Continuidad operacional</span><b>2025 es el origen, no el límite</b><p>La fuente canónica 2025 abre la línea. Cada evento real posterior continúa el mismo sistema, sin separar historia y operación.</p><span className="n3-signature">PESCAMAR · CONTROL OPERACIONAL</span></div>
       {operator&&canAccessPath(operator.role,"/modulos")?<NavLink className="settings-link" to="/modulos"><Settings2 size={18}/><span>Configuración modular</span></NavLink>:null}
     </aside>
     <div className="workspace"><header className="topbar"><button className="icon-btn menu-btn" onClick={()=>setMobileOpen(true)} aria-label="Abrir menú"><Menu size={20}/></button><div className="topbar-context"><span>Centro de control</span><b>{context}</b></div><div className="topbar-actions">
