@@ -1,4 +1,5 @@
 import { requireOperator } from "./_auth.js";
+import { allowedPlantIds, filterPlants, normalizePlantIds } from "./_plants.js";
 import { getSql } from "./_db.js";
 
 type Request = {
@@ -11,6 +12,7 @@ type Response = {
   setHeader: (name: string, value: string) => void;
   json: (body: unknown) => void;
 };
+type PlantRecord = { id: string } & Record<string, unknown>;
 type ImportBatch = {
   id: string;
   fileName: string;
@@ -41,6 +43,28 @@ const isBatch = (value: unknown): value is ImportBatch => {
   );
 };
 
+function plantRecords(value: unknown): PlantRecord[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (item): item is PlantRecord =>
+      Boolean(item) &&
+      typeof item === "object" &&
+      typeof (item as { id?: unknown }).id === "string",
+  );
+}
+
+function mergePlantUpdates(current: PlantRecord[], incoming: PlantRecord[], plantIds: string[]) {
+  const updates = new Map(incoming.map((plant) => [plant.id, plant]));
+  if (plantIds.some((plantId) => !updates.has(plantId))) return null;
+  const target = new Set(plantIds);
+  const merged = current.map((plant) => (target.has(plant.id) ? updates.get(plant.id) ?? plant : plant));
+  const existing = new Set(current.map((plant) => plant.id));
+  for (const plantId of plantIds) {
+    if (!existing.has(plantId)) merged.push(updates.get(plantId)!);
+  }
+  return merged;
+}
+
 export default async function handler(request: Request, response: Response) {
   response.setHeader("Cache-Control", "no-store");
   try {
@@ -52,33 +76,43 @@ export default async function handler(request: Request, response: Response) {
     if (request.method === "GET") {
       const [state, history] = await Promise.all([
         sql`select plants, updated_at from plant_current_state where state_key='current'`,
-        sql`select id,file_name,periods,plant_ids,row_count,published_at,published_by,previous_plants,resulting_plants,reverted_at from plant_import_batches order by published_at desc limit 10`,
+        sql`select id,file_name,periods,plant_ids,row_count,published_at,published_by,previous_plants,resulting_plants,reverted_at from plant_import_batches order by published_at desc limit 20`,
       ]);
       const stateRows = state as Array<Record<string, unknown>>;
       const historyRows = history as Array<Record<string, unknown>>;
+      const currentPlants = plantRecords(stateRows[0]?.plants);
+      const allowed = new Set(allowedPlantIds(operator));
+      const visibleHistory = historyRows
+        .map((row) => {
+          const plantIds = normalizePlantIds(row.plant_ids).filter((plantId) => allowed.has(plantId));
+          if (!plantIds.length) return null;
+          return {
+            id: row.id,
+            fileName: row.file_name,
+            periods: row.periods,
+            plantIds,
+            rowCount: row.row_count,
+            publishedAt: row.published_at,
+            publishedBy: row.published_by,
+            previousPlants: filterPlants(plantRecords(row.previous_plants), operator),
+            resultingPlants: filterPlants(plantRecords(row.resulting_plants), operator),
+            revertedAt: row.reverted_at ?? undefined,
+          };
+        })
+        .filter(Boolean)
+        .slice(0, 10);
       return response.status(200).json({
         ok: true,
-        plants: stateRows[0]?.plants ?? null,
+        plants: filterPlants(currentPlants, operator),
         updatedAt: stateRows[0]?.updated_at ?? null,
-        history: historyRows.map((row) => ({
-          id: row.id,
-          fileName: row.file_name,
-          periods: row.periods,
-          plantIds: row.plant_ids,
-          rowCount: row.row_count,
-          publishedAt: row.published_at,
-          publishedBy: row.published_by,
-          previousPlants: row.previous_plants,
-          resultingPlants: row.resulting_plants,
-          revertedAt: row.reverted_at ?? undefined,
-        })),
+        history: visibleHistory,
       });
     }
 
     if (!["admin", "operations"].includes(operator.role))
       return response
         .status(403)
-        .json({ ok: false, error: "Tu rol no puede publicar ni revertir plantas" });
+        .json({ ok: false, error: "Tu rol no puede publicar plantas" });
 
     if (request.method === "POST") {
       const batch = (request.body as { batch?: unknown } | undefined)?.batch;
@@ -86,14 +120,30 @@ export default async function handler(request: Request, response: Response) {
         return response
           .status(400)
           .json({ ok: false, error: "Lote de importación inválido" });
+      const rawPlantIds = batch.plantIds.map((value) => String(value).trim()).filter(Boolean);
+      const plantIds = normalizePlantIds(rawPlantIds);
+      if (!plantIds.length || plantIds.length !== rawPlantIds.length)
+        return response.status(400).json({ ok: false, error: "El lote contiene plantas inválidas" });
+      const allowed = new Set(allowedPlantIds(operator));
+      if (plantIds.some((plantId) => !allowed.has(plantId)))
+        return response.status(403).json({ ok: false, error: "El lote incluye una planta fuera de tu alcance" });
+
+      const currentRows = await sql`select plants from plant_current_state where state_key='current'`;
+      const currentPlants = plantRecords((currentRows as Array<Record<string, unknown>>)[0]?.plants);
+      const resultingPlants = mergePlantUpdates(currentPlants, plantRecords(batch.resultingPlants), plantIds);
+      if (!resultingPlants)
+        return response.status(400).json({ ok: false, error: "Faltan plantas declaradas dentro del resultado importado" });
+
       await sql.transaction([
-        sql`insert into plant_import_batches (id,file_name,periods,plant_ids,row_count,published_at,published_by,previous_plants,resulting_plants) values (${batch.id},${batch.fileName},${batch.periods},${batch.plantIds},${batch.rowCount},${batch.publishedAt},${operator.fullName},${JSON.stringify(batch.previousPlants)},${JSON.stringify(batch.resultingPlants)})`,
-        sql`insert into plant_current_state (state_key,plants,latest_batch_id,updated_at) values ('current',${JSON.stringify(batch.resultingPlants)},${batch.id},now()) on conflict (state_key) do update set plants=excluded.plants,latest_batch_id=excluded.latest_batch_id,updated_at=now()`,
+        sql`insert into plant_import_batches (id,file_name,periods,plant_ids,row_count,published_at,published_by,previous_plants,resulting_plants) values (${batch.id},${batch.fileName},${batch.periods},${plantIds},${batch.rowCount},${batch.publishedAt},${operator.fullName},${JSON.stringify(currentPlants)},${JSON.stringify(resultingPlants)})`,
+        sql`insert into plant_current_state (state_key,plants,latest_batch_id,updated_at) values ('current',${JSON.stringify(resultingPlants)},${batch.id},now()) on conflict (state_key) do update set plants=excluded.plants,latest_batch_id=excluded.latest_batch_id,updated_at=now()`,
       ]);
       return response.status(201).json({ ok: true, batchId: batch.id });
     }
 
     if (request.method === "PATCH") {
+      if (operator.role !== "admin")
+        return response.status(403).json({ ok: false, error: "Solo Administración puede revertir una publicación global" });
       const batchId = (request.body as { batchId?: unknown } | undefined)?.batchId;
       if (typeof batchId !== "string" || !batchId)
         return response.status(400).json({ ok: false, error: "Lote inválido" });
@@ -104,7 +154,7 @@ export default async function handler(request: Request, response: Response) {
         return response
           .status(409)
           .json({ ok: false, error: "La publicación ya no se puede revertir" });
-      return response.status(200).json({ ok: true, plants: rows[0].plants });
+      return response.status(200).json({ ok: true, plants: filterPlants(plantRecords(rows[0].plants), operator) });
     }
 
     response.setHeader("Allow", "GET, POST, PATCH");
