@@ -1,4 +1,5 @@
 import {Database,Radio,Scale} from 'lucide-react'
+import './data-continuity.css'
 
 type Props={compact?:boolean}
 
