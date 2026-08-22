@@ -1,4 +1,4 @@
-import {Activity,Blocks,Boxes,CheckCheck,Database,Factory,FileSpreadsheet,Landmark,LayoutDashboard,LogOut,Menu,Moon,ReceiptText,Settings2,Sun,X} from "lucide-react";
+import {Activity,Blocks,Boxes,CheckCheck,Factory,FileSpreadsheet,History,Landmark,LayoutDashboard,LogOut,Menu,Moon,ReceiptText,Settings2,Sun,X} from "lucide-react";
 import {NavLink,useLocation} from "react-router-dom";
 import {useEffect,useState,type ReactNode} from "react";
 import {canAccessPath,canCreateReception} from "../access";
@@ -7,6 +7,7 @@ import {usePlatformStatus} from "../hooks/usePlatformStatus";
 
 const navigation=[{label:"Operación diaria",items:[
   {to:"/",label:"Operación de hoy",icon:LayoutDashboard},
+  {to:"/timeline",label:"Línea de tiempo",icon:History},
   {to:"/aprobaciones",label:"Decisiones",icon:CheckCheck},
   {to:"/recepciones",label:"Recepciones",icon:Boxes},
   {to:"/creditos",label:"Créditos y anticipos",icon:Landmark},
@@ -15,7 +16,6 @@ const navigation=[{label:"Operación diaria",items:[
 const secondaryNavigation=[
   {to:"/plantas",label:"Plantas",icon:Factory},
   {to:"/lineas",label:"Producción",icon:Blocks},
-  {to:"/operacion-2025",label:"Fuente canónica 2025",icon:Database},
   {to:"/importaciones",label:"Importaciones",icon:FileSpreadsheet},
   {to:"/operadores",label:"Operadores",icon:Settings2},
 ];
@@ -28,7 +28,7 @@ export function AppShell({children,onNewReception}:{children:ReactNode;onNewRece
   const {pathname}=useLocation();
   const {status}=usePlatformStatus();
   useEffect(()=>{document.documentElement.dataset.theme=theme;document.documentElement.style.colorScheme=theme;localStorage.setItem("pescamar-theme",theme)},[theme]);
-  const context=pathname==="/"?"Operación de hoy":pathname.startsWith("/aprobaciones")?"Decisiones":pathname.startsWith("/recepciones")?"Recepciones":pathname.startsWith("/plantas")?"Red de plantas":pathname.startsWith("/lineas")?"Producción":pathname.startsWith("/creditos")?"Créditos y anticipos":pathname.startsWith("/liquidaciones")?"Liquidaciones":pathname.startsWith("/importaciones")?"Importaciones":pathname.startsWith("/operacion-2025")?"Fuente canónica":pathname.startsWith("/operadores")?"Operadores":"Configuración";
+  const context=pathname==="/"?"Operación de hoy":pathname.startsWith("/timeline")||pathname.startsWith("/operacion-2025")?"Línea de tiempo":pathname.startsWith("/aprobaciones")?"Decisiones":pathname.startsWith("/recepciones")?"Recepciones":pathname.startsWith("/plantas")?"Red de plantas":pathname.startsWith("/lineas")?"Producción":pathname.startsWith("/creditos")?"Créditos y anticipos":pathname.startsWith("/liquidaciones")?"Liquidaciones":pathname.startsWith("/importaciones")?"Importaciones":pathname.startsWith("/operadores")?"Operadores":"Configuración";
   const initials=operator?.fullName.split(" ").map(part=>part[0]).slice(0,2).join("").toUpperCase()||"PS";
   const visiblePrimary=operator?navigation.map(group=>({...group,items:group.items.filter(item=>canAccessPath(operator.role,item.to))})):[];
   const visibleSecondary=operator?secondaryNavigation.filter(item=>canAccessPath(operator.role,item.to)):[];
@@ -44,7 +44,7 @@ export function AppShell({children,onNewReception}:{children:ReactNode;onNewRece
         {visibleSecondary.length?<details className="nav-more"><summary><Blocks size={18}/><span>Gestión y datos</span></summary><div>{visibleSecondary.map(({to,label,icon:Icon})=><NavLink key={to} to={to} onClick={()=>setMobileOpen(false)}><Icon size={18}/><span>{label}</span></NavLink>)}</div></details>:null}
       </nav>
       <div className="sidebar-spacer"/>
-      <div className="pilot-card"><span className="overline">Control por excepción</span><b>Solo lo que requiere criterio</b><p>La operación normal permanece silenciosa. Aquí aparecen las decisiones que necesitan atención.</p><span className="n3-signature">PESCAMAR · CONTROL OPERACIONAL</span></div>
+      <div className="pilot-card"><span className="overline">Continuidad operacional</span><b>Una historia, sin cortes</b><p>La base 2025 y cada evento nuevo viven en la misma línea de tiempo. Los módulos alimentan la continuidad.</p><span className="n3-signature">PESCAMAR · CONTROL OPERACIONAL</span></div>
       {operator&&canAccessPath(operator.role,"/modulos")?<NavLink className="settings-link" to="/modulos"><Settings2 size={18}/><span>Configuración modular</span></NavLink>:null}
     </aside>
     <div className="workspace"><header className="topbar"><button className="icon-btn menu-btn" onClick={()=>setMobileOpen(true)} aria-label="Abrir menú"><Menu size={20}/></button><div className="topbar-context"><span>Centro de control</span><b>{context}</b></div><div className="topbar-actions">
