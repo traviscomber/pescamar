@@ -15,7 +15,8 @@ export default async function handler(_request:unknown,response:ApiResponse){
       const rows=await getSql()`
         select
           ((select count(*) from credit_requests where status='pending') +
-           (select count(*) from receptions where status='pending'))::int as pending_decisions,
+           (select count(*) from receptions where status='pending') +
+           (select count(*) from settlements where status='pending'))::int as pending_decisions,
           (select count(*)::int from credit_requests where status='pending') as pending_credits,
           (select count(*)::int from operators where active=true) as active_operators,
           (select count(*)::int from receptions) as receptions
