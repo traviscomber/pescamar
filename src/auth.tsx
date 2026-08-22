@@ -131,7 +131,7 @@ export function LoginScreen() {
             {busy ? "Ingresando…" : "Ingresar"}
           </button>
         </form>
-        <BootstrapPanel onActivated={(activatedEmail, activatedPassword) => void login(activatedEmail, activatedPassword)} />
+        <BootstrapPanel onActivated={login} />
       </section>
     </main>
   );
@@ -140,7 +140,7 @@ export function LoginScreen() {
 function BootstrapPanel({
   onActivated,
 }: {
-  onActivated: (email: string, password: string) => void;
+  onActivated: (email: string, password: string) => Promise<void>;
 }) {
   const [token, setToken] = useState("");
   const [name, setName] = useState("");
@@ -168,7 +168,7 @@ function BootstrapPanel({
       if (!response.ok)
         throw new Error(data.error ?? "No fue posible activar la primera cuenta");
       setMessage("Administrador activado. Iniciando sesión…");
-      onActivated(email, password);
+      await onActivated(email, password);
     } catch (reason) {
       setError(
         reason instanceof Error
