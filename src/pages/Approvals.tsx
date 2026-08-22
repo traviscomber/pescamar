@@ -3,7 +3,7 @@ import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { PageHeader } from '../components/PageHeader'
 
-type Approval={entity_type:'credit_request'|'reception';entity_id:string;reference:string;title:string;detail:string;module:string;owner:string;created_at:string}
+type Approval={entity_type:'credit_request'|'reception'|'settlement';entity_id:string;reference:string;title:string;detail:string;module:string;owner:string;created_at:string}
 type Role='admin'|'operations'|'finance'|'quality'|'viewer'
 type Operator={id:string;full_name:string;email:string;role:Role;active:boolean}
 type ApiResponse={ok?:boolean;items?:Approval[];operators?:Operator[];error?:string}
