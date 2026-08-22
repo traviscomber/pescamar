@@ -10,6 +10,7 @@ type ReceptionInput = {
   supplier?: unknown;
   species?: unknown;
   zone?: unknown;
+  guide?: unknown;
   gross?: unknown;
   tare?: unknown;
   drained?: unknown;
@@ -55,7 +56,7 @@ export default async function handler(request: Request, response: Response) {
 async function listReceptions(response: Response) {
   const rows = await getSql()`
     select r.id, r.reception_number, p.legal_name as supplier, r.species,
-      r.extraction_zone, r.gross_kg, r.tare_kg, r.drained_kg, r.accepted_kg,
+      r.extraction_zone, r.guide_kg, r.gross_kg, r.tare_kg, r.drained_kg, r.accepted_kg,
       r.temperature_c, r.quality_status, r.evidence_count, r.received_at
     from receptions r
     join parties p on p.id=r.supplier_id
@@ -69,7 +70,8 @@ async function createReception(body: unknown, response: Response) {
   const supplier = String(input.supplier ?? "").trim(),
     species = String(input.species ?? "").trim(),
     zone = String(input.zone ?? "").trim();
-  const gross = Number(input.gross),
+  const guide = Number(input.guide),
+    gross = Number(input.gross),
     tare = Number(input.tare),
     drained = Number(input.drained),
     accepted = Number(input.accepted);
@@ -79,7 +81,8 @@ async function createReception(body: unknown, response: Response) {
     !supplier ||
     !zone ||
     !allowedSpecies.has(species) ||
-    ![gross, tare, drained, accepted, temperature].every(Number.isFinite) ||
+    ![guide, gross, tare, drained, accepted, temperature].every(Number.isFinite) ||
+    guide <= 0 ||
     gross <= 0 ||
     tare < 0 ||
     drained < 0 ||
@@ -97,8 +100,8 @@ async function createReception(body: unknown, response: Response) {
       insert into parties (kind, legal_name) values ('supplier', ${supplier})
       on conflict (kind, legal_name) do update set updated_at=now() returning id
     )
-    insert into receptions (supplier_id, species, extraction_zone, received_at, gross_kg, tare_kg, drained_kg, accepted_kg, temperature_c, quality_status, evidence_count, status, source)
-    select id, ${species}, ${zone}, now(), ${gross}, ${tare}, ${drained}, ${accepted}, ${temperature}, 'Muestreo', ${evidenceCount}, 'pending', 'manual' from party
+    insert into receptions (supplier_id, species, extraction_zone, received_at, guide_kg, gross_kg, tare_kg, drained_kg, accepted_kg, temperature_c, quality_status, evidence_count, status, source)
+    select id, ${species}, ${zone}, now(), ${guide}, ${gross}, ${tare}, ${drained}, ${accepted}, ${temperature}, 'Muestreo', ${evidenceCount}, 'pending', 'manual' from party
     returning id, reception_number, received_at
   `;
   const reception = Array.isArray(rows) ? rows[0] : null;
