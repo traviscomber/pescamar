@@ -97,6 +97,7 @@ async function createReception(body: unknown, response: Response, operator: Sess
   const temperature = Number(input.temperature);
   const receivedAt = new Date(String(input.occurredAt ?? ""));
   const evidence = normalizeEvidence(input.evidence ?? []);
+  const expectedAccepted=Math.max(0,drained-tare);
   const validReceivedAt=!Number.isNaN(receivedAt.getTime())&&receivedAt.getTime()<=Date.now()+15*60*1000;
   if (
     supplier.length < 2 ||
@@ -116,7 +117,7 @@ async function createReception(body: unknown, response: Response, operator: Sess
     drained > gross ||
     tare > drained ||
     accepted > gross - tare ||
-    accepted !== Math.max(0,drained-tare) ||
+    Math.abs(accepted-expectedAccepted)>0.001 ||
     temperature < -5 || temperature > 30 ||
     evidence === null
   ) return response.status(400).json({ ok: false, error: "Datos de recepción, pesos, guía o evidencia inválidos" });
