@@ -68,6 +68,40 @@
 .status{border-radius:5px;padding:4px 6px;letter-spacing:.015em}
 .row-actions button,.row-action{border-radius:6px}
 
+/* Dense operational workspaces: put work before analysis */
+.production-workspace{margin-top:0;order:-1}
+.balance-panel,.insight-pair{margin-top:20px}
+.balance-panel{background:color-mix(in srgb,var(--surface) 94%,var(--surface-2));}
+.insight-pair .panel{background:transparent}
+.insight-pair{border-top:1px solid var(--frida-rule);padding-top:20px}
+.production-line-list{display:grid;gap:8px}
+.production-line-card{padding:0;overflow:hidden}
+.line-summary{min-height:64px}
+
+/* Historical summaries should read as context, not compete with the task */
+.summary-strip{display:flex;align-items:center;gap:0;background:transparent;border-width:0 0 1px;border-radius:0!important;margin:0 0 16px;overflow:auto}
+.summary-strip div{min-width:150px;padding:10px 20px 12px 0;margin-right:20px;border-right:1px solid var(--frida-rule)}
+.summary-strip div:last-child{border-right:0}
+.summary-strip small{font-size:8px;text-transform:uppercase;letter-spacing:.07em}
+.summary-strip b{font-size:16px;margin-top:3px}
+
+/* Inventory: locations are the work; totals are supporting context */
+.signal-grid{gap:8px;margin:12px 0 18px}
+.signal-card{padding:14px 16px;gap:5px;background:transparent}
+.signal-card>b{font-size:21px}
+.signal-card>small{line-height:1.4}
+.compact-ledger button{min-height:56px}
+
+/* Timeline: reduce card feeling and make the sequence dominant */
+.timeline-overview{gap:1px!important;background:var(--frida-rule);border:1px solid var(--frida-rule);border-radius:9px!important;overflow:hidden}
+.timeline-overview article{border:0!important;border-radius:0!important;box-shadow:none!important;background:var(--surface)!important;padding:14px 16px!important}
+.timeline-toolbar{box-shadow:none!important;border-radius:9px!important}
+.timeline-event{box-shadow:none!important;border-radius:8px!important}
+.timeline-event-main h3{letter-spacing:-.01em}
+.timeline-event-main p{max-width:760px;line-height:1.5}
+.timeline-filters{scrollbar-width:none}
+.timeline-filters::-webkit-scrollbar{display:none}
+
 /* Forms: fewer visual decisions */
 input,select,textarea{border-radius:7px!important}
 label{line-height:1.35}
@@ -97,6 +131,9 @@ label{line-height:1.35}
   .command-metrics{grid-template-columns:repeat(3,minmax(0,1fr))!important;width:100%}
   .rule-note{display:none}
   .data-table th,.data-table td{padding-left:12px;padding-right:12px}
+  .summary-strip div{min-width:132px}
+  .timeline-overview{grid-template-columns:1fr 1fr!important}
+  .timeline-toolbar{align-items:flex-start!important}
 }
 @media(max-width:620px){
   .main-content{padding:18px 14px 88px}
@@ -106,4 +143,12 @@ label{line-height:1.35}
   .command-metrics{grid-template-columns:1fr!important}
   .queue-row,.alert-row{min-height:68px}
   .floating-action{border-radius:9px!important}
+  .signal-grid{grid-template-columns:1fr!important}
+  .signal-card{grid-template-columns:1fr auto;align-items:center}
+  .signal-card>span,.signal-card>small{grid-column:1}
+  .signal-card>b{grid-column:2;grid-row:1/3;text-align:right}
+  .timeline-overview{grid-template-columns:1fr!important}
+  .timeline-overview article:nth-child(n+3){display:none}
+  .timeline-event{grid-template-columns:32px minmax(0,1fr)!important}
+  .timeline-event time{grid-column:2!important;justify-self:start!important;margin-top:4px}
 }
