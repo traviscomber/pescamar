@@ -1,4 +1,5 @@
 import { requireOperator } from './_auth.js'
+import { ensureReceptionSchema } from './_reception-schema.js'
 import { getSql } from './_db.js'
 
 type ApiRequest={headers?:Record<string,string|string[]|undefined>}
@@ -16,14 +17,22 @@ export default async function handler(request:ApiRequest,response:ApiResponse){
   let database=databaseConfigured,metrics=emptyMetrics
   if(databaseConfigured){
     try{
+      await ensureReceptionSchema()
+      const plantIds=operator.plantIds
+      const admin=operator.role==='admin'
+      const finance=operator.role==='finance'
+      const operations=operator.role==='operations'
+      const quality=operator.role==='quality'
       const rows=await getSql()`
         select
-          ((select count(*) from credit_requests where status='pending') +
-           (select count(*) from receptions where status='pending') +
-           (select count(*) from settlements where status='pending'))::int as pending_decisions,
-          (select count(*)::int from credit_requests where status='pending') as pending_credits,
-          (select count(*)::int from operators where active=true) as active_operators,
-          (select count(*)::int from receptions) as receptions
+          (
+            ${admin||finance}::boolean::int * (select count(*)::int from credit_requests where status='pending') +
+            ${admin||operations||quality}::boolean::int * (select count(*)::int from receptions where status='pending' and (${admin} or plant_id=any(${plantIds}::text[]))) +
+            ${admin||finance}::boolean::int * (select count(*)::int from settlements s join receptions r on r.id=s.reception_id where s.status='pending' and (${admin} or r.plant_id=any(${plantIds}::text[])))
+          )::int as pending_decisions,
+          case when ${admin||finance} then (select count(*)::int from credit_requests where status='pending') else 0 end as pending_credits,
+          case when ${admin} then (select count(*)::int from operators where active=true) else 0 end as active_operators,
+          (select count(*)::int from receptions where ${admin} or plant_id=any(${plantIds}::text[])) as receptions
       `
       const row=Array.isArray(rows)?rows[0] as Record<string,number>|undefined:undefined
       if(row)metrics={pendingDecisions:Number(row.pending_decisions),pendingCredits:Number(row.pending_credits),activeOperators:Number(row.active_operators),receptions:Number(row.receptions)}
