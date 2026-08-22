@@ -10,9 +10,14 @@ Para una instalación administrada manualmente, ejecutar en orden:
 psql "$DATABASE_URL" -f db/migrations/001_core.sql
 psql "$DATABASE_URL" -f db/migrations/002_settlement_workflow.sql
 psql "$DATABASE_URL" -f db/migrations/003_operator_auth.sql
+psql "$DATABASE_URL" -f db/migrations/004_reception_plant_evidence.sql
 ```
 
-`002_settlement_workflow.sql` incorpora peso guía, cálculo de liquidaciones y recuperación auditable de anticipos. `003_operator_auth.sql` agrega credenciales individuales, alcance por planta y sesiones.
+`002_settlement_workflow.sql` incorpora peso guía, cálculo de liquidaciones y recuperación auditable de anticipos. `003_operator_auth.sql` agrega credenciales individuales, alcance por planta y sesiones. `004_reception_plant_evidence.sql` vincula cada nueva recepción a una planta y agrega evidencia documental trazable.
+
+La migración 004 es aditiva. Las recepciones históricas pueden conservar `plant_id` nulo hasta que exista evidencia suficiente para asignarlas sin inventar procedencia. Por seguridad, esas filas heredadas sólo son visibles para Administración mientras no tengan planta confirmada.
+
+Las funciones operacionales ejecutan una compatibilidad idempotente mínima para crear las estructuras aditivas de 004 si aún no existen. La migración versionada sigue siendo la fuente canónica y debe aplicarse explícitamente en una operación de mantenimiento para instalar también sus constraints de dominio.
 
 ## Primera activación
 

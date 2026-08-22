@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import type { Lot, LotStatus, Species } from "./types";
+import type { Lot, LotStatus, ReceptionEvidence, Species } from "./types";
 
 type ApiReception = {
   id: string;
   reception_number: string | number;
+  plant_id: string;
   supplier: string;
   species: Species;
   extraction_zone: string;
@@ -15,6 +16,7 @@ type ApiReception = {
   temperature_c: string | number | null;
   quality_status: LotStatus;
   evidence_count: number;
+  evidence?: ReceptionEvidence[];
   received_at: string;
 };
 
@@ -25,6 +27,7 @@ function toLot(row: ApiReception): Lot {
     accepted = Number(row.accepted_kg ?? 0);
   return {
     id: `REC-${row.reception_number}`,
+    plantId: row.plant_id,
     species: row.species,
     supplier: row.supplier,
     initials: row.supplier
@@ -49,6 +52,7 @@ function toLot(row: ApiReception): Lot {
       minute: "2-digit",
     }),
     evidenceCount: row.evidence_count,
+    evidence: row.evidence ?? [],
   };
 }
 
