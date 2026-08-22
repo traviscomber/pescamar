@@ -1,0 +1,109 @@
+/* Frida UI/UX refinement layer: simplicity, hierarchy, calm enterprise density */
+:root{
+  --frida-radius:10px;
+  --frida-radius-sm:7px;
+  --frida-space:clamp(20px,2.4vw,34px);
+  --frida-rule:color-mix(in srgb,var(--line) 82%,transparent);
+  --frida-focus:0 0 0 3px color-mix(in srgb,var(--teal) 18%,transparent);
+}
+
+/* Global rhythm */
+.main-content{padding:28px var(--frida-space) 72px;max-width:1480px}
+.page-header{align-items:flex-start;margin-bottom:22px}
+.page-header>div:first-child{max-width:760px}
+.page-header h1{font-size:clamp(28px,3vw,40px);line-height:.98;letter-spacing:-.045em;margin:6px 0 8px}
+.page-header p{max-width:720px;line-height:1.55;font-size:12px}
+.overline,.system-label{letter-spacing:.12em}
+
+/* Shell: calmer and more architectural */
+.sidebar{padding:22px 16px 18px}
+.brand{padding:0 8px 18px;border-bottom:1px solid rgba(255,255,255,.08)}
+.plant-chip{margin:16px 0 14px;border-radius:8px;padding:10px 11px;background:rgba(255,255,255,.045);border-color:rgba(255,255,255,.09)}
+.grouped-nav{gap:2px}
+.side-nav a,.settings-link{min-height:40px;border-radius:7px;padding:9px 10px;font-size:12px}
+.side-nav a.active{box-shadow:none;background:rgba(255,255,255,.085);position:relative}
+.side-nav a.active:before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:2px;background:var(--teal);border-radius:2px}
+.nav-more{border-top:1px solid rgba(255,255,255,.07);margin-top:5px;padding-top:5px}
+.nav-more summary{min-height:38px;border-radius:7px}
+.pilot-card{border-radius:8px;background:rgba(255,255,255,.035);border-color:rgba(255,255,255,.08);box-shadow:none}
+.topbar{height:64px;padding:0 var(--frida-space);background:color-mix(in srgb,var(--panel) 92%,transparent);backdrop-filter:blur(18px)}
+.topbar-context span{font-size:9px;text-transform:uppercase;letter-spacing:.1em}
+.topbar-context b{font-size:12px}
+.theme-toggle,.system-state,.operator-state{border-radius:7px}
+
+/* One visual language for surfaces */
+.panel,.metric,.signal-card,.commercial-summary article,.summary-strip,.standard-card{border-radius:var(--frida-radius);box-shadow:none;border-color:var(--frida-rule)}
+.panel{padding:20px}
+.button{min-height:40px;border-radius:7px;padding:9px 14px;box-shadow:none!important}
+.button.primary:hover{transform:none}
+.button:focus-visible,.icon-btn:focus-visible,.side-nav a:focus-visible,.queue-row:focus-visible,.alert-row:focus-visible,.data-table button:focus-visible,.command-action:focus-visible{outline:none;box-shadow:var(--frida-focus)}
+
+/* Operational home: one dominant answer, secondary evidence quiet */
+.command-deck{border-radius:12px!important;box-shadow:none!important}
+.command-copy h2{max-width:760px;line-height:1.05}
+.command-copy p{max-width:680px;line-height:1.55}
+.command-metrics{align-self:stretch}
+.command-metrics>div{min-width:118px}
+.executive-queue{margin-top:18px}
+.section-heading{align-items:center;margin-bottom:14px}
+.section-heading h2{font-size:15px;letter-spacing:-.015em}
+.rule-note{max-width:360px;line-height:1.4;text-align:right}
+.empty-inline{min-height:88px;padding:20px 4px}
+
+/* Rows should scan like enterprise work queues, not cards */
+.queue-row,.alert-row{min-height:62px;padding:12px 6px;transition:background-color .14s ease}
+.queue-row div b,.alert-row div b{font-size:10px;letter-spacing:-.01em}
+.queue-row div small,.alert-row div small{font-size:8.5px}
+.queue-priority,.alert-icon{border-radius:6px}
+
+/* Tables: more breathing room, better scanning */
+.list-panel{border-radius:10px}
+.toolbar{padding:12px 14px}
+.search-box{min-height:38px;border-radius:7px}
+.data-table{font-size:10px}
+.data-table th{padding:0 14px 10px;font-size:8px;letter-spacing:.055em;text-transform:uppercase;background:transparent;position:sticky;top:0}
+.data-table td{padding:13px 14px;border-bottom-color:var(--frida-rule)}
+.data-table tbody tr{transition:background-color .12s ease}
+.data-table tbody tr:hover{background:color-mix(in srgb,var(--surface-2) 72%,transparent)}
+.status{border-radius:5px;padding:4px 6px;letter-spacing:.015em}
+.row-actions button,.row-action{border-radius:6px}
+
+/* Forms: fewer visual decisions */
+input,select,textarea{border-radius:7px!important}
+label{line-height:1.35}
+.modal-panel{border-radius:12px;box-shadow:0 24px 70px rgba(0,0,0,.2)}
+
+/* Drawer: treat as the canonical object, not another dashboard */
+.lot-drawer{box-shadow:-24px 0 70px rgba(0,0,0,.18)!important}
+.lot-drawer-header{position:sticky;top:0;z-index:2;background:var(--surface);border-bottom:1px solid var(--frida-rule)}
+.lot-section{border-top-color:var(--frida-rule)!important}
+.lot-facts{gap:1px!important;background:var(--frida-rule);border:1px solid var(--frida-rule);border-radius:8px;overflow:hidden}
+.lot-facts>div{border:0!important;border-radius:0!important;background:var(--surface)!important}
+.live-event-form{border-radius:8px!important;box-shadow:none!important}
+.event-kind-tabs button{min-height:34px}
+
+/* Calm motion and accessible reduction */
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+/* Mobile is recomposed, not compressed */
+@media(max-width:900px){
+  .main-content{padding:22px 18px 84px}
+  .topbar{padding:0 16px;height:58px}
+  .page-header{display:grid;gap:14px;margin-bottom:18px}
+  .page-header h1{font-size:31px}
+  .page-actions{width:100%}
+  .page-actions .button{flex:1}
+  .command-deck{padding:20px!important}
+  .command-metrics{grid-template-columns:repeat(3,minmax(0,1fr))!important;width:100%}
+  .rule-note{display:none}
+  .data-table th,.data-table td{padding-left:12px;padding-right:12px}
+}
+@media(max-width:620px){
+  .main-content{padding:18px 14px 88px}
+  .page-header h1{font-size:29px}
+  .page-header p{font-size:11px}
+  .panel{padding:16px}
+  .command-metrics{grid-template-columns:1fr!important}
+  .queue-row,.alert-row{min-height:68px}
+  .floating-action{border-radius:9px!important}
+}
