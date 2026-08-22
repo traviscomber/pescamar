@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { canAccessPath, canCreateReception } from "./access";
 import { LoginScreen, useAuth } from "./auth";
 import { AppShell } from "./components/AppShell";
+import { Lot360Provider } from "./components/Lot360Context";
 import { ReceptionModal } from "./components/ReceptionModal";
 import { Approvals } from "./pages/Approvals";
 import { Credits } from "./pages/Credits";
@@ -32,7 +33,7 @@ function AuthenticatedApp(){
   const mayCreate=canCreateReception(operator.role);
   const open=()=>{if(mayCreate)setModalOpen(true)};
   const gate=(path:string,node:ReactNode)=>canAccessPath(operator.role,path)?node:<Navigate to="/" replace/>;
-  return <AppShell onNewReception={open}>
+  return <Lot360Provider><AppShell onNewReception={open}>
     {loading?<div className="system-banner">Sincronizando recepciones…</div>:error?<div className="system-banner error" role="alert">{error}</div>:null}
     <Routes>
       <Route path="/" element={<Dashboard lots={lots} onNewReception={open}/>}/>
@@ -51,5 +52,5 @@ function AuthenticatedApp(){
       <Route path="*" element={<Navigate to="/" replace/>}/>
     </Routes>
     {mayCreate?<ReceptionModal open={modalOpen} onClose={()=>setModalOpen(false)} onSave={addLot}/>:null}
-  </AppShell>;
+  </AppShell></Lot360Provider>;
 }
