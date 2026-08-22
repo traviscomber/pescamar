@@ -10,11 +10,13 @@ import {
   Landmark,
   LayoutDashboard,
   Menu,
+  Moon,
   Settings2,
+  Sun,
   X,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { usePlatformStatus } from "../hooks/usePlatformStatus";
 
 const navigation = [
@@ -55,8 +57,20 @@ export function AppShell({
   onNewReception: () => void;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    const saved = localStorage.getItem("pescamar-theme");
+    if (saved === "light" || saved === "dark") return saved;
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  });
   const { pathname } = useLocation(),
     { status } = usePlatformStatus();
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+    localStorage.setItem("pescamar-theme", theme);
+  }, [theme]);
   const context =
     pathname === "/"
       ? "Operación de hoy"
@@ -147,6 +161,17 @@ export function AppShell({
             <b>{context}</b>
           </div>
           <div className="topbar-actions">
+            <button
+              className="theme-toggle"
+              type="button"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              aria-label={`Activar modo ${theme === "dark" ? "claro" : "oscuro"}`}
+              aria-pressed={theme === "dark"}
+              title={`Modo ${theme === "dark" ? "claro" : "oscuro"}`}
+            >
+              {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+              <span>{theme === "dark" ? "Claro" : "Oscuro"}</span>
+            </button>
             <NavLink className="system-state" to="/modulos">
               <Activity size={15} />
               <span>
