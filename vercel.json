@@ -6,6 +6,7 @@
     { "source": "/importaciones", "destination": "/index.html" },
     { "source": "/operacion-2025", "destination": "/index.html" },
     { "source": "/creditos", "destination": "/index.html" },
+    { "source": "/liquidaciones", "destination": "/index.html" },
     { "source": "/aprobaciones", "destination": "/index.html" },
     { "source": "/modulos", "destination": "/index.html" },
     { "source": "/lineas", "destination": "/index.html" },

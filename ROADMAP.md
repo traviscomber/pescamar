@@ -98,6 +98,17 @@ El estado general se calcula desde reglas y siempre presenta una causa legible.
 4. Datos atrasados o sin responsable identificable.
 5. Expansión del alcance hacia un ERP completo durante el MVP.
 
+## Estado actual
+
+- [x] Persistencia operacional en PostgreSQL/Neon.
+- [x] Recepciones con peso guía, peso recibido, tara, drenado y kilos aceptados.
+- [x] Créditos y anticipos vinculados a proveedores, con movimientos auditables.
+- [x] Liquidaciones desde recepciones aprobadas, precio por kilo y descuentos.
+- [x] Recuperación automática de anticipos al aprobar una liquidación.
+- [x] Bandeja única de decisiones con aprobación o rechazo y comentario obligatorio.
+- [x] Operadores y roles para separar operación, finanzas y administración.
+- [x] Importación y consulta de la fuente canónica 2025.
+
 ## Próximo incremento
 
-Persistir lotes de importación en backend, agregar historial/reversión y validar el contrato canónico contra planillas reales de las seis plantas. La persistencia actual en navegador sirve para la demostración, pero todavía no es multiusuario ni auditable.
+Cerrar el piloto con identidad individual, matriz de permisos por planta, evidencia documental y pruebas de aceptación con los cinco operadores reales. Después del piloto, incorporar clasificación visual por calibre y color como un módulo independiente, sin mezclarlo con el flujo financiero ya estabilizado.

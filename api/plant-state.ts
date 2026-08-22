@@ -1,6 +1,11 @@
+import { requireOperator } from "./_auth.js";
 import { getSql } from "./_db.js";
 
-type Request = { method?: string; body?: unknown };
+type Request = {
+  method?: string;
+  body?: unknown;
+  headers?: Record<string, string | string[] | undefined>;
+};
 type Response = {
   status: (code: number) => Response;
   setHeader: (name: string, value: string) => void;
@@ -13,7 +18,6 @@ type ImportBatch = {
   plantIds: string[];
   rowCount: number;
   publishedAt: string;
-  publishedBy: string;
   previousPlants: unknown[];
   resultingPlants: unknown[];
 };
@@ -32,8 +36,6 @@ const isBatch = (value: unknown): value is ImportBatch => {
     Number(batch.rowCount) > 0 &&
     typeof batch.publishedAt === "string" &&
     !Number.isNaN(Date.parse(batch.publishedAt)) &&
-    typeof batch.publishedBy === "string" &&
-    batch.publishedBy.trim().length > 0 &&
     Array.isArray(batch.previousPlants) &&
     Array.isArray(batch.resultingPlants)
   );
@@ -42,6 +44,10 @@ const isBatch = (value: unknown): value is ImportBatch => {
 export default async function handler(request: Request, response: Response) {
   response.setHeader("Cache-Control", "no-store");
   try {
+    const operator = await requireOperator(request);
+    if (!operator)
+      return response.status(401).json({ ok: false, error: "Sesión requerida" });
+
     const sql = getSql();
     if (request.method === "GET") {
       const [state, history] = await Promise.all([
@@ -68,6 +74,12 @@ export default async function handler(request: Request, response: Response) {
         })),
       });
     }
+
+    if (!["admin", "operations"].includes(operator.role))
+      return response
+        .status(403)
+        .json({ ok: false, error: "Tu rol no puede publicar ni revertir plantas" });
+
     if (request.method === "POST") {
       const batch = (request.body as { batch?: unknown } | undefined)?.batch;
       if (!isBatch(batch))
@@ -75,14 +87,14 @@ export default async function handler(request: Request, response: Response) {
           .status(400)
           .json({ ok: false, error: "Lote de importación inválido" });
       await sql.transaction([
-        sql`insert into plant_import_batches (id,file_name,periods,plant_ids,row_count,published_at,published_by,previous_plants,resulting_plants) values (${batch.id},${batch.fileName},${batch.periods},${batch.plantIds},${batch.rowCount},${batch.publishedAt},${batch.publishedBy},${JSON.stringify(batch.previousPlants)},${JSON.stringify(batch.resultingPlants)})`,
+        sql`insert into plant_import_batches (id,file_name,periods,plant_ids,row_count,published_at,published_by,previous_plants,resulting_plants) values (${batch.id},${batch.fileName},${batch.periods},${batch.plantIds},${batch.rowCount},${batch.publishedAt},${operator.fullName},${JSON.stringify(batch.previousPlants)},${JSON.stringify(batch.resultingPlants)})`,
         sql`insert into plant_current_state (state_key,plants,latest_batch_id,updated_at) values ('current',${JSON.stringify(batch.resultingPlants)},${batch.id},now()) on conflict (state_key) do update set plants=excluded.plants,latest_batch_id=excluded.latest_batch_id,updated_at=now()`,
       ]);
       return response.status(201).json({ ok: true, batchId: batch.id });
     }
+
     if (request.method === "PATCH") {
-      const batchId = (request.body as { batchId?: unknown } | undefined)
-        ?.batchId;
+      const batchId = (request.body as { batchId?: unknown } | undefined)?.batchId;
       if (typeof batchId !== "string" || !batchId)
         return response.status(400).json({ ok: false, error: "Lote inválido" });
       const result =
@@ -94,18 +106,20 @@ export default async function handler(request: Request, response: Response) {
           .json({ ok: false, error: "La publicación ya no se puede revertir" });
       return response.status(200).json({ ok: true, plants: rows[0].plants });
     }
+
     response.setHeader("Allow", "GET, POST, PATCH");
-    return response
-      .status(405)
-      .json({ ok: false, error: "Método no permitido" });
+    return response.status(405).json({ ok: false, error: "Método no permitido" });
   } catch (error) {
-    const configuration =
-      error instanceof Error && error.message.includes("DATABASE_URL");
-    return response.status(configuration ? 503 : 500).json({
+    const message = error instanceof Error ? error.message : "";
+    const configuration = message.includes("DATABASE_URL");
+    const migration = message.includes("operator_sessions");
+    return response.status(configuration || migration ? 503 : 500).json({
       ok: false,
       error: configuration
         ? "Base de datos no conectada"
-        : "No fue posible persistir el estado de plantas",
+        : migration
+          ? "Falta aplicar la migración 003_operator_auth.sql"
+          : "No fue posible persistir el estado de plantas",
     });
   }
 }
