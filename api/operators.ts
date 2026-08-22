@@ -1,4 +1,5 @@
 import { hashPassword, requireOperator } from "./_auth.js";
+import { normalizePlantIds } from "./_plants.js";
 import { getSql } from "./_db.js";
 
 type Request = {
@@ -39,9 +40,15 @@ export default async function handler(request: Request, response: Response) {
       const email = String(input.email ?? "").trim().toLowerCase();
       const role = String(input.role ?? "");
       const password = String(input.password ?? "");
-      const plantIds = Array.isArray(input.plantIds)
-        ? input.plantIds.map(String).map((value) => value.trim()).filter(Boolean)
+      const rawPlantIds = Array.isArray(input.plantIds)
+        ? input.plantIds.map((value) => String(value).trim()).filter(Boolean)
         : [];
+      const plantIds = normalizePlantIds(rawPlantIds);
+      if (rawPlantIds.length !== plantIds.length)
+        return response.status(400).json({
+          ok: false,
+          error: "La selección contiene una planta no autorizada",
+        });
       if (
         name.length < 2 ||
         name.length > 120 ||
