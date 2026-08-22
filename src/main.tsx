@@ -6,5 +6,6 @@ import { AuthProvider } from './auth'
 import './styles.css'
 import './premium.css'
 import './control.css'
+import './planning.css'
 import './login-premium.css'
 createRoot(document.getElementById('root')!).render(<StrictMode><AuthProvider><BrowserRouter><App /></BrowserRouter></AuthProvider></StrictMode>)

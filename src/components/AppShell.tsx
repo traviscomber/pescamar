@@ -1,4 +1,4 @@
-import {Activity,Blocks,Boxes,CheckCheck,Factory,FileSpreadsheet,History,Landmark,LayoutDashboard,LogOut,Menu,Moon,ReceiptText,Settings2,ShoppingCart,Sun,X} from "lucide-react";
+import {Activity,Blocks,Boxes,CalendarCheck2,CheckCheck,ClipboardList,Factory,FileSpreadsheet,History,Landmark,LayoutDashboard,LogOut,Menu,Moon,PackageSearch,ReceiptText,Settings2,ShoppingCart,Sun,X} from "lucide-react";
 import {NavLink,useLocation} from "react-router-dom";
 import {useEffect,useState,type ReactNode} from "react";
 import {canAccessPath,canCreateReception} from "../access";
@@ -10,9 +10,12 @@ const navigation=[{label:"Operación diaria",items:[
   {to:"/timeline",label:"Línea de tiempo",icon:History},
   {to:"/aprobaciones",label:"Decisiones",icon:CheckCheck},
   {to:"/recepciones",label:"Recepciones",icon:Boxes},
+  {to:"/inventario",label:"Inventario",icon:PackageSearch},
+  {to:"/ordenes-venta",label:"Órdenes de venta",icon:ClipboardList},
   {to:"/despachos-ventas",label:"Despachos y ventas",icon:ShoppingCart},
   {to:"/creditos",label:"Créditos y anticipos",icon:Landmark},
   {to:"/liquidaciones",label:"Liquidaciones",icon:ReceiptText},
+  {to:"/cierre-diario",label:"Cierre diario",icon:CalendarCheck2},
 ]}];
 const secondaryNavigation=[
   {to:"/plantas",label:"Plantas",icon:Factory},
@@ -20,7 +23,7 @@ const secondaryNavigation=[
   {to:"/importaciones",label:"Importaciones",icon:FileSpreadsheet},
   {to:"/operadores",label:"Operadores",icon:Settings2},
 ];
-const roleLabels={admin:"Administrador",operations:"Gerente Operaciones",finance:"Finanzas",quality:"Calidad",viewer:"Lectura"} as const;
+const roleLabels={admin:"Administrador",operations:"Gerente de Operaciones",finance:"Finanzas",quality:"Calidad",viewer:"Lectura"} as const;
 
 export function AppShell({children,onNewReception}:{children:ReactNode;onNewReception:()=>void}){
   const [mobileOpen,setMobileOpen]=useState(false);
@@ -29,7 +32,7 @@ export function AppShell({children,onNewReception}:{children:ReactNode;onNewRece
   const {pathname}=useLocation();
   const {status}=usePlatformStatus();
   useEffect(()=>{document.documentElement.dataset.theme=theme;document.documentElement.style.colorScheme=theme;localStorage.setItem("pescamar-theme",theme)},[theme]);
-  const context=pathname==="/"?"Operación de hoy":pathname.startsWith("/timeline")||pathname.startsWith("/operacion-2025")?"Línea de tiempo":pathname.startsWith("/aprobaciones")?"Decisiones":pathname.startsWith("/recepciones")?"Recepciones":pathname.startsWith("/despachos-ventas")?"Despachos y ventas":pathname.startsWith("/plantas")?"Red de plantas":pathname.startsWith("/lineas")?"Producción":pathname.startsWith("/creditos")?"Créditos y anticipos":pathname.startsWith("/liquidaciones")?"Liquidaciones":pathname.startsWith("/importaciones")?"Importaciones":pathname.startsWith("/operadores")?"Operadores":"Configuración";
+  const context=pathname==="/"?"Operación de hoy":pathname.startsWith("/timeline")||pathname.startsWith("/operacion-2025")?"Línea de tiempo":pathname.startsWith("/aprobaciones")?"Decisiones":pathname.startsWith("/recepciones")?"Recepciones":pathname.startsWith("/inventario")?"Inventario":pathname.startsWith("/ordenes-venta")?"Órdenes de venta":pathname.startsWith("/despachos-ventas")?"Despachos y ventas":pathname.startsWith("/cierre-diario")?"Cierre diario":pathname.startsWith("/plantas")?"Red de plantas":pathname.startsWith("/lineas")?"Producción":pathname.startsWith("/creditos")?"Créditos y anticipos":pathname.startsWith("/liquidaciones")?"Liquidaciones":pathname.startsWith("/importaciones")?"Importaciones":pathname.startsWith("/operadores")?"Operadores":"Configuración";
   const initials=operator?.fullName.split(" ").map(part=>part[0]).slice(0,2).join("").toUpperCase()||"PS";
   const visiblePrimary=operator?navigation.map(group=>({...group,items:group.items.filter(item=>canAccessPath(operator.role,item.to))})):[];
   const visibleSecondary=operator?secondaryNavigation.filter(item=>canAccessPath(operator.role,item.to)):[];
