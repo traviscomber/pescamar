@@ -2,8 +2,10 @@ import { requireOperator } from "./_auth.js";
 import { getSql } from "./_db.js";
 import { ensureReceptionSchema } from "./_reception-schema.js";
 
+declare const Buffer:{from:(input:string,encoding?:string)=>{length:number}};
+type Binary={length:number};
 type Request = { method?: string; query?: Record<string,string|string[]|undefined>; headers?: Record<string,string|string[]|undefined> };
-type Response = { status:(code:number)=>Response; setHeader:(name:string,value:string)=>void; end:(body?:Buffer|string)=>void; json:(body:unknown)=>void };
+type Response = { status:(code:number)=>Response; setHeader:(name:string,value:string)=>void; end:(body?:Binary|string)=>void; json:(body:unknown)=>void };
 
 const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
