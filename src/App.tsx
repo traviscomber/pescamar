@@ -11,6 +11,7 @@ import { Imports } from "./pages/Imports";
 import { PlantControl } from "./pages/PlantControl";
 import { ProductionLines } from "./pages/ProductionLines";
 import { Receptions } from "./pages/Receptions";
+import { Settlements } from "./pages/Settlements";
 import { Operators } from "./pages/Operators";
 import { useLots } from "./store";
 export default function App() {
@@ -36,6 +37,7 @@ export default function App() {
         <Route path="/importaciones" element={<Imports />} />
         <Route path="/operacion-2025" element={<Canonical2025 />} />
         <Route path="/creditos" element={<Credits />} />
+        <Route path="/liquidaciones" element={<Settlements />} />
         <Route path="/aprobaciones" element={<Approvals />} />
         <Route path="/modulos" element={<Modules />} />
         <Route path="/operadores" element={<Operators />} />
