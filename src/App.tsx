@@ -5,7 +5,6 @@ import { LoginScreen, useAuth } from "./auth";
 import { AppShell } from "./components/AppShell";
 import { ReceptionModal } from "./components/ReceptionModal";
 import { Approvals } from "./pages/Approvals";
-import { Canonical2025 } from "./pages/Canonical2025";
 import { Credits } from "./pages/Credits";
 import { Dashboard } from "./pages/Dashboard";
 import { Modules } from "./pages/Modules";
@@ -15,6 +14,7 @@ import { ProductionLines } from "./pages/ProductionLines";
 import { Receptions } from "./pages/Receptions";
 import { Settlements } from "./pages/Settlements";
 import { Operators } from "./pages/Operators";
+import { Timeline } from "./pages/Timeline";
 import { useLots } from "./store";
 
 export default function App(){
@@ -36,10 +36,11 @@ function AuthenticatedApp(){
     {loading?<div className="system-banner">Sincronizando recepciones…</div>:error?<div className="system-banner error" role="alert">{error}</div>:null}
     <Routes>
       <Route path="/" element={<Dashboard lots={lots} onNewReception={open}/>}/>
+      <Route path="/timeline" element={<Timeline/>}/>
+      <Route path="/operacion-2025" element={<Navigate to="/timeline" replace/>}/>
       <Route path="/plantas" element={<PlantControl/>}/>
       <Route path="/plantas/:plantId" element={<PlantControl/>}/>
       <Route path="/importaciones" element={gate("/importaciones",<Imports/>)}/>
-      <Route path="/operacion-2025" element={<Canonical2025/>}/>
       <Route path="/creditos" element={gate("/creditos",<Credits/>)}/>
       <Route path="/liquidaciones" element={gate("/liquidaciones",<Settlements/>)}/>
       <Route path="/aprobaciones" element={gate("/aprobaciones",<Approvals/>)}/>
