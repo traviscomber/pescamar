@@ -8,12 +8,15 @@ import { ReceptionModal } from "./components/ReceptionModal";
 import { Approvals } from "./pages/Approvals";
 import { Commercial } from "./pages/Commercial";
 import { Credits } from "./pages/Credits";
+import { DailyClose } from "./pages/DailyClose";
 import { Dashboard } from "./pages/Dashboard";
+import { Inventory } from "./pages/Inventory";
 import { Modules } from "./pages/Modules";
 import { Imports } from "./pages/Imports";
 import { PlantControl } from "./pages/PlantControl";
 import { ProductionLines } from "./pages/ProductionLines";
 import { Receptions } from "./pages/Receptions";
+import { SalesOrders } from "./pages/SalesOrders";
 import { Settlements } from "./pages/Settlements";
 import { Operators } from "./pages/Operators";
 import { Timeline } from "./pages/Timeline";
@@ -46,6 +49,9 @@ function AuthenticatedApp(){
       <Route path="/creditos" element={gate("/creditos",<Credits/>)}/>
       <Route path="/liquidaciones" element={gate("/liquidaciones",<Settlements/>)}/>
       <Route path="/despachos-ventas" element={gate("/despachos-ventas",<Commercial/>)}/>
+      <Route path="/ordenes-venta" element={gate("/ordenes-venta",<SalesOrders/>)}/>
+      <Route path="/inventario" element={gate("/inventario",<Inventory/>)}/>
+      <Route path="/cierre-diario" element={gate("/cierre-diario",<DailyClose/>)}/>
       <Route path="/aprobaciones" element={gate("/aprobaciones",<Approvals/>)}/>
       <Route path="/modulos" element={gate("/modulos",<Modules/>)}/>
       <Route path="/operadores" element={gate("/operadores",<Operators/>)}/>
