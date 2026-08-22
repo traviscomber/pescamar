@@ -109,7 +109,7 @@ export function PlantControl() {
       <section className="plant-directory-summary" aria-label="Resumen de la red">
         <div><small>Centros configurados</small><b>{plants.length}</b></div>
         <div><small>Con fuente operacional</small><b>{linkedCount}</b></div>
-        <div className={plants.length-linkedCount?"attention":""}><small>Pendientes de vincular</small><b>{plants.length-linkedCount}</b></div>
+        <div><small>Pendientes de vincular</small><b>{plants.length-linkedCount}</b></div>
         <p>Los indicadores aparecen únicamente después de publicar una fuente validada.</p>
       </section>
       <section className="plant-grid corporate-plant-grid">
@@ -133,9 +133,12 @@ function PlantCard({ plant }: { plant: PlantState }) {
   return <Link className={`panel plant-card corporate-plant-card status-${operational ? plant.status : "offline"}`} to={`/plantas/${plant.id}`}>
     <header>
       <div><span className="overline">{plant.mode}</span><h2>{plant.name}</h2><small>{plant.location}</small></div>
-      <ArrowRight size={18} />
+      <span className="plant-card-actions">
+        {!operational ? <Link2Off className="plant-pending-icon" size={16} aria-label="Fuente pendiente de vincular" /> : null}
+        <ArrowRight size={18} />
+      </span>
     </header>
-    <div className={`plant-card-state ${operational ? plant.status : "offline"}`}><i/><span><b>{operational ? plant.statusLabel : "Fuente pendiente"}</b><small>{operational ? plant.statusReason : "Sin indicadores publicados"}</small></span></div>
+    {operational ? <div className={`plant-card-state ${plant.status}`}><i/><span><b>{plant.statusLabel}</b><small>{plant.statusReason}</small></span></div> : null}
     {operational ? <div className="plant-kpis"><div><small>Producción</small><b>{kg(plant.productionKg)}</b></div><div><small>Cumplimiento</small><b>{progress}%</b></div><div><small>Alertas</small><b>{plant.alerts.length}</b></div></div> : null}
     <div className="plant-products"><small>Productos</small><p>{plant.products.slice(0,3).join(" · ")}{plant.products.length>3?` · +${plant.products.length-3}`:""}</p></div>
     <footer><span>{operational ? <><Clock3 size={13}/>{plant.updatedAt}</> : <><Link2Off size={13}/>No vinculada</>}</span><span>Abrir planta <ArrowRight size={13}/></span></footer>
