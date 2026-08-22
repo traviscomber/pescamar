@@ -7,6 +7,7 @@ type ApiReception = {
   supplier: string;
   species: Species;
   extraction_zone: string;
+  guide_kg: string | number;
   gross_kg: string | number;
   tare_kg: string | number;
   drained_kg: string | number | null;
@@ -33,6 +34,7 @@ function toLot(row: ApiReception): Lot {
       .join("")
       .toUpperCase(),
     zone: row.extraction_zone,
+    guide: Number(row.guide_kg),
     gross,
     tare,
     drained,
