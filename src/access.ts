@@ -7,11 +7,11 @@ const access:Record<string,AppRole[]|"all">={
   "/operacion-2025":"all",
   "/recepciones":"all",
   "/aprobaciones":["admin","operations","finance","quality"],
-  "/creditos":["admin","finance"],
-  "/liquidaciones":["admin","finance"],
+  "/creditos":["admin","finance","operations"],
+  "/liquidaciones":["admin","finance","operations"],
   "/importaciones":["admin","operations"],
   "/operadores":["admin","operations"],
-  "/modulos":["admin"],
+  "/modulos":["admin","operations"],
 };
 
 export function canAccessPath(role:AppRole,path:string){
