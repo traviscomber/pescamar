@@ -21,32 +21,22 @@ import { usePlatformStatus } from "../hooks/usePlatformStatus";
 
 const navigation = [
   {
-    label: "Trabajo",
+    label: "Operación diaria",
     items: [
       { to: "/", label: "Operación de hoy", icon: LayoutDashboard },
       { to: "/aprobaciones", label: "Decisiones", icon: CheckCheck },
-    ],
-  },
-  {
-    label: "Operación",
-    items: [
       { to: "/recepciones", label: "Recepciones", icon: Boxes },
-      { to: "/plantas", label: "Plantas", icon: Factory },
-      { to: "/lineas", label: "Producción", icon: Blocks },
+      { to: "/creditos", label: "Créditos y anticipos", icon: Landmark },
     ],
   },
-  {
-    label: "Comercial",
-    items: [{ to: "/creditos", label: "Créditos y anticipos", icon: Landmark }],
-  },
-  {
-    label: "Control",
-    items: [
-      { to: "/importaciones", label: "Importaciones", icon: FileSpreadsheet },
-      { to: "/operacion-2025", label: "Fuente canónica 2025", icon: Database },
-      { to: "/operadores", label: "Operadores", icon: Settings2 },
-    ],
-  },
+];
+
+const secondaryNavigation = [
+  { to: "/plantas", label: "Plantas", icon: Factory },
+  { to: "/lineas", label: "Producción", icon: Blocks },
+  { to: "/operacion-2025", label: "Fuente canónica 2025", icon: Database },
+  { to: "/importaciones", label: "Importaciones", icon: FileSpreadsheet },
+  { to: "/operadores", label: "Operadores", icon: Settings2 },
 ];
 
 export function AppShell({
@@ -140,6 +130,16 @@ export function AppShell({
               ))}
             </section>
           ))}
+          <details className="nav-more">
+            <summary><Blocks size={18} /><span>Más módulos</span><ChevronDown size={14} /></summary>
+            <div>
+              {secondaryNavigation.map(({ to, label, icon: Icon }) => (
+                <NavLink key={to} to={to} onClick={() => setMobileOpen(false)}>
+                  <Icon size={18} /><span>{label}</span>
+                </NavLink>
+              ))}
+            </div>
+          </details>
         </nav>
         <div className="sidebar-spacer" />
         <div className="pilot-card">
