@@ -131,7 +131,108 @@ export function LoginScreen() {
             {busy ? "Ingresando…" : "Ingresar"}
           </button>
         </form>
+        <BootstrapPanel onActivated={(activatedEmail, activatedPassword) => void login(activatedEmail, activatedPassword)} />
       </section>
     </main>
+  );
+}
+
+function BootstrapPanel({
+  onActivated,
+}: {
+  onActivated: (email: string, password: string) => void;
+}) {
+  const [token, setToken] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  async function activate(event: FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch("/api/bootstrap", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name, email, password }),
+      });
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok)
+        throw new Error(data.error ?? "No fue posible activar la primera cuenta");
+      setMessage("Administrador activado. Iniciando sesión…");
+      onActivated(email, password);
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "No fue posible activar la primera cuenta",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <details className="bootstrap-panel">
+      <summary>Activación inicial</summary>
+      <p>
+        Úsalo únicamente si todavía no existe un administrador con contraseña.
+      </p>
+      <form onSubmit={activate}>
+        <label>
+          Clave de activación
+          <input
+            type="password"
+            autoComplete="off"
+            value={token}
+            onChange={(event) => setToken(event.target.value)}
+            required
+            minLength={24}
+          />
+        </label>
+        <label>
+          Nombre del administrador
+          <input
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            required
+            maxLength={120}
+          />
+        </label>
+        <label>
+          Correo
+          <input
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            required
+          />
+        </label>
+        <label>
+          Contraseña inicial
+          <input
+            type="password"
+            autoComplete="new-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            required
+            minLength={12}
+          />
+        </label>
+        {message ? <p className="form-success">{message}</p> : null}
+        {error ? <p className="form-error">{error}</p> : null}
+        <button className="button secondary full" disabled={busy}>
+          {busy ? "Activando…" : "Crear primer administrador"}
+        </button>
+      </form>
+    </details>
   );
 }
