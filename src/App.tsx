@@ -6,6 +6,7 @@ import { AppShell } from "./components/AppShell";
 import { Lot360Provider } from "./components/Lot360Context";
 import { ReceptionModal } from "./components/ReceptionModal";
 import { Approvals } from "./pages/Approvals";
+import { Commercial } from "./pages/Commercial";
 import { Credits } from "./pages/Credits";
 import { Dashboard } from "./pages/Dashboard";
 import { Modules } from "./pages/Modules";
@@ -44,6 +45,7 @@ function AuthenticatedApp(){
       <Route path="/importaciones" element={gate("/importaciones",<Imports/>)}/>
       <Route path="/creditos" element={gate("/creditos",<Credits/>)}/>
       <Route path="/liquidaciones" element={gate("/liquidaciones",<Settlements/>)}/>
+      <Route path="/despachos-ventas" element={gate("/despachos-ventas",<Commercial/>)}/>
       <Route path="/aprobaciones" element={gate("/aprobaciones",<Approvals/>)}/>
       <Route path="/modulos" element={gate("/modulos",<Modules/>)}/>
       <Route path="/operadores" element={gate("/operadores",<Operators/>)}/>
