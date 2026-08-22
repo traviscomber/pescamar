@@ -47,7 +47,7 @@ function AuthenticatedApp(){
       <Route path="/aprobaciones" element={gate("/aprobaciones",<Approvals/>)}/>
       <Route path="/modulos" element={gate("/modulos",<Modules/>)}/>
       <Route path="/operadores" element={gate("/operadores",<Operators/>)}/>
-      <Route path="/lineas" element={<ProductionLines/>}/>
+      <Route path="/lineas" element={<ProductionLines lots={lots}/>}/>
       <Route path="/recepciones" element={<Receptions lots={lots} onNew={open}/>}/>
       <Route path="*" element={<Navigate to="/" replace/>}/>
     </Routes>
