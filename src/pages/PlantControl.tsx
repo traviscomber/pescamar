@@ -72,14 +72,20 @@ export function PlantControl() {
   if (selected)
     return (
       <>
-        <PlantScopeSelector
-          plants={plants}
-          value={selected.id}
-          onChange={(id) => {
-            localStorage.setItem("pescamar-active-plant", id);
-            navigate(`/plantas/${id}`);
-          }}
-        />
+        <nav className="plant-detail-toolbar" aria-label="Navegación de plantas">
+          <Link to="/plantas" className="back-link">
+            <ArrowLeft size={15} />
+            Todas las plantas
+          </Link>
+          <PlantScopeSelector
+            plants={plants}
+            value={selected.id}
+            onChange={(id) => {
+              localStorage.setItem("pescamar-active-plant", id);
+              navigate(`/plantas/${id}`);
+            }}
+          />
+        </nav>
         <PlantDetail plant={selected} />
         <PlantImportModal
           open={importOpen}
@@ -146,59 +152,38 @@ function PlantCard({ plant }: { plant: PlantState }) {
 }
 
 function PlantScopeSelector({plants,value,onChange}:{plants:PlantState[];value:string;onChange:(id:string)=>void}) {
-  return <label className="plant-scope-selector"><span>Centro operativo</span><select value={value} onChange={(event)=>onChange(event.target.value)}><option value="" disabled>Seleccionar planta</option>{plants.map((plant)=><option value={plant.id} key={plant.id}>{plant.name} · {plant.location}</option>)}</select></label>
+  return <label className="plant-scope-selector"><span>Cambiar planta</span><select aria-label="Cambiar planta" value={value} onChange={(event)=>onChange(event.target.value)}><option value="" disabled>Seleccionar planta</option>{plants.map((plant)=><option value={plant.id} key={plant.id}>{plant.name} · {plant.location}</option>)}</select></label>
 }
 
 function PlantDetail({ plant }: { plant: PlantState }) {
   if (!isOperationalPlant(plant))
     return (
       <>
-        <Link to="/" className="back-link">
-          <ArrowLeft size={15} />
-          Volver al centro de control
-        </Link>
         <PageHeader
           eyebrow={`${plant.mode} · ${plant.location}`}
           title={plant.name}
-          description="Esta planta está configurada, pero todavía no tiene una fuente operacional validada."
-          actions={
+          description="Centro configurado, pendiente de conexión con una fuente operacional validada."
+        />
+        <section className="plant-offline-layout">
+          <article className="panel plant-offline-state">
+            <span className="plant-offline-icon"><Link2Off size={24} /></span>
+            <div>
+              <span className="overline">Estado de datos</span>
+              <h2>Planta sin fuente operacional</h2>
+              <p>Asigna y publica una fuente validada para comenzar a mostrar indicadores reales de esta planta.</p>
+            </div>
             <Link className="button primary" to="/importaciones">
               <FileSpreadsheet size={16} />
-              Asignar planilla
+              Asignar fuente
             </Link>
-          }
-        />
-        <section className="plant-detail-banner offline">
-          <div className="plant-signal offline">
-            <span />
-          </div>
-          <div>
-            <small>Estado de datos</small>
-            <b>Sin fuente asignada</b>
-            <p>
-              No se muestran indicadores hasta publicar una importación válida.
-            </p>
-          </div>
-        </section>
-        <section className="plant-detail-grid">
-          <ProductCatalog plant={plant} />
-          <article className="panel plant-empty">
-            <Link2Off size={30} />
-            <b>Indicadores bloqueados</b>
-            <span>
-              Asigna y publica una fuente válida para habilitar los KPI.
-            </span>
           </article>
+          <ProductCatalog plant={plant} />
         </section>
       </>
     );
   const progress = Math.round((plant.productionKg / plant.targetKg) * 100);
   return (
     <>
-      <Link to="/" className="back-link">
-        <ArrowLeft size={15} />
-        Volver al centro de control
-      </Link>
       <PageHeader
         eyebrow={`${plant.mode} · ${plant.location}`}
         title={plant.name}
