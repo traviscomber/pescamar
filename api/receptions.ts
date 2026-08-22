@@ -22,6 +22,7 @@ type ReceptionInput = {
 
 const allowedSpecies = new Set(["Erizo", "Loco", "Jaiba", "Centolla", "Pulpo", "Pescado", "Algas"]);
 const evidenceKinds = new Set(["document", "photo", "certificate", "other"]);
+const httpsUrlPattern = /^https:\/\/[a-z0-9.-]+(?::\d+)?(?:[/?#][^\s]*)?$/i;
 
 function normalizeEvidence(value: unknown) {
   if (!Array.isArray(value) || value.length > 6) return null;
@@ -31,14 +32,8 @@ function normalizeEvidence(value: unknown) {
     const label = String(raw?.label ?? "").trim().slice(0, 120);
     const url = String(raw?.url ?? "").trim();
     const note = String(raw?.note ?? "").trim().slice(0, 500);
-    let parsed: URL;
-    try {
-      parsed = new URL(url);
-    } catch {
-      return null;
-    }
-    if (!evidenceKinds.has(kind) || label.length < 2 || parsed.protocol !== "https:") return null;
-    result.push({ kind, label, url: parsed.toString(), note });
+    if (!evidenceKinds.has(kind) || label.length < 2 || url.length > 2048 || !httpsUrlPattern.test(url)) return null;
+    result.push({ kind, label, url, note });
   }
   return result;
 }
