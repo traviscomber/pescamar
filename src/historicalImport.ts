@@ -1,97 +1,13 @@
 import {readWorkbook} from './workbook'
 
-export type HistoricalProductionRow={
-  sourceRow:number
-  recordStatus:'operational'|'void'
-  eventDate:string|null
-  receptionDate:string|null
-  processDate:string|null
-  productionDate:string|null
-  guideNumber:string|null
-  supplierOriginal:string|null
-  supplierName:string|null
-  extractionZone:string|null
-  guidePriceClp:number|null
-  processSiteOriginal:string|null
-  lotCode:string
-  guideKg:number|null
-  receivedKg:number|null
-  differenceKg:number|null
-  qualityDiscount:number|null
-  gradeBreakdown:Record<string,number|null>
-  yields:Record<string,number|null>
-  client:string|null
-  observations:string|null
-  dataQualityFlags:string[]
-  rawRecord:Record<string,unknown>
-}
-
-export type HistoricalWorkbookPreview={
-  kind:'pescamar-production'
-  fileName:string
-  fileHash:string
-  sheetName:string
-  sheetCount:number
-  rows:HistoricalProductionRow[]
-  operational:number
-  voids:number
-  flagged:number
-}
-
+export type GradeValue={boxes:number|null;kg:number|null}
+export type HistoricalProductionRow={sourceRow:number;recordStatus:'operational'|'void';eventDate:string|null;receptionDate:string|null;processDate:string|null;productionDate:string|null;guideNumber:string|null;supplierOriginal:string|null;supplierName:string|null;extractionZone:string|null;guidePriceClp:number|null;processSiteOriginal:string|null;lotCode:string;guideKg:number|null;receivedKg:number|null;differenceKg:number|null;qualityDiscount:number|null;gradeBreakdown:Record<string,GradeValue>;yields:Record<string,number|null>;client:string|null;observations:string|null;dataQualityFlags:string[];rawRecord:Record<string,unknown>}
+export type HistoricalWorkbookPreview={kind:'pescamar-production';fileName:string;fileHash:string;sheetName:string;sheetCount:number;rows:HistoricalProductionRow[];operational:number;voids:number;flagged:number}
 const text=(value:unknown)=>{const v=String(value??'').trim();return v||null}
 const number=(value:unknown)=>typeof value==='number'&&Number.isFinite(value)?value:(()=>{const raw=String(value??'').trim();if(!raw)return null;const parsed=Number(raw.replace(/\./g,'').replace(',','.'));return Number.isFinite(parsed)?parsed:null})()
 const date=(value:unknown)=>{if(value instanceof Date&&!Number.isNaN(value.getTime()))return value.toISOString().slice(0,10);const raw=String(value??'').trim();if(!raw)return null;const parsed=new Date(raw);return Number.isNaN(parsed.getTime())?null:parsed.toISOString().slice(0,10)}
 const normalize=(value:unknown)=>String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'')
 const cell=(row:unknown[],index:number)=>row[index]??null
-
-export async function readHistoricalProductionWorkbook(file:File):Promise<HistoricalWorkbookPreview|null>{
-  const workbook=await readWorkbook(file)
-  const top=workbook.rows[0]??[],sub=workbook.rows[1]??[]
-  const signature=[
-    [4,'guia','n'],[5,'proveedor','nombre'],[6,'lugarextraccion','zona'],[8,'planta','proceso'],[9,'lote','n'],[10,'controlrecepcionmp','kilosguia'],[11,'','kilosrecep']
-  ] as const
-  const compatible=signature.every(([index,a,b])=>(!a||normalize(top[index]).includes(a))&&(!b||normalize(sub[index]).includes(b)))
-  if(!compatible)return null
-
-  const rows:HistoricalProductionRow[]=[]
-  workbook.rows.slice(2).forEach((values,index)=>{
-    if(!values.some(value=>value!==null&&String(value).trim()!==''))return
-    const sourceRow=index+3
-    const lotCode=text(cell(values,9))
-    if(!lotCode)return
-    const guideKg=number(cell(values,10)),receivedKg=number(cell(values,11))
-    const receptionDate=date(cell(values,0)),processDate=date(cell(values,1)),productionDate=date(cell(values,2))
-    const guideNumber=text(cell(values,4)),supplier=text(cell(values,5)),site=text(cell(values,8))
-    const flags:string[]=[]
-    if(!guideNumber)flags.push('guide_number_missing')
-    if(!supplier)flags.push('supplier_missing')
-    if(!receptionDate)flags.push('reception_date_missing')
-    if(guideKg==null)flags.push('guide_kg_missing')
-    if(receivedKg==null)flags.push('received_kg_missing')
-    if(!site)flags.push('process_site_missing')
-    if(guideKg!=null&&guideKg<0)flags.push('guide_kg_negative')
-    if(receivedKg!=null&&receivedKg<0)flags.push('received_kg_negative')
-    const recordStatus=/no\s*existe|anulad|void/i.test(lotCode)?'void':'operational'
-    rows.push({
-      sourceRow,recordStatus,
-      eventDate:productionDate??processDate??receptionDate,receptionDate,processDate,productionDate,
-      guideNumber,supplierOriginal:supplier,supplierName:supplier,extractionZone:text(cell(values,6)),guidePriceClp:number(cell(values,7)),
-      processSiteOriginal:site,lotCode,guideKg,receivedKg,differenceKg:number(cell(values,12))??(guideKg!=null&&receivedKg!=null?guideKg-receivedKg:null),
-      qualityDiscount:number(cell(values,13)),
-      gradeBreakdown:{A1:number(cell(values,15)),AA:number(cell(values,17)),V1:number(cell(values,19)),Vj50:number(cell(values,21)),C1:number(cell(values,23)),C2:number(cell(values,25)),D:number(cell(values,27)),PT:number(cell(values,31)),R:number(cell(values,33))},
-      yields:{gradeA:number(cell(values,37)),volcadoA:number(cell(values,38)),gradeC:number(cell(values,39)),total:number(cell(values,40)),D:number(cell(values,41)),pasta:number(cell(values,42)),rechazo:number(cell(values,43))},
-      client:text(cell(values,44)),observations:text(cell(values,45)),dataQualityFlags:flags,
-      rawRecord:Object.fromEntries(values.slice(0,46).map((value,column)=>[`c${column+1}`,value instanceof Date?value.toISOString():value]))
-    })
-  })
-  const digest=await crypto.subtle.digest('SHA-256',await file.arrayBuffer())
-  const fileHash=Array.from(new Uint8Array(digest)).map(byte=>byte.toString(16).padStart(2,'0')).join('')
-  return {kind:'pescamar-production',fileName:file.name,fileHash,sheetName:workbook.sheetName,sheetCount:workbook.sheetCount,rows,operational:rows.filter(row=>row.recordStatus==='operational').length,voids:rows.filter(row=>row.recordStatus==='void').length,flagged:rows.filter(row=>row.dataQualityFlags.length>0).length}
-}
-
-export async function publishHistoricalProduction(preview:HistoricalWorkbookPreview){
-  const response=await fetch('/api/historical-import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fileName:preview.fileName,fileHash:preview.fileHash,rows:preview.rows})})
-  const payload=await response.json().catch(()=>({})) as {ok?:boolean;error?:string;inserted?:number;duplicates?:number}
-  if(!response.ok||!payload.ok)throw new Error(payload.error||'No fue posible publicar la planilla histórica')
-  return payload
-}
+const grade=(row:unknown[],boxes:number,kg:number):GradeValue=>({boxes:number(cell(row,boxes)),kg:number(cell(row,kg))})
+export async function readHistoricalProductionWorkbook(file:File):Promise<HistoricalWorkbookPreview|null>{const workbook=await readWorkbook(file);const top=workbook.rows[0]??[],sub=workbook.rows[1]??[];const signature=[[4,'guia','n'],[5,'proveedor','nombre'],[6,'lugarextraccion','zona'],[8,'planta','proceso'],[9,'lote','n'],[10,'controlrecepcionmp','kilosguia'],[11,'','kilosrecep']] as const;const compatible=signature.every(([index,a,b])=>(!a||normalize(top[index]).includes(a))&&(!b||normalize(sub[index]).includes(b)));if(!compatible)return null;const rows:HistoricalProductionRow[]=[];workbook.rows.slice(2).forEach((values,index)=>{if(!values.some(value=>value!==null&&String(value).trim()!==''))return;const sourceRow=index+3,lotCode=text(cell(values,9));if(!lotCode)return;const guideKg=number(cell(values,10)),receivedKg=number(cell(values,11)),receptionDate=date(cell(values,0)),processDate=date(cell(values,1)),productionDate=date(cell(values,2)),guideNumber=text(cell(values,4)),supplier=text(cell(values,5)),site=text(cell(values,8));const flags:string[]=[];if(!guideNumber)flags.push('guide_number_missing');if(!supplier)flags.push('supplier_missing');if(!receptionDate)flags.push('reception_date_missing');if(guideKg==null)flags.push('guide_kg_missing');if(receivedKg==null)flags.push('received_kg_missing');if(!site)flags.push('process_site_missing');if(guideKg!=null&&guideKg<0)flags.push('guide_kg_negative');if(receivedKg!=null&&receivedKg<0)flags.push('received_kg_negative');const recordStatus=/no\s*existe|anulad|void/i.test(lotCode)?'void':'operational';rows.push({sourceRow,recordStatus,eventDate:productionDate??processDate??receptionDate,receptionDate,processDate,productionDate,guideNumber,supplierOriginal:supplier,supplierName:supplier,extractionZone:text(cell(values,6)),guidePriceClp:number(cell(values,7)),processSiteOriginal:site,lotCode,guideKg,receivedKg,differenceKg:number(cell(values,12))??(guideKg!=null&&receivedKg!=null?guideKg-receivedKg:null),qualityDiscount:number(cell(values,13)),gradeBreakdown:{A1:grade(values,14,15),AA:grade(values,16,17),V1:grade(values,18,19),VJ50:grade(values,20,21),C1:grade(values,22,23),C2:grade(values,24,25),D:grade(values,26,27),PT:grade(values,30,31),R:grade(values,32,33)},yields:{grade_a:number(cell(values,37)),volcado_a:number(cell(values,38)),grade_c:number(cell(values,39)),total:number(cell(values,40)),d:number(cell(values,41)),pasta:number(cell(values,42)),rechazo:number(cell(values,43))},client:text(cell(values,44)),observations:text(cell(values,45)),dataQualityFlags:flags,rawRecord:Object.fromEntries(values.slice(0,46).map((value,column)=>[`c${column+1}`,value instanceof Date?value.toISOString():value]))})});const digest=await crypto.subtle.digest('SHA-256',await file.arrayBuffer());const fileHash=Array.from(new Uint8Array(digest)).map(byte=>byte.toString(16).padStart(2,'0')).join('');return {kind:'pescamar-production',fileName:file.name,fileHash,sheetName:workbook.sheetName,sheetCount:workbook.sheetCount,rows,operational:rows.filter(row=>row.recordStatus==='operational').length,voids:rows.filter(row=>row.recordStatus==='void').length,flagged:rows.filter(row=>row.dataQualityFlags.length>0).length}}
+export async function publishHistoricalProduction(preview:HistoricalWorkbookPreview){const response=await fetch('/api/historical-import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fileName:preview.fileName,fileHash:preview.fileHash,rows:preview.rows})});const payload=await response.json().catch(()=>({})) as {ok?:boolean;error?:string;inserted?:number;duplicates?:number};if(!response.ok||!payload.ok)throw new Error(payload.error||'No fue posible publicar la planilla histórica');window.dispatchEvent(new CustomEvent('pescamar:data-updated',{detail:{scope:'historical-production'}}));return payload}
