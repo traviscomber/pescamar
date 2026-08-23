@@ -1,243 +1,342 @@
-# Pescamar Control Multiplanta — Roadmap 90 días
+# Pescamar — ROADMAP 90 días
 
 **Ventana:** 24 agosto – 22 noviembre 2026  
-**Objetivo:** terminar en un máximo de 3 meses una plataforma operacional estable, trazable y adoptada para las seis plantas de Pescamar.  
-**Principio:** no esperar a que todas las plantas estén perfectas para avanzar. Se estabiliza el núcleo común una vez y luego se despliega por planta en olas cortas.
+**Estado:** OPERANDO / HARDENING  
+**Fecha máxima de término:** 22 noviembre 2026  
+**North Star:** seis plantas operativas sobre un solo core, con datos reales, trazabilidad completa, permisos por planta y operación diaria sin depender del equipo de desarrollo.
 
-## Estado de partida
+> Simplicidad primero. Datos reales primero. Un solo core. Una planta a la vez, sin perder la visión multiplanta.
 
-El producto ya está operando técnicamente sobre una base sólida:
+---
 
-- PostgreSQL/Neon como persistencia operacional canónica.
+## 1. Qué ya está resuelto
+
+La plataforma ya tiene base productiva:
+
+- Neon/PostgreSQL como persistencia operacional.
 - Importación XLSX/XLS/CSV con preview, historial y rollback.
-- Snapshot compartido multiplanta.
-- Recepciones trazables con evidencia.
-- OpenAI Vision para extracción documental; prueba sintética controlada: 11/11 campos, 100% de extracción y score 99/100.
-- Créditos, anticipos, liquidaciones y recuperación de anticipos.
-- Login individual, roles y autorización efectiva por planta.
-- CI/build y despliegue productivo en Vercel.
+- Recepciones vivas trazables.
+- Ficha 360 y línea temporal por lote.
+- Calidad, producción, inventario, costos, órdenes, comercial y cierre diario.
+- Créditos, anticipos y liquidaciones.
+- Roles, sesiones y alcance por planta.
+- Vercel + CI/build productivo.
+- OpenAI Vision activo en producción.
+- Prueba sintética Vision: 11/11 campos correctos, 100% extracción, 95% confianza, score 99/100.
+- 2025 tratado como referencia histórica canónica; 2026+ como operación viva.
 
-El desafío de los próximos 90 días ya no es demostrar que la arquitectura funciona. Es convertirla en operación repetible por planta, con datos reales, usuarios reales y criterios de aceptación medibles.
+El trabajo restante ya no es demostrar la arquitectura. Es **activar, validar y estabilizar cada planta con operación real**.
 
-## Plantas y estrategia de rollout
+---
 
-| Ola | Planta | Modalidad | Foco de activación |
+## 2. Estrategia de rollout
+
+| Ola | Planta | Modalidad | Resultado esperado |
 | --- | --- | --- | --- |
-| 1 | Ancud | Propia | Recepción, producción, rendimiento, inventario y trazabilidad |
-| 1 | Quellón | Propia | Recepción multiespecie, desconche, rendimiento y liquidación |
-| 2 | Iquique (Sotomayor) | Maquila | Control de maquila, recepción, producción y conciliación |
-| 2 | Piedra Azul | Maquila / producto terminado | Maquila, producto terminado, inventario y despacho |
-| 3 | Aqua Austral | Producto terminado | Ingreso PT, inventario, trazabilidad y despacho |
-| 3 | Natales | Producto terminado | Multiespecie, inventario, trazabilidad y despacho |
+| 0 | Core común | Plataforma | Core Production Ready |
+| 1 | Ancud | Propia | Flujo completo de recepción a inventario |
+| 1 | Quellón | Propia | Flujo multiespecie + desconche + liquidación |
+| 2 | Iquique / Sotomayor | Maquila | Conciliación maquila completa |
+| 2 | Piedra Azul | Maquila / PT | Maquila + producto terminado + despacho |
+| 3 | Aqua Austral | Producto terminado | Inventario PT + trazabilidad + despacho |
+| 3 | Natales | Producto terminado | Multiespecie PT + inventario + despacho |
 
-La prioridad de las olas puede cambiar según disponibilidad de operadores y datos, sin cambiar la fecha máxima de cierre.
-
----
-
-# MES 1 — Núcleo productivo + Ola 1
-## 24 agosto – 22 septiembre
-
-### Semana 1 — Cerrar el núcleo
-
-- [ ] Confirmar migraciones canónicas en Neon y eliminar cualquier drift de esquema.
-- [ ] Crear administrador y usuarios reales por rol.
-- [ ] Definir matriz real usuario → rol → planta.
-- [ ] Ejecutar pruebas cruzadas de autorización por rol/planta.
-- [ ] Completar flujo real recepción → aprobación → liquidación → anticipo.
-- [ ] Probar Vision con fotografías reales de documentos de planta: buena luz, sombra, inclinación, documento arrugado y cámara móvil.
-- [ ] Definir ground truth y score de OCR por campo crítico.
-- [ ] Gate Vision: >=95% en campos críticos y cero datos críticos inventados.
-- [ ] Revisar logs, errores runtime, seguridad y recuperación ante fallos.
-
-**Gate:** Core Production Ready.
-
-### Semana 2 — Modelo operacional por planta
-
-- [ ] Parametrizar especies, procesos, unidades y reglas por planta; evitar lógica hardcodeada por instalación.
-- [ ] Definir catálogo canónico de proveedores, productos, especies y lotes.
-- [ ] Definir estados del lote desde recepción hasta producto terminado/despacho.
-- [ ] Implementar inventario/lotes con trazabilidad de origen.
-- [ ] Implementar rendimiento y merma con reglas configurables.
-- [ ] Establecer calidad de datos: completo, pendiente, observado, rechazado.
-- [ ] Crear dashboard de salud por planta: última actualización, cobertura, pendientes y excepciones.
-
-### Semana 3 — Ancud
-
-- [ ] Cargar y reconciliar datos históricos disponibles.
-- [ ] Validar recepción real y evidencia documental.
-- [ ] Validar producción de erizo congelado.
-- [ ] Validar rendimiento/merma.
-- [ ] Validar inventario y trazabilidad por lote.
-- [ ] Capacitación corta a operadores responsables.
-- [ ] Operar 3 días consecutivos sin intervención técnica manual.
-
-### Semana 4 — Quellón
-
-- [ ] Cargar y reconciliar datos históricos disponibles.
-- [ ] Validar desconche de erizo y producto terminado.
-- [ ] Validar flujo multiespecie: erizo, pulpo, centolla y jaiba según datos reales disponibles.
-- [ ] Validar recepción, rendimiento, calidad y liquidación.
-- [ ] Operar 3 días consecutivos sin intervención técnica manual.
-
-**Gate fin Mes 1:** Ancud y Quellón en operación controlada; core estable.
+**Regla:** no se crea un fork por planta. Primero configuración; luego reglas reutilizables; código específico sólo si no existe otra opción.
 
 ---
 
-# MES 2 — Maquilas + control multiplanta
+# FASE 0 — CORE PRODUCTION READY
+## 24–31 agosto
+
+### Objetivo
+Cerrar todos los riesgos estructurales antes de acelerar plantas.
+
+### Entregables
+
+- [ ] Confirmar migraciones canónicas en Neon y eliminar drift.
+- [ ] Validar usuarios reales y matriz usuario → rol → planta.
+- [ ] Ejecutar pruebas cruzadas de autorización por planta/rol.
+- [ ] Completar E2E real: recepción → calidad → producción → inventario → liquidación.
+- [ ] Probar Vision con documentos reales de planta.
+- [ ] Dataset Vision: luz normal, baja luz, inclinación, sombra, documento arrugado y texto pequeño.
+- [ ] Gate Vision: >=95% campos críticos y cero campos críticos inventados.
+- [ ] Validar errores, fallos de OpenAI, archivos corruptos y recuperación.
+- [ ] Validar backup / restore / rollback.
+- [ ] Confirmar catálogos comunes: plantas, proveedores, especies, productos, procesos.
+- [ ] Cero P0 abiertos.
+
+### Gate
+**CORE PRODUCTION READY**
+
+No comienza rollout acelerado si existe un P0.
+
+---
+
+# FASE 1 — PLANTAS PROPIAS
+## 1–22 septiembre
+
+## Semana 2 — Modelo operacional común
+
+- [ ] Parametrizar especies, procesos, unidades y reglas por planta.
+- [ ] Consolidar catálogo canónico de proveedores/productos/especies.
+- [ ] Confirmar estados del lote de punta a punta.
+- [ ] Validar rendimiento y merma configurables.
+- [ ] Definir estados de calidad de datos: completo / pendiente / observado / rechazado.
+- [ ] Salud por planta: última actualización, cobertura, pendientes y excepciones.
+
+## Semana 3 — Ancud
+
+- [ ] Reconciliar 2025 disponible como referencia histórica.
+- [ ] Ejecutar primera recepción viva real.
+- [ ] Validar evidencia + Vision.
+- [ ] Calidad sin recaptura.
+- [ ] Producción de erizo congelado.
+- [ ] Rendimiento y merma.
+- [ ] Inventario por lote.
+- [ ] Trazabilidad completa en Ficha 360.
+- [ ] Operar 3 días consecutivos sin intervención técnica manual.
+- [ ] Responsable de planta acepta el flujo.
+
+**Gate Ancud:** LIVE.
+
+## Semana 4 — Quellón
+
+- [ ] Reconciliar 2025 disponible.
+- [ ] Ejecutar recepción viva real.
+- [ ] Validar desconche de erizo.
+- [ ] Validar producto terminado.
+- [ ] Validar erizo, pulpo, centolla y jaiba según operación real.
+- [ ] Validar calidad, rendimiento y liquidación.
+- [ ] Operar 3 días consecutivos sin intervención técnica manual.
+- [ ] Responsable de planta acepta el flujo.
+
+**Gate Quellón:** LIVE.
+
+### Gate fin Fase 1
+**2/6 plantas LIVE + core estable.**
+
+---
+
+# FASE 2 — MAQUILAS + CONTROL MULTIPLANTA
 ## 23 septiembre – 22 octubre
 
-### Semana 5 — Aprendizajes y plantilla de activación
+## Semana 5 — Plantilla reutilizable
 
-- [ ] Corregir fricciones detectadas en Ola 1.
-- [ ] Convertir configuración de planta en plantilla reutilizable.
-- [ ] Crear checklist técnico/operacional estándar para alta de una nueva planta.
-- [ ] Automatizar validaciones de importación y conciliación más frecuentes.
-- [ ] Agregar alertas por datos vencidos, faltantes, diferencias y rendimientos fuera de rango.
+- [ ] Corregir fricciones detectadas en Ancud/Quellón.
+- [ ] Convertir diferencias de planta en configuración reusable.
+- [ ] Checklist estándar de alta de planta.
+- [ ] Automatizar conciliaciones frecuentes.
+- [ ] Alertas por datos vencidos, faltantes, diferencias y rendimientos anómalos.
 
-### Semana 6 — Iquique / Sotomayor
+## Semana 6 — Iquique / Sotomayor
 
 - [ ] Configurar modalidad maquila.
 - [ ] Cargar fuentes reales disponibles.
 - [ ] Validar recepción y producción por especie.
-- [ ] Conciliar kilos enviados, procesados, merma y producto resultante.
-- [ ] Validar trazabilidad y documentación.
+- [ ] Conciliar kilos enviados / procesados / merma / producto resultante.
+- [ ] Validar documentación y trazabilidad.
 - [ ] Operar 3 días consecutivos sin soporte manual.
 
-### Semana 7 — Piedra Azul
+**Gate Iquique:** LIVE.
+
+## Semana 7 — Piedra Azul
 
 - [ ] Configurar maquila + producto terminado.
 - [ ] Validar centolla, Chinook y corvina según cobertura real.
-- [ ] Validar inventario PT y movimientos.
-- [ ] Conciliar origen → procesamiento → PT/despacho.
+- [ ] Validar inventario PT.
+- [ ] Conciliar origen → procesamiento → PT → despacho.
 - [ ] Operar 3 días consecutivos sin soporte manual.
 
-### Semana 8 — Centro de control multiplanta
+**Gate Piedra Azul:** LIVE.
 
-- [ ] Comparador de plantas con filtros homogéneos.
-- [ ] KPIs: recepción, producción, rendimiento, merma, inventario, antigüedad de datos y excepciones.
-- [ ] Tendencias históricas sólo donde la cobertura sea suficiente.
-- [ ] Bandeja ejecutiva de excepciones y decisiones.
-- [ ] Drill-down KPI → planta → lote/recepción → evidencia.
-- [ ] Exportación/entrega ejecutiva de información sin romper trazabilidad.
+## Semana 8 — Centro de control multiplanta
 
-**Gate fin Mes 2:** cuatro plantas operativas y centro de control multiplanta útil para gestión diaria.
+- [ ] Comparador homogéneo por planta.
+- [ ] KPIs: recepción, producción, rendimiento, merma, inventario y antigüedad de datos.
+- [ ] Excepciones y decisiones prioritarias.
+- [ ] Drill-down KPI → planta → lote → evidencia.
+- [ ] Tendencias sólo donde exista cobertura suficiente.
+- [ ] Cierre diario consolidado con origen visible.
+
+### Gate fin Fase 2
+**4/6 plantas LIVE + centro de control útil para gestión diaria.**
 
 ---
 
-# MES 3 — Producto terminado + cierre definitivo
+# FASE 3 — PRODUCTO TERMINADO + CIERRE
 ## 23 octubre – 22 noviembre
 
-### Semana 9 — Aqua Austral
+## Semana 9 — Aqua Austral
 
-- [ ] Configurar flujo de producto terminado.
-- [ ] Cargar y reconciliar datos disponibles.
-- [ ] Validar inventario, movimientos, trazabilidad y despacho.
-- [ ] Validar productos/especies reales.
+- [ ] Configurar flujo de ingreso de producto terminado.
+- [ ] Reconciliar datos disponibles.
+- [ ] Validar inventario PT.
+- [ ] Validar movimientos y trazabilidad.
+- [ ] Validar despacho.
 - [ ] Operar 3 días consecutivos sin soporte manual.
 
-### Semana 10 — Natales
+**Gate Aqua Austral:** LIVE.
 
-- [ ] Configurar flujo multiespecie de producto terminado.
-- [ ] Cargar y reconciliar datos disponibles.
-- [ ] Validar erizo, centolla, centollón y ostiones según cobertura real.
-- [ ] Validar inventario, movimientos, trazabilidad y despacho.
+## Semana 10 — Natales
+
+- [ ] Configurar flujo PT multiespecie.
+- [ ] Reconciliar datos disponibles.
+- [ ] Validar erizo, centolla, centollón y ostiones según operación real.
+- [ ] Validar inventario, movimientos y despacho.
 - [ ] Operar 3 días consecutivos sin soporte manual.
 
-### Semana 11 — Hardening global
+**Gate Natales:** LIVE.
 
-- [ ] Pruebas E2E de las seis plantas.
-- [ ] Matriz completa de permisos y aislamiento por planta.
-- [ ] Backups, restore y rollback ensayados.
-- [ ] Pruebas de duplicados, idempotencia y concurrencia.
-- [ ] Manejo de archivos corruptos, datos incompletos y fallos de OpenAI.
-- [ ] Performance en móvil y escritorio.
-- [ ] Observabilidad: errores, latencia, fallos de importación/Vision y salud de DB.
-- [ ] Revisión de seguridad y secretos.
-- [ ] Cero errores críticos abiertos.
+## Semana 11 — Hardening global
 
-### Semana 12 — Aceptación y transferencia
+- [ ] E2E de las seis plantas.
+- [ ] Permisos y aislamiento por planta.
+- [ ] Duplicados, idempotencia y concurrencia.
+- [ ] Backup / restore / rollback ensayados.
+- [ ] Fallos OpenAI y degradación segura sin Vision.
+- [ ] Performance escritorio + móvil.
+- [ ] Observabilidad de API, DB, importación y Vision.
+- [ ] Revisión de secretos y seguridad.
+- [ ] Cero P0/P1 abiertos.
 
-- [ ] UAT por cada planta con responsable identificado.
-- [ ] UAT Administración, Operaciones, Calidad, Finanzas y Gerencia.
-- [ ] Manual operacional breve dentro del repositorio.
-- [ ] Runbook técnico: Vercel, GitHub, Neon, OpenAI, dominios, variables y recuperación.
-- [ ] Documentar todas las integraciones y propietarios.
-- [ ] Congelar esquema/API v1 y documentar cambios posteriores mediante migraciones.
-- [ ] Resolver todos los P0/P1.
-- [ ] Firmar checklist de aceptación final.
+## Semana 12 — UAT + transferencia
 
-### Buffer máximo — hasta 22 noviembre
+- [ ] UAT por cada planta.
+- [ ] UAT Administración.
+- [ ] UAT Operaciones.
+- [ ] UAT Calidad.
+- [ ] UAT Finanzas.
+- [ ] UAT Gerencia / lectura.
+- [ ] Manual operacional breve.
+- [ ] Runbook técnico: GitHub, Vercel, Neon, OpenAI, variables, recovery.
+- [ ] Integraciones y responsables documentados.
+- [ ] Esquema/API v1 congelado para cierre.
+- [ ] Checklist `PILOT_ACCEPTANCE.md` completo.
 
-Los últimos días son exclusivamente para defectos de aceptación, datos faltantes o activación de una planta retrasada. No se incorporan features nuevas que no sean necesarias para el cierre.
-
-**Gate final:** seis plantas operativas, plataforma aceptada y transferible.
+### Buffer final
+**13–22 noviembre:** sólo aceptación, defectos, datos faltantes y plantas retrasadas. No nuevas features salvo requisito directo de cierre.
 
 ---
 
-## Definition of Done por planta
+## 3. Definition of Done por planta
 
-Una planta se considera **LIVE** sólo cuando cumple todos estos puntos:
+Una planta es **LIVE** sólo cuando cumple los 10 puntos:
 
-1. Fuentes reales identificadas y responsables definidos.
-2. Datos históricos mínimos cargados/reconciliados cuando existan.
-3. Usuarios y permisos reales configurados.
-4. Recepción/ingreso principal funcionando con evidencia.
-5. Flujo operacional principal trazable hasta producto o salida correspondiente.
-6. KPIs de la planta derivados de datos canónicos, no mocks.
-7. Excepciones visibles y accionables.
-8. Tres días consecutivos de uso real sin intervención técnica manual.
-9. Sin P0/P1 abiertos.
-10. Responsable de planta acepta el flujo.
+1. Fuentes reales identificadas.
+2. Responsable funcional definido.
+3. Usuarios/permisos reales configurados.
+4. Datos históricos reconciliados cuando existan.
+5. Flujo operacional principal E2E funcionando.
+6. Evidencia y trazabilidad visibles.
+7. KPIs derivados de datos reales, no mocks.
+8. Excepciones accionables.
+9. 3 días consecutivos de operación sin soporte técnico manual.
+10. Cero P0/P1 y aceptación del responsable.
 
-## Score semanal
+---
 
-Cada viernes se calcula un score de 100 puntos:
+## 4. Score semanal
+
+Cada viernes se puntúa cada planta y el core.
 
 | Área | Peso |
 | --- | ---: |
 | Integridad y calidad de datos | 25 |
-| Flujos operacionales E2E | 25 |
+| Flujo operacional E2E | 25 |
 | Trazabilidad y evidencia | 15 |
 | Seguridad y permisos | 15 |
 | Estabilidad / observabilidad | 10 |
-| Adopción de usuarios | 10 |
+| Adopción | 10 |
 
-- **95–100:** listo / estable.
-- **90–94:** operable, cerrar detalles.
-- **80–89:** piloto, no declarar terminado.
-- **<80:** bloqueado para aceptación.
+Interpretación:
 
-El cierre global requiere **>=95/100**, ninguna planta bajo **90/100** y **cero P0/P1**.
+- **95–100:** estable / listo.
+- **90–94:** operable; cerrar detalles.
+- **80–89:** piloto; no declarar terminado.
+- **<80:** bloqueado.
 
-## KPIs de éxito a 90 días
+### Gate de cierre global
 
-- 6/6 plantas activas o formalmente aceptadas según su modalidad real.
-- >=95% de precisión en campos documentales críticos del conjunto de prueba real.
-- 100% de decisiones críticas con usuario, timestamp y evidencia/origen.
-- 100% de usuarios restringidos a sus plantas/roles autorizados.
-- 0 datos demo/mocks presentados como producción.
-- 0 P0/P1 abiertos al cierre.
-- >=95/100 de score global.
-- Operación diaria posible sin depender del equipo de desarrollo.
+- Score global >=95/100.
+- Ninguna planta <90/100.
+- Cero P0/P1.
 
-## Fuera de alcance antes del cierre
+---
 
-No deben poner en riesgo los 90 días:
+## 5. KPIs de éxito a 90 días
 
-- Computer vision avanzada para calibre/color si no es requisito de aceptación.
-- Forecasting/ML predictivo sin suficiente historia real.
-- Integraciones externas sin fuente, propietario y contrato de datos confirmado.
-- Personalizaciones cosméticas específicas por planta que rompan el modelo común.
-- Nuevos módulos que no aporten a operación, trazabilidad, control o aceptación.
+- 6/6 plantas LIVE o formalmente aceptadas según modalidad real.
+- >=95% precisión Vision en campos críticos con documentos reales.
+- 0 campos críticos inventados por Vision aceptados automáticamente.
+- 100% decisiones críticas con usuario, timestamp y evidencia/origen.
+- 100% usuarios restringidos a plantas/roles autorizados.
+- 0 mocks presentados como producción.
+- 0 P0/P1 al cierre.
+- >=95/100 score global.
+- Operación diaria sin dependencia del equipo de desarrollo.
 
-## Regla de ejecución
+---
 
-**Core común primero; configuración por planta después; custom code por planta sólo como último recurso.**
+## 6. Prioridad de defectos
 
-Cada nueva necesidad debe responder: ¿es una regla configurable que puede servir a otra planta? Si la respuesta es sí, se implementa en el núcleo y no como fork local.
+**P0 — bloquea seguridad, datos u operación.** Se corrige antes de continuar rollout.
 
-## Estado actual
+**P1 — rompe flujo principal.** Se corrige dentro de la ola activa.
 
-**OPERANDO / HARDENING.** La arquitectura y el pipeline principal están funcionales. El trabajo restante es activación real por planta, validación humana, cobertura de datos, hardening y adopción.
+**P2 — fricción operativa.** Se corrige si afecta adopción o score.
 
-**Fecha máxima de término: 22 de noviembre de 2026.**
+**P3 — mejora.** No entra mientras exista P0/P1 ni puede poner en riesgo la fecha final.
+
+---
+
+## 7. Fuera de alcance antes del cierre
+
+No se incorpora antes del 22 de noviembre salvo requisito directo de aceptación:
+
+- forecasting / ML predictivo sin historia suficiente;
+- computer vision avanzada de calibre/color;
+- dashboards redundantes;
+- integraciones sin fuente y owner confirmado;
+- personalizaciones cosméticas específicas por planta;
+- forks de código por planta;
+- módulos que no mejoren operación, trazabilidad, control o adopción.
+
+---
+
+## 8. Riesgos que pueden mover una planta, no la fecha final
+
+- datos reales no disponibles a tiempo;
+- operador de planta sin disponibilidad;
+- diferencias de procesos no documentadas;
+- documentos físicos de baja calidad;
+- reglas financieras aún no confirmadas;
+- catálogo de proveedores/especies inconsistente.
+
+Mitigación: mover el orden de las plantas dentro de la misma ola o intercambiar olas, manteniendo el core único y la fecha máxima de cierre.
+
+---
+
+## 9. Secuencia inmediata
+
+1. Cerrar Fase 0 contra `PILOT_ACCEPTANCE.md`.
+2. Usuarios/roles reales por planta.
+3. Vision con documentos reales de Ancud y Quellón.
+4. Catálogos y reglas comunes.
+5. Ancud LIVE.
+6. Quellón LIVE.
+7. Convertir aprendizajes en configuración reusable.
+8. Iquique y Piedra Azul.
+9. Centro de control multiplanta.
+10. Aqua Austral y Natales.
+11. Hardening.
+12. UAT + handoff + cierre.
+
+---
+
+# DONE
+
+Pescamar se considera terminado cuando:
+
+**6/6 plantas operativas, score global >=95, ninguna planta <90, cero P0/P1, datos reales sin mocks, permisos validados, backups/restore probados, `PILOT_ACCEPTANCE.md` completo y operación diaria posible sin el equipo de desarrollo.**
+
+**Deadline absoluto: 22 noviembre 2026.**
