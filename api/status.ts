@@ -14,7 +14,7 @@ export default async function handler(request:ApiRequest,response:ApiResponse){
   const operator=await requireOperator(request)
   if(!operator)return response.status(401).json({ok:false,error:'Sesión requerida'})
   const databaseConfigured=Boolean(process.env.DATABASE_URL)
-  let database=databaseConfigured,metrics=emptyMetrics
+  let database=databaseConfigured,files=databaseConfigured,metrics=emptyMetrics
   if(databaseConfigured){
     try{
       await ensureReceptionSchema()
@@ -32,18 +32,22 @@ export default async function handler(request:ApiRequest,response:ApiResponse){
           )::int as pending_decisions,
           case when ${admin||finance} then (select count(*)::int from credit_requests where status='pending') else 0 end as pending_credits,
           case when ${admin} then (select count(*)::int from operators where active=true) else 0 end as active_operators,
-          (select count(*)::int from receptions where ${admin} or plant_id=any(${plantIds}::text[])) as receptions
+          (select count(*)::int from receptions where ${admin} or plant_id=any(${plantIds}::text[])) as receptions,
+          to_regclass('public.reception_evidence_files') is not null as evidence_files_ready
       `
-      const row=Array.isArray(rows)?rows[0] as Record<string,number>|undefined:undefined
-      if(row)metrics={pendingDecisions:Number(row.pending_decisions),pendingCredits:Number(row.pending_credits),activeOperators:Number(row.active_operators),receptions:Number(row.receptions)}
-    }catch{database=false}
+      const row=Array.isArray(rows)?rows[0] as Record<string,number|boolean>|undefined:undefined
+      if(row){
+        metrics={pendingDecisions:Number(row.pending_decisions),pendingCredits:Number(row.pending_credits),activeOperators:Number(row.active_operators),receptions:Number(row.receptions)}
+        files=Boolean(row.evidence_files_ready)
+      }
+    }catch{database=false;files=false}
   }
   return response.status(200).json({
     ok:true,
     service:'pescamar-control',
     platform:'vercel-functions',
     environment:process.env.VERCEL_ENV??'local',
-    persistence:{database,files:Boolean(process.env.BLOB_READ_WRITE_TOKEN)},
+    persistence:{database,files,fileStore:files?'neon':'unavailable'},
     metrics,
     commit:process.env.VERCEL_GIT_COMMIT_SHA?.slice(0,7)??null,
     checkedAt:new Date().toISOString()
