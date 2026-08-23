@@ -42,13 +42,17 @@ export default async function handler(request:ApiRequest,response:ApiResponse){
       }
     }catch{database=false;files=false}
   }
+  const ok=database&&files
+  const issues=[!database?'database_unavailable':null,!files?'evidence_store_unavailable':null].filter(Boolean)
+  response.setHeader('X-Pescamar-Health',ok?'ok':'degraded')
   return response.status(200).json({
-    ok:true,
+    ok,
     service:'pescamar-control',
     platform:'vercel-functions',
     environment:process.env.VERCEL_ENV??'local',
     persistence:{database,files,fileStore:files?'neon':'unavailable'},
     metrics,
+    issues,
     commit:process.env.VERCEL_GIT_COMMIT_SHA?.slice(0,7)??null,
     checkedAt:new Date().toISOString()
   })
