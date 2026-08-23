@@ -1,0 +1,11 @@
+@layer base, premium, control, modules, auth, brand, responsive, accessibility;
+
+@import './styles.css' layer(base);
+@import './premium.css' layer(premium);
+@import './control.css' layer(control);
+@import './planning.css' layer(modules);
+@import './auth.css' layer(auth);
+@import './login-premium.css' layer(auth);
+@import './frida.css' layer(brand);
+@import './mobile.css' layer(responsive);
+@import './a11y.css' layer(accessibility);
