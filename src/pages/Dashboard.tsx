@@ -1,5 +1,5 @@
 import {AlertTriangle,ArrowRight,CheckCheck,History,Info,Plus,RefreshCw,Scale} from "lucide-react";
-import {useCallback,useEffect,useState} from "react";
+import {Fragment,useCallback,useEffect,useState} from "react";
 import {Link} from "react-router-dom";
 import {canAccessPath,canCreateReception} from "../access";
 import {useAuth} from "../auth";
@@ -27,7 +27,7 @@ export function Dashboard({lots,onNewReception}:{lots:Lot[];onNewReception:()=>v
       const response=await fetch('/api/operations-overview',{cache:'no-store'});
       const payload=await response.json() as Overview;
       if(!response.ok)throw new Error(payload.error??'No fue posible cargar la operación');
-      setOverview(payload);
+      setOverview({...payload,generatedAt:payload.generatedAt??new Date().toISOString()});
       setOverviewError('');
     }catch(cause){
       setOverviewError(cause instanceof Error?cause.message:'No fue posible cargar la operación');
@@ -58,7 +58,7 @@ export function Dashboard({lots,onNewReception}:{lots:Lot[];onNewReception:()=>v
   const platformIssue=Boolean(error)||Boolean(status&&(!status.ok||!status.persistence.database));
   const next=queue[0];
   const updatedLabel=overview?.generatedAt?new Intl.DateTimeFormat('es-CL',{hour:'2-digit',minute:'2-digit'}).format(new Date(overview.generatedAt)):null;
-  const headerActions=<div className="page-action-group"><button className="button secondary" type="button" onClick={()=>void loadOverview(true)} disabled={refreshing} aria-label="Actualizar estado operacional"><RefreshCw size={15}/>{refreshing?'Actualizando':'Actualizar'}{updatedLabel?<span className="button-meta">{updatedLabel}</span>:null}</button>{mayCreate?<button className="button primary" onClick={onNewReception}><Plus size={15}/>Nueva recepción</button>:null}</div>;
+  const headerActions=<Fragment><button className="button secondary" type="button" onClick={()=>void loadOverview(true)} disabled={refreshing} aria-label={updatedLabel?`Actualizar estado operacional. Última sincronización ${updatedLabel}`:'Actualizar estado operacional'} title={updatedLabel?`Última sincronización ${updatedLabel}`:undefined}><RefreshCw size={15}/>{refreshing?'Actualizando':updatedLabel?`Actualizar · ${updatedLabel}`:'Actualizar'}</button>{mayCreate?<button className="button primary" onClick={onNewReception}><Plus size={15}/>Nueva recepción</button>:null}</Fragment>;
 
   return <>
     <PageHeader eyebrow="Hoy" title="Operación" description={liveStarted?"Lo importante, en orden de acción.":"2025 conserva la base canónica. La operación viva comienza con la primera recepción real."} actions={headerActions}/>
