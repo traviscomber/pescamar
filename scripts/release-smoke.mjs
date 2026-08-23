@@ -6,7 +6,7 @@ const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
 const runtimeDdl=/\b(create table|alter table|create index|drop table|drop index)\b/i
 
-const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaSource,evidenceFileSource,bootstrapSource,visionSource,receptionsSource,inventorySource,commercialSource,settlementsSource,approvalsSource,timelineSource,creditsSource,costsSource,dailyCloseSource]=await Promise.all([
+const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaSource,evidenceFileSource,bootstrapSource,visionSource,receptionsSource,inventorySource,commercialSource,settlementsSource,approvalsSource,timelineSource,creditsSource,costsSource,dailyCloseSource,productionLinesSource]=await Promise.all([
   fetch(base,{redirect:'manual'}).then(async response=>({status:response.status,text:await response.text()})),
   readFile(new URL('../src/main.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/app.css',import.meta.url),'utf8'),
@@ -26,6 +26,7 @@ const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaS
   readFile(new URL('../api/credits.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/transformation-costs.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/daily-close.ts',import.meta.url),'utf8'),
+  readFile(new URL('../api/production-lines.ts',import.meta.url),'utf8'),
 ])
 
 assert(indexHtml.status===200,`home returned HTTP ${indexHtml.status}`)
@@ -44,6 +45,7 @@ assert(a11yCss.includes('min-width:44px')&&a11yCss.includes('min-height:44px'),'
 assert(!authSource.includes('AUTH_BYPASS')&&!authSource.includes('TEMPORARY_OPERATOR'),'authentication bypass code must not exist')
 assert(!runtimeDdl.test(receptionSchemaSource),'runtime reception schema helper must remain side-effect free')
 assert(!runtimeDdl.test(bootstrapSource),'admin bootstrap must not execute schema DDL')
+assert(!runtimeDdl.test(productionLinesSource),'production lines endpoint must not execute schema DDL')
 assert(evidenceFileSource.includes('hasPlantAccess'),'evidence downloads must enforce plant authorization')
 assert(evidenceFileSource.includes('created_by_operator_id'),'evidence downloads must authorize unattached files by operator id')
 assert(evidenceFileSource.includes('f.reception_id'),'evidence downloads must use explicit reception ownership')
@@ -78,4 +80,4 @@ if(failures.length){
   for(const failure of failures)console.error(`- ${failure}`)
   process.exit(1)
 }
-console.log('Release smoke PASS: shell, layered CSS, mobile, accessibility, auth, migration, bootstrap, SQL role/plant isolation, daily close boundaries and evidence ownership contracts verified')
+console.log('Release smoke PASS: shell, layered CSS, mobile, accessibility, auth, migration-only schema, SQL role/plant isolation, daily close boundaries and evidence ownership contracts verified')
