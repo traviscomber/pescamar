@@ -6,7 +6,7 @@ const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
 const runtimeDdl=/\b(create table|alter table|create index|drop table|drop index)\b/i
 
-const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaSource,evidenceFileSource,bootstrapSource,visionSource,receptionsSource,inventorySource,commercialSource,settlementsSource,approvalsSource,timelineSource,creditsSource,costsSource,dailyCloseSource,productionLinesSource]=await Promise.all([
+const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaSource,evidenceFileSource,bootstrapSource,visionSource,receptionsSource,inventorySource,commercialSource,settlementsSource,approvalsSource,timelineSource,creditsSource,costsSource,dailyCloseSource,productionLinesSource,overviewSource,lot360Source]=await Promise.all([
   fetch(base,{redirect:'manual'}).then(async response=>({status:response.status,text:await response.text()})),
   readFile(new URL('../src/main.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/app.css',import.meta.url),'utf8'),
@@ -27,6 +27,8 @@ const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaS
   readFile(new URL('../api/transformation-costs.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/daily-close.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/production-lines.ts',import.meta.url),'utf8'),
+  readFile(new URL('../api/operations-overview.ts',import.meta.url),'utf8'),
+  readFile(new URL('../api/lot-360.ts',import.meta.url),'utf8'),
 ])
 
 assert(indexHtml.status===200,`home returned HTTP ${indexHtml.status}`)
@@ -74,10 +76,17 @@ assert(costsSource.includes("insert into transformation_costs")&&costsSource.inc
 assert(dailyCloseSource.includes("operator.role!=='admin'&&!plantId"),'non-admin users must not write corporate daily closes')
 assert(dailyCloseSource.includes('r.plant_id=any(${plantIds}::text[])'),'daily close operational metrics must enforce plant scope in SQL')
 assert(dailyCloseSource.includes('plant_id=any(${plantIds}::text[])'),'daily close direct plant metrics must enforce plant scope in SQL')
+assert(overviewSource.includes("financialRole=['admin','finance','operations'].includes(operator.role)"),'operations overview must define a financial role boundary')
+assert(overviewSource.includes('where r.plant_id=any(${plantIds}::text[])'),'operations overview must scope live receptions and production in SQL')
+assert(overviewSource.includes('financialRole&&canSeeCorporateHistory?sql'),'operations overview must avoid historical economy queries for unauthorized roles')
+assert(lot360Source.includes('plant_id=any(${operator.plantIds}::text[])'),'lot 360 access must enforce plant scope in SQL')
+assert(lot360Source.includes('financialRole?sql`select s.id,s.gross_amount_clp'),'lot 360 must gate settlement queries by role')
+assert(lot360Source.includes('financialRole?sql`select s.id,s.dispatch_id'),'lot 360 must gate sales queries by role')
+assert(lot360Source.includes('with target as (select r.id from receptions r'),'lot 360 writes must re-check scoped reception access inside the mutation')
 
 if(failures.length){
   console.error('Release smoke FAILED')
   for(const failure of failures)console.error(`- ${failure}`)
   process.exit(1)
 }
-console.log('Release smoke PASS: shell, layered CSS, mobile, accessibility, auth, migration-only schema, SQL role/plant isolation, daily close boundaries and evidence ownership contracts verified')
+console.log('Release smoke PASS: shell, layered CSS, mobile, accessibility, auth, migration-only schema, SQL role/plant isolation, overview and lot-360 financial boundaries, daily close boundaries and evidence ownership contracts verified')
