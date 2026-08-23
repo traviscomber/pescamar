@@ -1,5 +1,5 @@
 import { createSession, clearSessionCookie, destroySession, requireOperator, sessionCookie, verifyPassword } from "./_auth.js";
-import { clearSuccessfulPair, ensureAuthSecuritySchema, loginRateState, recordAuthEvent, recordLoginFailure } from "./_auth-security.js";
+import { clearSuccessfulPair, loginRateState, recordAuthEvent, recordLoginFailure } from "./_auth-security.js";
 import { getSql } from "./_db.js";
 
 type Request={method?:string;body?:unknown;headers?:Record<string,string|string[]|undefined>};
@@ -21,7 +21,6 @@ export default async function handler(request:Request,response:Response){
       if(!emailPattern.test(email)||email.length>254||password.length<12||password.length>256)
         return response.status(400).json({ok:false,error:"Correo o contraseña inválidos"});
 
-      await ensureAuthSecuritySchema();
       const rate=await loginRateState(request,email);
       if(rate.blocked){
         const retryAfter=Math.max(1,rate.retryAfter);
@@ -37,6 +36,7 @@ export default async function handler(request:Request,response:Response){
       }
 
       await getSql()`delete from operator_sessions where expires_at<=now()`;
+      await destroySession(request);
       const session=await createSession(row.id);
       await Promise.all([
         clearSuccessfulPair(request,email),
@@ -50,7 +50,6 @@ export default async function handler(request:Request,response:Response){
       await destroySession(request);
       response.setHeader("Set-Cookie",clearSessionCookie());
       if(operator){
-        await ensureAuthSecuritySchema();
         await recordAuthEvent("logout",request,operator.email,operator.id,{role:operator.role});
       }
       return response.status(200).json({ok:true});
@@ -60,7 +59,7 @@ export default async function handler(request:Request,response:Response){
   }catch(error){
     const message=error instanceof Error?error.message:"";
     const configuration=message.includes("DATABASE_URL");
-    const migration=message.includes("operator_sessions")||message.includes("password_hash");
-    return response.status(configuration||migration?503:500).json({ok:false,error:configuration?"Base de datos no conectada":migration?"Falta aplicar la migración 003_operator_auth.sql":"No fue posible autenticar"});
+    const migration=message.includes("operator_sessions")||message.includes("password_hash")||message.includes("auth_login_limits")||message.includes("auth_events");
+    return response.status(configuration||migration?503:500).json({ok:false,error:configuration?"Base de datos no conectada":migration?"Faltan migraciones de autenticación":"No fue posible autenticar"});
   }
 }
