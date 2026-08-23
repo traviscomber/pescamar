@@ -46,9 +46,6 @@ export default async function handler(request: Request, response: Response) {
       return response.status(401).json({ ok: false, error: "Sesión requerida" });
 
     const sql = getSql();
-    await sql`create table if not exists production_lines (id text primary key,name text not null,family text not null,formats text[] not null default '{}',route text[] not null default '{}',yield_target text not null,destination text not null,status text not null check(status in ('Activa','Configurar')),updated_at timestamptz not null default now())`;
-    await sql`insert into production_lines (id,name,family,formats,route,yield_target,destination,status) values ('LIN-ER','Erizo','Equinodermos',array['Gónada congelada','Fresco'],array['Recepción','Lavado','Apertura','Extracción','Clasificación IA','Congelado'],'9–12% gónada','Japón','Activa'),('LIN-MO','Moluscos','Loco · Pulpo · bivalvos',array['Cocido congelado','Media concha','Entero'],array['Recepción','Depuración','Cocción','Desconche','Calibrado','Congelado'],'Por especie y calibre','Asia / nacional','Activa'),('LIN-CR','Crustáceos','Jaiba · Centolla',array['Carne cocida','Secciones','Entero'],array['Recepción','Cocción','Enfriado','Extracción','Envasado','Congelado'],'Carne recuperada','Asia','Configurar'),('LIN-PE','Pescados','Demersales y pelágicos',array['Filete','Porción','Entero HG'],array['Recepción','Lavado','Eviscerado','Fileteado','Calibrado','Congelado'],'Filete / materia prima','Exportación / nacional','Configurar'),('LIN-AL','Algas','Luga y otras',array['Seca','Prensada','Materia prima'],array['Recepción','Selección','Lavado','Secado','Prensado','Despacho'],'Humedad y materia útil','Industrial','Configurar') on conflict(id) do nothing`;
-
     if (request.method === "GET") {
       const rows = await sql`select id,name,family,formats,route,yield_target,destination,status from production_lines order by name`;
       return response.status(200).json({
@@ -107,13 +104,13 @@ export default async function handler(request: Request, response: Response) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     const configuration = message.includes("DATABASE_URL");
-    const migration = message.includes("operator_sessions");
+    const migration = message.includes("production_lines") || message.includes("operator_sessions");
     return response.status(configuration || migration ? 503 : 500).json({
       ok: false,
       error: configuration
         ? "Base de datos no conectada"
         : migration
-          ? "Falta aplicar la migración 003_operator_auth.sql"
+          ? "Faltan migraciones operacionales"
           : "No fue posible administrar las líneas",
     });
   }
