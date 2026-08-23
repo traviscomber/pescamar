@@ -6,7 +6,7 @@ const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
 const runtimeDdl=/\b(create table|alter table|create index|drop table|drop index)\b/i
 
-const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaSource,evidenceFileSource,bootstrapSource,visionSource,receptionsSource,inventorySource]=await Promise.all([
+const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaSource,evidenceFileSource,bootstrapSource,visionSource,receptionsSource,inventorySource,commercialSource,settlementsSource,approvalsSource]=await Promise.all([
   fetch(base,{redirect:'manual'}).then(async response=>({status:response.status,text:await response.text()})),
   readFile(new URL('../src/main.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/app.css',import.meta.url),'utf8'),
@@ -19,6 +19,9 @@ const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaS
   readFile(new URL('../api/reception-vision.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/receptions.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/inventory.ts',import.meta.url),'utf8'),
+  readFile(new URL('../api/commercial.ts',import.meta.url),'utf8'),
+  readFile(new URL('../api/settlements.ts',import.meta.url),'utf8'),
+  readFile(new URL('../api/approvals.ts',import.meta.url),'utf8'),
 ])
 
 assert(indexHtml.status===200,`home returned HTTP ${indexHtml.status}`)
@@ -48,6 +51,13 @@ assert(receptionsSource.includes('created_by_operator_id=${operator.id}::uuid'),
 assert(receptionsSource.includes('set reception_id=r.id'),'stored evidence must bind explicitly to the created reception')
 assert(inventorySource.includes('plant_id=any(${plantIds}::text[])'),'inventory locations must enforce plant scope in SQL')
 assert(inventorySource.includes('r.plant_id=any(${plantIds}::text[])'),'inventory lot and movement reads must enforce plant scope in SQL')
+assert(commercialSource.includes('r.plant_id=any(${plantIds}::text[])'),'commercial reads must enforce plant scope in SQL')
+assert(commercialSource.includes('plant_id=any(${operator.plantIds}::text[])'),'commercial mutation lookup must enforce plant scope in SQL')
+assert(settlementsSource.includes('r.plant_id=any(${plantIds}::text[])'),'settlement reads must enforce plant scope in SQL')
+assert(settlementsSource.includes('r.plant_id=any(${operator.plantIds}::text[])'),'settlement creation must enforce plant scope in SQL')
+assert(approvalsSource.includes("cr.status='pending' and ${finance}"),'approval credit visibility must enforce role in SQL')
+assert(approvalsSource.includes('r.plant_id=any(${plantIds}::text[])'),'approval reads must enforce plant scope in SQL')
+assert(approvalsSource.includes('plant_id=any(${plantIds}::text[])'),'approval writes must enforce plant scope in SQL')
 
 if(failures.length){
   console.error('Release smoke FAILED')
