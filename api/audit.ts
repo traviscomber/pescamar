@@ -6,7 +6,7 @@ type Response={status:(code:number)=>Response;setHeader:(name:string,value:strin
 const one=(v:string|string[]|undefined)=>Array.isArray(v)?v[0]:v
 const text=(v:unknown,max=120)=>String(v??'').trim().slice(0,max)
 const validDate=(v:string)=>!v||/^\d{4}-\d{2}-\d{2}$/.test(v)
-const canAudit=(o:SessionOperator)=>['admin','operations','finance'].includes(o.role)
+const canAudit=(o:SessionOperator)=>['admin','operations'].includes(o.role)
 
 export default async function handler(req:Request,res:Response){
   res.setHeader('Cache-Control','no-store')
@@ -17,7 +17,7 @@ export default async function handler(req:Request,res:Response){
     if(!canAudit(operator))return res.status(403).json({ok:false,error:'Tu rol no puede acceder a auditoría operacional'})
     const from=text(one(req.query?.from),10),to=text(one(req.query?.to),10),plantId=text(one(req.query?.plantId),80),operatorId=text(one(req.query?.operatorId),40),module=text(one(req.query?.module),40)
     if(!validDate(from)||!validDate(to)||operatorId&&!/^[0-9a-f-]{36}$/i.test(operatorId))return res.status(400).json({ok:false,error:'Filtros inválidos'})
-    const sql=getSql(),admin=operator.role==='admin',financial=['admin','finance'].includes(operator.role),plantIds=operator.plantIds
+    const sql=getSql(),admin=operator.role==='admin',financial=operator.role==='admin',plantIds=operator.plantIds
     const rows=await sql`
       with audit as (
         select r.id::text id,r.created_at occurred_at,'recepciones' module,'Recepción registrada' action,p.legal_name||' · '||r.species detail,r.plant_id,r.created_by_operator_id operator_id,r.source operator_name,'REC-'||r.reception_number reference,false financial from receptions r join parties p on p.id=r.supplier_id
