@@ -67,8 +67,36 @@ for(const scenario of [
   })
 }
 
+for(const denied of [
+  {role:'finance' as const,path:'/operadores'},
+  {role:'finance' as const,path:'/identidades-plantas'},
+  {role:'quality' as const,path:'/costos-transformacion'},
+  {role:'quality' as const,path:'/creditos'},
+  {role:'viewer' as const,path:'/aprobaciones'},
+  {role:'viewer' as const,path:'/importaciones'},
+]){
+  test(`${denied.role} is redirected away from ${denied.path}`,async({page})=>{
+    await mockAuthenticatedApp(page,denied.role)
+    await page.goto(denied.path)
+    await expect(page).toHaveURL(/\/$/)
+    await expect(page.getByText(`QA ${denied.role}`,{exact:true})).toBeVisible()
+  })
+}
+
 test('plant-scoped operator sees its assigned coverage',async({page})=>{
   await mockAuthenticatedApp(page,'operations',['ancud','quellon'])
   await page.goto('/')
   await expect(page.getByText('2 plantas bajo tu alcance')).toBeVisible()
+})
+
+test('mobile drawer traps focus, closes with Escape and restores trigger focus',async({page},testInfo)=>{
+  test.skip(testInfo.project.name!=='mobile-chromium','Mobile-only interaction contract')
+  await mockAuthenticatedApp(page,'operations',['ancud'])
+  await page.goto('/')
+  const trigger=page.getByRole('button',{name:'Abrir menú'})
+  await trigger.click()
+  await expect(page.getByRole('button',{name:'Cerrar menú'})).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('button',{name:'Cerrar menú'})).toBeHidden()
+  await expect(trigger).toBeFocused()
 })
