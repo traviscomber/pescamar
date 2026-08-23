@@ -18,23 +18,20 @@ export default async function handler(request:Request,response:Response){
   if(!id||!uuidPattern.test(id))return response.status(400).json({ok:false,error:"Archivo inválido"});
 
   const rows=await getSql()`
-    select f.file_name,f.mime_type,f.data_base64,f.created_by,
-      e.reception_id,r.plant_id
+    select f.file_name,f.mime_type,f.data_base64,f.created_by_operator_id,f.reception_id,r.plant_id
     from reception_evidence_files f
-    left join reception_evidence e on e.url like ('%id=' || f.id::text || '%')
-    left join receptions r on r.id=e.reception_id
+    left join receptions r on r.id=f.reception_id
     where f.id=${id}::uuid
-    order by e.created_at desc nulls last
     limit 1` as Array<Record<string,unknown>>;
   const row=rows[0];
   if(!row)return response.status(404).json({ok:false,error:"Evidencia no encontrada"});
 
   const receptionId=row.reception_id?String(row.reception_id):null;
   const plantId=row.plant_id?String(row.plant_id):null;
-  const uploadedBy=String(row.created_by??"");
+  const uploadedById=row.created_by_operator_id?String(row.created_by_operator_id):null;
   const mayAccess=operator.role==="admin"
     || (receptionId!==null&&plantId!==null&&hasPlantAccess(operator,plantId))
-    || (receptionId===null&&uploadedBy===operator.fullName);
+    || (receptionId===null&&uploadedById===operator.id);
   if(!mayAccess)return response.status(403).json({ok:false,error:"No tienes acceso a esta evidencia"});
 
   const mime=String(row.mime_type??"application/octet-stream");
