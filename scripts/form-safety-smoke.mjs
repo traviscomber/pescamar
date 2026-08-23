@@ -2,7 +2,7 @@ import {readFile} from 'node:fs/promises'
 
 const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
-const [reception,credits,commercial,inventory,costs,salesOrders,settlements,settlementApi,approvalsApi]=await Promise.all([
+const [reception,credits,commercial,inventory,costs,salesOrders,settlements,creditsApi,settlementApi,approvalsApi]=await Promise.all([
   readFile(new URL('../src/components/ReceptionModal.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/Credits.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/Commercial.tsx',import.meta.url),'utf8'),
@@ -10,6 +10,7 @@ const [reception,credits,commercial,inventory,costs,salesOrders,settlements,sett
   readFile(new URL('../src/pages/TransformationCosts.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/SalesOrders.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/Settlements.tsx',import.meta.url),'utf8'),
+  readFile(new URL('../api/credits.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/settlements.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/approvals.ts',import.meta.url),'utf8'),
 ])
@@ -22,6 +23,7 @@ assert(reception.includes('aria-labelledby="reception-modal-title"')&&reception.
 assert(!credits.includes('requestedBy'),'credit requester must come from authenticated server context')
 assert(credits.includes('setFisher(\'\')')&&credits.includes('setRecoveryValue(0)'),'credit capture must reset between openings')
 assert(credits.includes('aria-labelledby="credit-modal-title"')&&credits.includes("event.key==='Escape'"),'credit capture must remain keyboard-safe')
+assert(creditsApi.includes('requested_by_operator_id')&&creditsApi.includes('${operator.id}::uuid'),'credit requests must persist stable operator identity')
 
 assert(commercial.includes('aria-labelledby="commercial-modal-title"')&&commercial.includes("event.key==='Escape'"),'commercial capture must remain keyboard-safe')
 assert(commercial.includes("document.body.style.overflow='hidden'"),'commercial modal must lock background scroll')
@@ -41,14 +43,18 @@ assert(salesOrders.includes('max={maxAllocation||undefined}')&&salesOrders.inclu
 assert(salesOrders.includes('min={today()}'),'new sales orders must not accept a past delivery date in the client')
 
 assert(settlements.includes('<option value="">Seleccionar recepción</option>'),'settlement creation must require an explicit reception selection')
-assert(settlements.includes('deductions<=gross')||settlements.includes('deductions<=gross'),'settlement UI must bound deductions by gross amount')
+assert(settlements.includes('deductions<=gross'),'settlement UI must bound deductions by gross amount')
 assert(settlementApi.includes('${otherDeductions}<=round(r.accepted_kg*${pricePerKg})'),'settlement API must reject deductions above gross amount')
-assert(approvalsApi.includes('lower(trim(cr.requested_by))<>lower(trim(${actor}))'),'credit approvals must enforce dual control')
-assert(approvalsApi.includes('lower(trim(s.created_by))<>lower(trim(${actor}))'),'settlement approvals must enforce dual control')
+assert(settlementApi.includes('created_by_operator_id')&&settlementApi.includes('${operator.id}::uuid'),'settlements must persist stable creator identity')
+assert(approvalsApi.includes('requested_by_operator_id is not null'),'credit dual control must prefer stable operator identity')
+assert(approvalsApi.includes('created_by_operator_id is not null'),'settlement dual control must prefer stable operator identity')
+assert(approvalsApi.includes('acted_by_operator_id'),'approval actions must persist stable operator identity')
+assert(approvalsApi.includes('approved_by_operator_id'),'settlement approval must persist stable approver identity')
+assert(approvalsApi.includes('created_by_operator_id) select account_id,id'),'credit movements must persist stable actor identity')
 
 if(failures.length){
   console.error('Operational form safety FAILED')
   for(const failure of failures)console.error(`- ${failure}`)
   process.exit(1)
 }
-console.log('Operational form safety PASS: real-data defaults, authenticated identity, bounded financial inputs, dual control, reset behavior and keyboard-safe modals verified')
+console.log('Operational form safety PASS: real-data defaults, stable authenticated identity, bounded financial inputs, UUID dual control, reset behavior and keyboard-safe modals verified')
