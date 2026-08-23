@@ -7,7 +7,6 @@ type EventType = "login_success" | "login_failure" | "login_rate_limited" | "log
 const WINDOW_MINUTES = 15;
 const PAIR_LIMIT = 5;
 const IP_LIMIT = 30;
-let schemaReady: Promise<void> | null = null;
 
 function header(request: Request, name: string) {
   const value = Object.entries(request.headers ?? {}).find(([key]) => key.toLowerCase() === name.toLowerCase())?.[1];
@@ -31,37 +30,6 @@ function keys(request: Request, email: string) {
     pairKey: digest(`pair:${ip}:${email}`),
     ipKey: digest(`ip:${ip}`),
   };
-}
-
-export function ensureAuthSecuritySchema() {
-  if (!schemaReady) {
-    schemaReady = (async () => {
-      const sql = getSql();
-      await sql`create table if not exists auth_login_limits (
-        key_hash text primary key,
-        attempts integer not null default 0 check (attempts >= 0),
-        window_started_at timestamptz not null default now(),
-        blocked_until timestamptz,
-        updated_at timestamptz not null default now()
-      )`;
-      await sql`create index if not exists auth_login_limits_expiry_idx on auth_login_limits (blocked_until, updated_at)`;
-      await sql`create table if not exists auth_events (
-        id bigint generated always as identity primary key,
-        event_type text not null check (event_type in ('login_success','login_failure','login_rate_limited','logout')),
-        operator_id uuid references operators(id) on delete set null,
-        email_hash text,
-        ip_hash text,
-        occurred_at timestamptz not null default now(),
-        metadata jsonb not null default '{}'::jsonb
-      )`;
-      await sql`create index if not exists auth_events_occurred_idx on auth_events (occurred_at desc)`;
-      await sql`create index if not exists auth_events_operator_idx on auth_events (operator_id, occurred_at desc)`;
-    })().catch((error) => {
-      schemaReady = null;
-      throw error;
-    });
-  }
-  return schemaReady;
 }
 
 async function blocked(keyHash: string) {
