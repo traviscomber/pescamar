@@ -5,6 +5,8 @@ type Request={method?:string;headers?:Record<string,string|string[]|undefined>;b
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void}
 type PayloadRow={sourceRow:number;recordStatus:'operational'|'void';eventDate:string|null;receptionDate:string|null;processDate:string|null;productionDate:string|null;guideNumber:string|null;supplierOriginal:string|null;supplierName:string|null;extractionZone:string|null;guidePriceClp:number|null;processSiteOriginal:string|null;lotCode:string;guideKg:number|null;receivedKg:number|null;differenceKg:number|null;qualityDiscount:number|null;gradeBreakdown:Record<string,unknown>;yields:Record<string,unknown>;client:string|null;observations:string|null;dataQualityFlags:string[];rawRecord:Record<string,unknown>}
 type Payload={fileName?:string;fileHash?:string;rows?:PayloadRow[]}
+type CountRow={count?:number|string;flagged?:number|string}
+const firstRow=(value:unknown)=>Array.isArray(value)?(value[0] as CountRow|undefined):undefined
 
 export default async function handler(request:Request,response:Response){
   response.setHeader('Cache-Control','no-store')
@@ -20,7 +22,7 @@ export default async function handler(request:Request,response:Response){
     if(!clean.length)return response.status(400).json({ok:false,error:'No hay filas canónicas para publicar'})
     const sql=getSql()
     const before=await sql`select count(*)::int as count from historical_production_records where source_file_hash=${fileHash}`
-    const existing=Number(Array.isArray(before)?before[0]?.count??0:0)
+    const existing=Number(firstRow(before)?.count??0)
     await sql`
       insert into historical_production_records(
         source_row,source_file,source_file_hash,record_status,event_date,reception_date,process_date,production_date,
@@ -49,7 +51,7 @@ export default async function handler(request:Request,response:Response){
         data_quality_flags=excluded.data_quality_flags,raw_record=excluded.raw_record
     `
     const after=await sql`select count(*)::int as count,count(*) filter(where cardinality(data_quality_flags)>0)::int as flagged from historical_production_records where source_file_hash=${fileHash}`
-    const total=Number(Array.isArray(after)?after[0]?.count??0:0),flagged=Number(Array.isArray(after)?after[0]?.flagged??0:0)
+    const summary=firstRow(after),total=Number(summary?.count??0),flagged=Number(summary?.flagged??0)
     return response.status(200).json({ok:true,total,inserted:Math.max(0,total-existing),duplicates:Math.min(existing,total),flagged,fileHash})
   }catch(error){
     const message=error instanceof Error?error.message:''
