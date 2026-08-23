@@ -1,5 +1,4 @@
 import { requireOperator } from "./_auth.js";
-import { ensureAuthSecuritySchema } from "./_auth-security.js";
 import { getSql } from "./_db.js";
 
 type Request={method?:string;headers?:Record<string,string|string[]|undefined>};
@@ -14,7 +13,6 @@ export default async function handler(request:Request,response:Response){
     }
     const admin=await requireOperator(request,["admin"]);
     if(!admin)return response.status(401).json({ok:false,error:"Sesión de administrador requerida"});
-    await ensureAuthSecuritySchema();
     const sql=getSql();
     const [summaryRows,eventRows]=await Promise.all([
       sql`select
@@ -30,7 +28,9 @@ export default async function handler(request:Request,response:Response){
     const summary=Array.isArray(summaryRows)?summaryRows[0]:null;
     return response.status(200).json({ok:true,summary:summary??{successful_logins:0,failed_logins:0,logouts:0,active_blocks:0},events:eventRows});
   }catch(error){
-    const configuration=error instanceof Error&&error.message.includes("DATABASE_URL");
-    return response.status(configuration?503:500).json({ok:false,error:configuration?"Base de datos no conectada":"No fue posible consultar la auditoría de acceso"});
+    const message=error instanceof Error?error.message:"";
+    const configuration=message.includes("DATABASE_URL");
+    const migration=message.includes("auth_events")||message.includes("auth_login_limits");
+    return response.status(configuration||migration?503:500).json({ok:false,error:configuration?"Base de datos no conectada":migration?"Falta aplicar la migración de auditoría de acceso":"No fue posible consultar la auditoría de acceso"});
   }
 }
