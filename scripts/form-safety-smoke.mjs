@@ -2,12 +2,16 @@ import {readFile} from 'node:fs/promises'
 
 const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
-const [reception,credits,commercial,inventory,costs]=await Promise.all([
+const [reception,credits,commercial,inventory,costs,salesOrders,settlements,settlementApi,approvalsApi]=await Promise.all([
   readFile(new URL('../src/components/ReceptionModal.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/Credits.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/Commercial.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/Inventory.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/TransformationCosts.tsx',import.meta.url),'utf8'),
+  readFile(new URL('../src/pages/SalesOrders.tsx',import.meta.url),'utf8'),
+  readFile(new URL('../src/pages/Settlements.tsx',import.meta.url),'utf8'),
+  readFile(new URL('../api/settlements.ts',import.meta.url),'utf8'),
+  readFile(new URL('../api/approvals.ts',import.meta.url),'utf8'),
 ])
 
 assert(reception.includes('const [guide,setGuide]=useState("")'),'reception weights must start empty')
@@ -31,9 +35,20 @@ assert(costs.includes('function startCost()')&&costs.includes("setAmount('')"),'
 assert(costs.includes('aria-labelledby="cost-modal-title"')&&costs.includes("event.key==='Escape'"),'transformation cost capture must remain keyboard-safe')
 assert(costs.includes("document.body.style.overflow='hidden'"),'transformation cost modal must lock background scroll')
 
+assert(salesOrders.includes('function startCreate()')&&salesOrders.includes("setCommittedKg('')")&&salesOrders.includes("setPrice('')"),'sales order capture must reset every new commitment')
+assert(salesOrders.includes('aria-labelledby="sales-order-modal-title"')&&salesOrders.includes("event.key==='Escape'"),'sales order capture must remain keyboard-safe')
+assert(salesOrders.includes('max={maxAllocation||undefined}')&&salesOrders.includes('Number(allocatedKg)>maxAllocation'),'sales allocations must be bounded in the client before mutation')
+assert(salesOrders.includes('min={today()}'),'new sales orders must not accept a past delivery date in the client')
+
+assert(settlements.includes('<option value="">Seleccionar recepción</option>'),'settlement creation must require an explicit reception selection')
+assert(settlements.includes('deductions<=gross')||settlements.includes('deductions<=gross'),'settlement UI must bound deductions by gross amount')
+assert(settlementApi.includes('${otherDeductions}<=round(r.accepted_kg*${pricePerKg})'),'settlement API must reject deductions above gross amount')
+assert(approvalsApi.includes('lower(trim(cr.requested_by))<>lower(trim(${actor}))'),'credit approvals must enforce dual control')
+assert(approvalsApi.includes('lower(trim(s.created_by))<>lower(trim(${actor}))'),'settlement approvals must enforce dual control')
+
 if(failures.length){
   console.error('Operational form safety FAILED')
   for(const failure of failures)console.error(`- ${failure}`)
   process.exit(1)
 }
-console.log('Operational form safety PASS: real-data defaults, authenticated identity, reset behavior and keyboard-safe modals verified')
+console.log('Operational form safety PASS: real-data defaults, authenticated identity, bounded financial inputs, dual control, reset behavior and keyboard-safe modals verified')
