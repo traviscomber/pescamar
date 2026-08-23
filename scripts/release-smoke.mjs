@@ -6,7 +6,7 @@ const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
 const runtimeDdl=/\b(create table|alter table|create index|drop table|drop index)\b/i
 
-const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaSource,evidenceFileSource,bootstrapSource,visionSource,receptionsSource]=await Promise.all([
+const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaSource,evidenceFileSource,bootstrapSource,visionSource,receptionsSource,inventorySource]=await Promise.all([
   fetch(base,{redirect:'manual'}).then(async response=>({status:response.status,text:await response.text()})),
   readFile(new URL('../src/main.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/app.css',import.meta.url),'utf8'),
@@ -18,6 +18,7 @@ const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaS
   readFile(new URL('../api/bootstrap.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/reception-vision.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/receptions.ts',import.meta.url),'utf8'),
+  readFile(new URL('../api/inventory.ts',import.meta.url),'utf8'),
 ])
 
 assert(indexHtml.status===200,`home returned HTTP ${indexHtml.status}`)
@@ -45,10 +46,12 @@ assert(visionSource.includes('fileId:id'),'vision responses must expose the stor
 assert(receptionsSource.includes('r.plant_id=any(${plantIds}::text[])'),'reception reads must enforce plant scope in SQL')
 assert(receptionsSource.includes('created_by_operator_id=${operator.id}::uuid'),'reception evidence binding must enforce operator ownership')
 assert(receptionsSource.includes('set reception_id=r.id'),'stored evidence must bind explicitly to the created reception')
+assert(inventorySource.includes('plant_id=any(${plantIds}::text[])'),'inventory locations must enforce plant scope in SQL')
+assert(inventorySource.includes('r.plant_id=any(${plantIds}::text[])'),'inventory lot and movement reads must enforce plant scope in SQL')
 
 if(failures.length){
   console.error('Release smoke FAILED')
   for(const failure of failures)console.error(`- ${failure}`)
   process.exit(1)
 }
-console.log('Release smoke PASS: shell, layered CSS, mobile, accessibility, auth, migration, bootstrap, plant scope and evidence ownership contracts verified')
+console.log('Release smoke PASS: shell, layered CSS, mobile, accessibility, auth, migration, bootstrap, SQL plant scope and evidence ownership contracts verified')
