@@ -6,7 +6,7 @@ const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
 const runtimeDdl=/\b(create table|alter table|create index|drop table|drop index)\b/i
 
-const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaSource,evidenceFileSource,bootstrapSource,visionSource,receptionsSource,inventorySource,commercialSource,settlementsSource,approvalsSource,timelineSource,creditsSource,costsSource,dailyCloseSource,productionLinesSource,overviewSource,lot360Source,lotContinuitySource]=await Promise.all([
+const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaSource,evidenceFileSource,bootstrapSource,visionSource,receptionsSource,inventorySource,commercialSource,settlementsSource,approvalsSource,timelineSource,creditsSource,costsSource,dailyCloseSource,productionLinesSource,overviewSource,lot360Source,lotContinuitySource,dashboardSource]=await Promise.all([
   fetch(base,{redirect:'manual'}).then(async response=>({status:response.status,text:await response.text()})),
   readFile(new URL('../src/main.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/app.css',import.meta.url),'utf8'),
@@ -30,6 +30,7 @@ const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaS
   readFile(new URL('../api/operations-overview.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/lot-360.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/lot-continuity.ts',import.meta.url),'utf8'),
+  readFile(new URL('../src/pages/Dashboard.tsx',import.meta.url),'utf8'),
 ])
 
 assert(indexHtml.status===200,`home returned HTTP ${indexHtml.status}`)
@@ -78,8 +79,13 @@ assert(dailyCloseSource.includes("operator.role!=='admin'&&!plantId"),'non-admin
 assert(dailyCloseSource.includes('r.plant_id=any(${plantIds}::text[])'),'daily close operational metrics must enforce plant scope in SQL')
 assert(dailyCloseSource.includes('plant_id=any(${plantIds}::text[])'),'daily close direct plant metrics must enforce plant scope in SQL')
 assert(overviewSource.includes("financialRole=['admin','finance','operations'].includes(operator.role)"),'operations overview must define a financial role boundary')
-assert(overviewSource.includes('where r.plant_id=any(${plantIds}::text[])'),'operations overview must scope live receptions and production in SQL')
+assert(overviewSource.includes('(${admin} or r.plant_id=any(${plantIds}::text[]))'),'operations overview must scope live data in SQL for non-admins')
+assert(overviewSource.match(/left join lateral/g)?.length>=3,'operations overview must resolve repeated per-lot state through lateral aggregation')
+assert(overviewSource.includes('generatedAt:new Date().toISOString()'),'operations overview must expose response freshness')
 assert(overviewSource.includes('financialRole&&canSeeCorporateHistory?sql'),'operations overview must avoid historical economy queries for unauthorized roles')
+assert(dashboardSource.includes('window.setInterval(refresh,60_000)'),'dashboard must refresh operational state on an interval')
+assert(dashboardSource.includes("document.addEventListener('visibilitychange',refresh)"),'dashboard must refresh after returning to the tab')
+assert(dashboardSource.includes('loading&&!overview'),'dashboard must not claim an idle operation before the first overview response')
 assert(lot360Source.includes('plant_id=any(${operator.plantIds}::text[])'),'lot 360 access must enforce plant scope in SQL')
 assert(lot360Source.includes('financialRole?sql`select s.id,s.gross_amount_clp'),'lot 360 must gate settlement queries by role')
 assert(lot360Source.includes('financialRole?sql`select s.id,s.dispatch_id'),'lot 360 must gate sales queries by role')
@@ -93,4 +99,4 @@ if(failures.length){
   for(const failure of failures)console.error(`- ${failure}`)
   process.exit(1)
 }
-console.log('Release smoke PASS: shell, layered CSS, mobile, accessibility, auth, migration-only schema, SQL role/plant isolation, overview/lot financial boundaries, daily close boundaries and evidence ownership contracts verified')
+console.log('Release smoke PASS: shell, layered CSS, mobile, accessibility, auth, migration-only schema, SQL role/plant isolation, overview performance/freshness, lot financial boundaries, daily close boundaries and evidence ownership contracts verified')
