@@ -17,3 +17,11 @@ declare module "node:crypto" {
 declare const Buffer: {
   from(value: string, encoding: "hex"): Uint8Array;
 };
+
+declare class URL {
+  constructor(input: string);
+  readonly pathname: string;
+  readonly searchParams: {
+    get(name: string): string | null;
+  };
+}
