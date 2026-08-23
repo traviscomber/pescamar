@@ -47,6 +47,8 @@ jobs:
         run: node scripts/form-safety-smoke.mjs
       - name: Stable operator identity
         run: node scripts/operator-identity-smoke.mjs
+      - name: Operational audit contracts
+        run: node scripts/audit-smoke.mjs
       - name: Install pinned browser test runtime
         run: |
           npm install --no-save --ignore-scripts @playwright/test@1.55.0
