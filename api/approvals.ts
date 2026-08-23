@@ -6,6 +6,7 @@ import { getSql } from './_db.js'
 type Request={method?:string;body?:unknown;headers?:Record<string,string|string[]|undefined>}
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void}
 type DecisionInput={entityType?:unknown;entityId?:unknown;decision?:unknown;comment?:unknown}
+const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 export default async function handler(request:Request,response:Response){
   response.setHeader('Cache-Control','no-store')
@@ -64,7 +65,7 @@ async function entityPlantId(entityType:string,entityId:string){
 async function decide(body:unknown,response:Response,operator:SessionOperator){
   const input=(body??{}) as DecisionInput
   const entityType=String(input.entityType??''),entityId=String(input.entityId??''),decision=String(input.decision??''),comment=String(input.comment??'').trim()
-  if(!['credit_request','reception','settlement'].includes(entityType)||!['approved','rejected'].includes(decision)||!entityId||!comment)return response.status(400).json({ok:false,error:'Decisión y comentario son obligatorios'})
+  if(!['credit_request','reception','settlement'].includes(entityType)||!['approved','rejected'].includes(decision)||!uuid.test(entityId)||!comment)return response.status(400).json({ok:false,error:'Decisión, entidad y comentario válidos son obligatorios'})
   if(entityType==='credit_request'&&!['admin','finance'].includes(operator.role))return response.status(403).json({ok:false,error:'Solo Administración o Finanzas puede decidir anticipos'})
   if(entityType==='reception'&&!['admin','operations','quality'].includes(operator.role))return response.status(403).json({ok:false,error:'Tu rol no puede decidir recepciones'})
   if(entityType==='settlement'&&!['admin','finance'].includes(operator.role))return response.status(403).json({ok:false,error:'Solo Administración o Finanzas puede decidir liquidaciones'})
