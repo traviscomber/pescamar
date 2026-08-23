@@ -1,6 +1,6 @@
 import {Activity,Blocks,Boxes,CalendarCheck2,CheckCheck,CircleDollarSign,ClipboardList,Factory,FileSpreadsheet,History,Landmark,LayoutDashboard,LogOut,Menu,Moon,PackageSearch,ReceiptText,Settings2,ShoppingCart,Sun,Target,X} from "lucide-react";
 import {NavLink,useLocation} from "react-router-dom";
-import {useEffect,useState,type ReactNode} from "react";
+import {useEffect,useRef,useState,type ReactNode} from "react";
 import {canAccessPath,canCreateReception} from "../access";
 import {useAuth} from "../auth";
 import {usePlatformStatus} from "../hooks/usePlatformStatus";
@@ -37,12 +37,31 @@ const roleLabels={admin:"Administrador",operations:"Gerente de Operaciones",fina
 export function AppShell({children,onNewReception}:{children:ReactNode;onNewReception:()=>void}){
   const [mobileOpen,setMobileOpen]=useState(false);
   const [theme,setTheme]=useState<"light"|"dark">(()=>{const saved=localStorage.getItem("pescamar-theme");if(saved==="light"||saved==="dark")return saved;return window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"});
+  const menuButtonRef=useRef<HTMLButtonElement>(null);
+  const drawerRef=useRef<HTMLElement>(null);
   const {operator,logout}=useAuth();
   const {pathname}=useLocation();
   const {status}=usePlatformStatus();
   useEffect(()=>{document.documentElement.dataset.theme=theme;document.documentElement.style.colorScheme=theme;localStorage.setItem("pescamar-theme",theme)},[theme]);
   useEffect(()=>{setMobileOpen(false)},[pathname]);
-  useEffect(()=>{if(!mobileOpen)return;const previous=document.body.style.overflow;document.body.style.overflow="hidden";const onKeyDown=(event:KeyboardEvent)=>{if(event.key==="Escape")setMobileOpen(false)};window.addEventListener("keydown",onKeyDown);return()=>{document.body.style.overflow=previous;window.removeEventListener("keydown",onKeyDown)}},[mobileOpen]);
+  useEffect(()=>{
+    if(!mobileOpen)return;
+    const previous=document.body.style.overflow;
+    const drawer=drawerRef.current;
+    document.body.style.overflow="hidden";
+    const focusable=()=>drawer?[...drawer.querySelectorAll<HTMLElement>('a[href],button:not([disabled]),summary,[tabindex]:not([tabindex="-1"])')].filter(node=>!node.hasAttribute("aria-hidden")):[];
+    requestAnimationFrame(()=>focusable()[0]?.focus());
+    const onKeyDown=(event:KeyboardEvent)=>{
+      if(event.key==="Escape"){event.preventDefault();setMobileOpen(false);return;}
+      if(event.key!=="Tab")return;
+      const items=focusable();if(!items.length)return;
+      const first=items[0],last=items[items.length-1];
+      if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+      else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+    };
+    window.addEventListener("keydown",onKeyDown);
+    return()=>{document.body.style.overflow=previous;window.removeEventListener("keydown",onKeyDown);menuButtonRef.current?.focus()};
+  },[mobileOpen]);
   const context=pathname==="/"?"Operación de hoy":pathname.startsWith("/timeline")||pathname.startsWith("/operacion-2025")?"Línea de tiempo":pathname.startsWith("/planificacion")?"Planificación":pathname.startsWith("/aprobaciones")?"Decisiones":pathname.startsWith("/recepciones")?"Recepciones":pathname.startsWith("/inventario")?"Inventario":pathname.startsWith("/costos-transformacion")?"Costos":pathname.startsWith("/ordenes-venta")?"Órdenes de venta":pathname.startsWith("/despachos-ventas")?"Despachos y ventas":pathname.startsWith("/cierre-diario")?"Cierre diario":pathname.startsWith("/identidades-plantas")?"Identidades históricas":pathname.startsWith("/plantas")?"Plantas":pathname.startsWith("/lineas")?"Producción":pathname.startsWith("/creditos")?"Créditos y anticipos":pathname.startsWith("/liquidaciones")?"Liquidaciones":pathname.startsWith("/importaciones")?"Importaciones":pathname.startsWith("/operadores")?"Operadores":"Configuración";
   const initials=operator?.fullName.split(" ").map(part=>part[0]).slice(0,2).join("").toUpperCase()||"PS";
   const visiblePrimary=operator?primaryNavigation.filter(item=>canAccessPath(operator.role,item.to)):[];
@@ -51,7 +70,8 @@ export function AppShell({children,onNewReception}:{children:ReactNode;onNewRece
   const platformLabel=!status?"Verificando":status.ok?"Plataforma activa":"Revisar plataforma";
   const databaseLabel=!status?"Sincronizando estado":status.persistence.database?"Neon conectado":"Base pendiente";
   return <div className="app-shell">
-    <aside className={`sidebar ${mobileOpen?"is-open":""}`} aria-hidden={!mobileOpen&&typeof window!=="undefined"&&window.matchMedia("(max-width: 720px)").matches?true:undefined}>
+    <a className="skip-link" href="#main-content">Ir al contenido principal</a>
+    <aside ref={drawerRef} className={`sidebar ${mobileOpen?"is-open":""}`} aria-label="Navegación de Pescamar" aria-hidden={!mobileOpen&&typeof window!=="undefined"&&window.matchMedia("(max-width: 720px)").matches?true:undefined}>
       <div className="brand"><span className="pescamar-symbol" aria-hidden="true"><svg viewBox="0 0 52 34" role="img"><path d="M4 17c8-8 17-12 27-10 5 1 10 4 15 10-5 6-10 9-15 10-10 2-19-2-27-10Z"/><path d="M36 11c4-4 8-6 12-6-1 5-1 8 0 12-4 0-8-2-12-6Z"/><circle cx="14" cy="15" r="1.35"/><path className="brand-wave" d="M3 27c8-3 15-3 22 0s15 3 24-1"/></svg></span><div className="brand-copy"><strong className="brand-name">Pescamar</strong><small className="brand-product">Control operacional</small></div><button className="icon-btn mobile-close" onClick={()=>setMobileOpen(false)} aria-label="Cerrar menú"><X size={18}/></button></div>
       <div className="plant-chip"><span className="live-dot pending"/><div><b>Red Pescamar</b><small>{operator?.role==="admin"?"Cobertura corporativa · 6 plantas":operator?.plantIds.length?`${operator.plantIds.length} planta${operator.plantIds.length===1?"":"s"} bajo tu alcance`:"Sin plantas asignadas"}</small></div></div>
       <nav className="side-nav grouped-nav" aria-label="Navegación principal">
@@ -63,11 +83,11 @@ export function AppShell({children,onNewReception}:{children:ReactNode;onNewRece
       {operator&&canAccessPath(operator.role,"/modulos")?<NavLink className="settings-link" to="/modulos"><Settings2 size={18}/><span>Configuración</span></NavLink>:null}
     </aside>
     {mobileOpen?<button className="mobile-nav-backdrop" type="button" onClick={()=>setMobileOpen(false)} aria-label="Cerrar navegación"/>:null}
-    <div className="workspace"><header className="topbar"><button className="icon-btn menu-btn" onClick={()=>setMobileOpen(true)} aria-label="Abrir menú" aria-expanded={mobileOpen}><Menu size={20}/></button><div className="topbar-context"><span>Pescamar</span><b>{context}</b></div><div className="topbar-actions">
+    <div className="workspace"><header className="topbar"><button ref={menuButtonRef} className="icon-btn menu-btn" onClick={()=>setMobileOpen(true)} aria-label="Abrir menú" aria-expanded={mobileOpen}><Menu size={20}/></button><div className="topbar-context"><span>Pescamar</span><b>{context}</b></div><div className="topbar-actions">
       <button className="theme-toggle" type="button" onClick={()=>setTheme(theme==="dark"?"light":"dark")} aria-label={`Activar modo ${theme==="dark"?"claro":"oscuro"}`} aria-pressed={theme==="dark"} title={`Modo ${theme==="dark"?"claro":"oscuro"}`}>{theme==="dark"?<Sun size={15}/>:<Moon size={15}/>}<span>{theme==="dark"?"Claro":"Oscuro"}</span></button>
       {operator&&canAccessPath(operator.role,"/modulos")?<NavLink className="system-state" to="/modulos"><Activity size={15}/><span><b>{platformLabel}</b><small>{databaseLabel}</small></span></NavLink>:<div className="system-state"><Activity size={15}/><span><b>{platformLabel}</b><small>{databaseLabel}</small></span></div>}
-      <button className="operator-state operator-session-button" type="button" onClick={()=>void logout()} title="Cerrar sesión"><span>{initials}</span><div><b>{operator?.fullName??"Sesión operativa"}</b><small>{operator?roleLabels[operator.role]:"Operador"}</small></div><LogOut size={14}/></button>
-    </div></header><main className="main-content">{children}</main></div>
+      <button className="operator-state operator-session-button" type="button" onClick={()=>void logout()} aria-label={`Cerrar sesión de ${operator?.fullName??"operador"}`} title="Cerrar sesión"><span>{initials}</span><div><b>{operator?.fullName??"Sesión operativa"}</b><small>{operator?roleLabels[operator.role]:"Operador"}</small></div><LogOut size={14}/></button>
+    </div></header><main id="main-content" tabIndex={-1} className="main-content">{children}</main></div>
     {mayCreate?<button className="floating-action" onClick={onNewReception}>+ Nueva recepción</button>:null}
   </div>;
 }
