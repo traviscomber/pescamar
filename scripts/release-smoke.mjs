@@ -6,7 +6,7 @@ const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
 const runtimeDdl=/\b(create table|alter table|create index|drop table|drop index)\b/i
 
-const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaSource,evidenceFileSource,bootstrapSource]=await Promise.all([
+const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaSource,evidenceFileSource,bootstrapSource,visionSource,receptionsSource]=await Promise.all([
   fetch(base,{redirect:'manual'}).then(async response=>({status:response.status,text:await response.text()})),
   readFile(new URL('../src/main.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/app.css',import.meta.url),'utf8'),
@@ -16,6 +16,8 @@ const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaS
   readFile(new URL('../api/_reception-schema.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/reception-evidence-file.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/bootstrap.ts',import.meta.url),'utf8'),
+  readFile(new URL('../api/reception-vision.ts',import.meta.url),'utf8'),
+  readFile(new URL('../api/receptions.ts',import.meta.url),'utf8'),
 ])
 
 assert(indexHtml.status===200,`home returned HTTP ${indexHtml.status}`)
@@ -35,11 +37,18 @@ assert(!authSource.includes('AUTH_BYPASS')&&!authSource.includes('TEMPORARY_OPER
 assert(!runtimeDdl.test(receptionSchemaSource),'runtime reception schema helper must remain side-effect free')
 assert(!runtimeDdl.test(bootstrapSource),'admin bootstrap must not execute schema DDL')
 assert(evidenceFileSource.includes('hasPlantAccess'),'evidence downloads must enforce plant authorization')
+assert(evidenceFileSource.includes('created_by_operator_id'),'evidence downloads must authorize unattached files by operator id')
+assert(evidenceFileSource.includes('f.reception_id'),'evidence downloads must use explicit reception ownership')
 assert(evidenceFileSource.includes('private, no-store, max-age=0'),'evidence downloads must not be cached')
+assert(visionSource.includes('created_by_operator_id'),'vision uploads must persist operator ownership')
+assert(visionSource.includes('fileId:id'),'vision responses must expose the stored file id for binding')
+assert(receptionsSource.includes('r.plant_id=any(${plantIds}::text[])'),'reception reads must enforce plant scope in SQL')
+assert(receptionsSource.includes('created_by_operator_id=${operator.id}::uuid'),'reception evidence binding must enforce operator ownership')
+assert(receptionsSource.includes('set reception_id=r.id'),'stored evidence must bind explicitly to the created reception')
 
 if(failures.length){
   console.error('Release smoke FAILED')
   for(const failure of failures)console.error(`- ${failure}`)
   process.exit(1)
 }
-console.log('Release smoke PASS: shell, layered CSS, mobile, accessibility, auth, migration, bootstrap and evidence-access contracts verified')
+console.log('Release smoke PASS: shell, layered CSS, mobile, accessibility, auth, migration, bootstrap, plant scope and evidence ownership contracts verified')
