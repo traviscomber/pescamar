@@ -1,6 +1,5 @@
 import { requireOperator } from "./_auth.js";
 import { getSql } from "./_db.js";
-import { ensureReceptionSchema } from "./_reception-schema.js";
 
 declare const process:{env:Record<string,string|undefined>};
 declare const fetch:(input:string,init?:Record<string,unknown>)=>Promise<{ok:boolean;status:number;json:()=>Promise<unknown>}>;
@@ -33,10 +32,7 @@ export default async function handler(request:Request,response:Response){
   if(!operator)return response.status(401).json({ok:false,error:"Sesión requerida"});
   const apiKey=process.env.OPENAI_API_KEY;
   const model=process.env.OPENAI_VISION_MODEL||"gpt-4o-mini";
-  if(request.method==="GET"){
-    await ensureReceptionSchema();
-    return response.status(200).json({ok:true,configured:Boolean(apiKey),provider:"openai",model});
-  }
+  if(request.method==="GET")return response.status(200).json({ok:true,configured:Boolean(apiKey),provider:"openai",model});
   if(request.method!=="POST"){response.setHeader("Allow","GET, POST");return response.status(405).json({ok:false,error:"Método no permitido"})}
   if(!["admin","operations","quality"].includes(operator.role))return response.status(403).json({ok:false,error:"Tu rol no puede registrar evidencia"});
 
@@ -48,7 +44,6 @@ export default async function handler(request:Request,response:Response){
   const bytes=Buffer.from(dataBase64,"base64").length;
   if(bytes<100||bytes>3*1024*1024)return response.status(400).json({ok:false,error:"La fotografía procesada no puede superar 3 MB"});
 
-  await ensureReceptionSchema();
   const sql=getSql();
   const stored=await sql`insert into reception_evidence_files(file_name,mime_type,data_base64,byte_size,created_by) values(${fileName},${mimeType},${dataBase64},${bytes},${operator.fullName}) returning id` as Array<Record<string,unknown>>;
   const id=String(stored[0]?.id??"");
