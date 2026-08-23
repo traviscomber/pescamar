@@ -3,6 +3,7 @@ export type AppRole="admin"|"operations"|"finance"|"quality"|"viewer";
 const access:Record<string,AppRole[]|"all">={
   "/":"all",
   "/timeline":"all",
+  "/auditoria":["admin","operations"],
   "/planificacion":["admin","operations","finance","viewer"],
   "/plantas":"all",
   "/identidades-plantas":["admin","operations"],
