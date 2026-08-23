@@ -11,4 +11,5 @@ import './auth.css'
 import './login-premium.css'
 import './frida.css'
 import './mobile.css'
-createRoot(document.getElementById('root')!).render(<StrictMode><AuthProvider><BrowserRouter><App /></BrowserRouter></AuthProvider></StrictMode>)
+import './a11y.css'
+createRoot(document.getElementById('root')!).render(<StrictMode><AuthProvider><BrowserRouter><App /></BrowserRouter></AuthProvider>)
