@@ -49,6 +49,16 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Desktop and mobile Chromium smoke
         run: npx playwright test
+      - name: Publish browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-release-evidence
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Preview logs on failure
         if: failure()
         run: cat /tmp/pescamar-preview.log || true
