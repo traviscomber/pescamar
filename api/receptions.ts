@@ -1,6 +1,5 @@
 import { requireOperator, type SessionOperator } from "./_auth.js";
 import { hasPlantAccess, normalizePlantIds } from "./_plants.js";
-import { ensureReceptionSchema } from "./_reception-schema.js";
 import { getSql } from "./_db.js";
 
 type Request = { method?: string; body?: unknown; headers?: Record<string, string | string[] | undefined> };
@@ -46,7 +45,6 @@ export default async function handler(request: Request, response: Response) {
   try {
     const operator = await requireOperator(request);
     if (!operator) return response.status(401).json({ ok: false, error: "Sesión requerida" });
-    await ensureReceptionSchema();
     if (request.method === "GET") return await listReceptions(response, operator);
     if (request.method === "POST") {
       if (!["admin", "operations", "quality"].includes(operator.role))
@@ -58,7 +56,7 @@ export default async function handler(request: Request, response: Response) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     const configuration = message.includes("DATABASE_URL");
-    const migration = message.includes("operator_sessions") || message.includes("guide_kg");
+    const migration = message.includes("operator_sessions") || message.includes("guide_kg") || message.includes("reception_evidence");
     return response.status(configuration || migration ? 503 : 500).json({
       ok: false,
       error: configuration
