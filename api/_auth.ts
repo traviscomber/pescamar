@@ -9,9 +9,8 @@ export type SessionOperator = { id: string; fullName: string; email: string; rol
 declare const process:{env:Record<string,string|undefined>};
 const COOKIE = "pescamar_session";
 const SESSION_DAYS = 7;
-// Temporary rollout mode: authentication is bypassed unless explicitly disabled.
-// Set AUTH_BYPASS=false in Vercel to restore real operator sessions without changing code.
-const TEMPORARY_AUTH_BYPASS = process.env.AUTH_BYPASS !== "false";
+// Authentication bypass is strictly non-production and opt-in. Production can never bypass operator sessions.
+const TEMPORARY_AUTH_BYPASS = process.env.VERCEL_ENV !== "production" && process.env.AUTH_BYPASS === "true";
 const TEMPORARY_OPERATOR: SessionOperator = {
   id: "1604b454-ef8a-448a-8788-136f6b224168",
   fullName: "Sebastián",
