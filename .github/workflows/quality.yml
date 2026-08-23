@@ -43,6 +43,8 @@ jobs:
           exit 1
       - name: Release smoke
         run: node scripts/release-smoke.mjs
+      - name: Operational form safety
+        run: node scripts/form-safety-smoke.mjs
       - name: Install pinned browser test runtime
         run: |
           npm install --no-save --ignore-scripts @playwright/test@1.55.0
