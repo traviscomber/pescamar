@@ -1,31 +1,101 @@
-import { AlertTriangle, CheckCircle2, FileSpreadsheet, ShieldCheck, Upload } from 'lucide-react'
-import { useState } from 'react'
+import { CheckCircle2, Database, FileSpreadsheet, History, RotateCcw, ShieldCheck, Upload } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { PlantImportModal } from '../components/PlantImportModal'
 import { PageHeader } from '../components/PageHeader'
-import { plants } from '../plants'
 import { usePlatformStatus } from '../hooks/usePlatformStatus'
-import { readWorkbook } from '../workbook'
-
-type Inspection={fileName:string;sheet:string;rows:number;columns:number;validRows:number;errors:string[];warnings:string[]}
-const schema=[
-  {column:4,label:'Guía / N°',top:'Guia',sub:'N°'},
-  {column:5,label:'Proveedor / Nombre',top:'Proveedor',sub:'Nombre'},
-  {column:6,label:'Lugar extracción / Zona',top:'Lugar extraccion',sub:'Zona'},
-  {column:8,label:'Planta / Proceso',top:'Planta',sub:'Proceso'},
-  {column:9,label:'Lote / N°',top:'Lote',sub:'N°'},
-  {column:10,label:'Kilos guía',sub:'Kilos Guia'},
-  {column:11,label:'Kilos recibidos',sub:'kilos recep.'}
-]
+import { fetchSharedPlantState, publishSharedPlantState, revertSharedPlantState } from '../plantApi'
+import { createImportBatch, type ImportBatch, type PlantState, type ValidatedImport } from '../plantImport'
+import { plants as configuredPlants } from '../plants'
 
 export function Imports(){
-  const [inspection,setInspection]=useState<Inspection|null>(null),[busy,setBusy]=useState(false),[plant,setPlant]=useState('')
-  const {status,error}=usePlatformStatus()
-  async function inspect(file:File){setBusy(true);try{const book=await readWorkbook(file),matrix=book.rows,top=(matrix[0]||[]).map(value=>String(value??'').trim()),sub=(matrix[1]||[]).map(value=>String(value??'').trim());const missing=schema.filter(field=>(field.top&&!top[field.column].toLowerCase().includes(field.top.toLowerCase()))||(field.sub&&!sub[field.column].toLowerCase().includes(field.sub.toLowerCase())));const rows=matrix.slice(2).filter(row=>row.some(value=>value!==null&&value!==''));const validRows=rows.filter(row=>row[4]&&row[5]&&row[9]&&typeof row[10]==='number'&&typeof row[11]==='number').length;const warnings:string[]=[];if(book.sheetCount>1)warnings.push(`El archivo contiene ${book.sheetCount} hojas; se procesará primero “${book.sheetName}”.`);if(validRows<rows.length)warnings.push(`${rows.length-validRows} filas requieren revisión por campos obligatorios o kilos no numéricos.`);setInspection({fileName:file.name,sheet:book.sheetName,rows:rows.length,columns:sub.filter(Boolean).length,validRows,errors:missing.map(field=>`No se reconoció el campo obligatorio “${field.label}” en la columna esperada.`),warnings})}catch(error){setInspection({fileName:file.name,sheet:'No disponible',rows:0,columns:0,validRows:0,errors:[error instanceof Error?error.message:'No fue posible leer el archivo.'],warnings:[]})}finally{setBusy(false)}}
-  const publishable=inspection&&inspection.errors.length===0&&inspection.validRows>0&&plant
-  return <><PageHeader eyebrow="Gobierno de datos" title="Importar planilla" description="Valida el archivo antes de asociarlo a una planta. La inspección no publica ni altera información operacional."/>
-    <section className="platform-strip"><div><span className={`platform-dot ${status?.ok?'online':'pending'}`}/><span><small>Vercel Functions</small><b>{status?.ok?'Conectado':error?'No disponible':'Comprobando…'}</b></span></div><div><small>Base de datos</small><b>{status?.persistence.database?'Conectada':'Pendiente'}</b></div><div><small>Archivos privados</small><b>{status?.persistence.files?'Conectados':'Pendiente'}</b></div><div><small>Entorno</small><b>{status?.environment??'—'}</b></div></section>
-    <section className="import-layout"><article className="panel import-upload"><div className="import-step"><span>01</span><div><h2>Seleccionar fuente</h2><p>Formato Excel `.xlsx` o CSV, con un máximo de 15 MB. El archivo permanece sin publicar durante la validación.</p></div></div><label className="file-drop"><Upload size={28}/><b>{busy?'Analizando archivo…':'Seleccionar planilla real'}</b><small>No se aceptan datos demostrativos</small><input type="file" accept=".xlsx,.csv" disabled={busy} onChange={event=>{const file=event.target.files?.[0];if(file)void inspect(file)}}/></label>{inspection?<InspectionResult inspection={inspection}/>:null}</article>
-      <aside className="panel import-assignment"><div className="import-step"><span>02</span><div><h2>Asignar contexto</h2><p>La planta debe ser confirmada por una persona responsable.</p></div></div><label>Planta<select value={plant} onChange={event=>setPlant(event.target.value)}><option value="">Seleccionar planta…</option>{plants.map(item=><option value={item.id} key={item.id}>{item.name}</option>)}</select></label><div className="governance-note"><ShieldCheck size={19}/><div><b>Publicación controlada</b><p>El siguiente paso guardará archivo original, hash, responsable, fecha y resultado de validación. La persistencia se habilitará al conectar la base de datos.</p></div></div><button className="button primary full-button" disabled={!publishable}>Preparar publicación</button><small className="disabled-note">{publishable?'Archivo válido y listo para la siguiente etapa.':'Selecciona un archivo válido y confirma su planta.'}</small></aside></section>
-    <section className="panel import-history"><header className="panel-header"><h2>Historial de importaciones</h2><span>Persistencia pendiente</span></header><div className="empty-state"><FileSpreadsheet size={30}/><h3>No hay importaciones publicadas</h3><p>La planilla canónica 2025 está disponible como referencia histórica, pero aún no se encuentra registrada como lote de importación ni asignada a una planta.</p></div></section></>
-}
+  const [plants,setPlants]=useState<PlantState[]>(configuredPlants)
+  const [history,setHistory]=useState<ImportBatch[]>([])
+  const [open,setOpen]=useState(false)
+  const [loading,setLoading]=useState(true)
+  const [error,setError]=useState('')
+  const [reverting,setReverting]=useState('')
+  const {status,error:statusError}=usePlatformStatus()
 
-function InspectionResult({inspection}:{inspection:Inspection}){const valid=inspection.errors.length===0;return <div className={`inspection-result ${valid?'valid':'invalid'}`}><header>{valid?<CheckCircle2 size={19}/>:<AlertTriangle size={19}/>}<div><b>{valid?'Estructura compatible':'Archivo con errores'}</b><small>{inspection.fileName} · Hoja “{inspection.sheet}”</small></div></header><div className="inspection-metrics"><span>Filas detectadas<b>{inspection.rows}</b></span><span>Filas válidas<b>{inspection.validRows}</b></span><span>Columnas con nombre<b>{inspection.columns}</b></span></div>{inspection.errors.map(error=><p className="validation-error" key={error}>{error}</p>)}{inspection.warnings.map(warning=><p className="validation-warning" key={warning}>{warning}</p>)}</div>}
+  const load=async()=>{
+    setLoading(true)
+    try{
+      const state=await fetchSharedPlantState()
+      setPlants(state.plants?.length?state.plants:configuredPlants)
+      setHistory(state.history??[])
+      setError('')
+    }catch(cause){
+      setError(cause instanceof Error?cause.message:'No fue posible cargar las importaciones')
+    }finally{
+      setLoading(false)
+    }
+  }
+
+  useEffect(()=>{void load()},[])
+
+  const publish=async(rows:ValidatedImport[])=>{
+    const batch=createImportBatch(plants,rows)
+    await publishSharedPlantState(batch)
+    setPlants(batch.resultingPlants)
+    await load()
+  }
+
+  const latestActive=useMemo(()=>history.find(batch=>!batch.revertedAt),[history])
+  const revert=async(batchId:string)=>{
+    setReverting(batchId)
+    try{
+      const result=await revertSharedPlantState(batchId)
+      setPlants(result.plants?.length?result.plants:configuredPlants)
+      await load()
+    }catch(cause){
+      setError(cause instanceof Error?cause.message:'No fue posible revertir la importación')
+    }finally{
+      setReverting('')
+    }
+  }
+
+  return <>
+    <PageHeader
+      eyebrow="Gobierno de datos"
+      title="Importar planilla"
+      description="Carga una planilla operacional, valida todas sus filas y publícala como una actualización compartida de las plantas. Ningún dato se modifica antes de confirmar la publicación."
+      actions={<button className="button primary" onClick={()=>setOpen(true)}><Upload size={16}/>Importar XLSX o CSV</button>}
+    />
+
+    <section className="platform-strip">
+      <div><span className={`platform-dot ${status?.ok?'online':'pending'}`}/><span><small>Vercel Functions</small><b>{status?.ok?'Conectado':statusError?'No disponible':'Comprobando…'}</b></span></div>
+      <div><small>Base de datos</small><b>{status?.persistence.database?'Conectada':'Pendiente'}</b></div>
+      <div><small>Persistencia</small><b>{status?.persistence.files?'Neon activo':'Pendiente'}</b></div>
+      <div><small>Entorno</small><b>{status?.environment??'—'}</b></div>
+    </section>
+
+    {error?<div className="system-banner error" role="alert">{error}</div>:null}
+
+    <section className="import-layout">
+      <article className="panel import-upload">
+        <div className="import-step"><span>01</span><div><h2>Seleccionar y validar</h2><p>Formatos admitidos: Excel `.xlsx` y CSV. Máximo 15 MB, 10.000 filas y 200 columnas. Se procesa la primera hoja.</p></div></div>
+        <button className="file-drop" onClick={()=>setOpen(true)}>
+          <Upload size={28}/><b>Seleccionar planilla real</b><small>La vista previa valida la estructura antes de publicar</small>
+        </button>
+        <div className="governance-note"><ShieldCheck size={19}/><div><b>Validación previa obligatoria</b><p>No se publica si existe una fila inválida, una planta no reconocida, números negativos, una meta en cero o una fecha incorrecta.</p></div></div>
+      </article>
+
+      <aside className="panel import-assignment">
+        <div className="import-step"><span>02</span><div><h2>Publicación compartida</h2><p>Al confirmar, el snapshot se guarda en Neon y queda disponible para todos los usuarios con acceso a esas plantas.</p></div></div>
+        <div className="import-contract"><Database/><div><b>{plants.filter(plant=>plant.sourceStatus==='linked').length} de {configuredPlants.length} plantas con fuente</b><p>La publicación conserva el lote anterior para trazabilidad y reversión administrativa.</p></div></div>
+        <div className="import-contract"><CheckCircle2/><div><b>Deduplicación por planta</b><p>Una misma planta no puede aparecer más de una vez dentro del mismo archivo.</p></div></div>
+      </aside>
+    </section>
+
+    <section className="panel import-history">
+      <header className="panel-header"><div><span className="overline">Trazabilidad</span><h2>Historial de importaciones</h2></div><span>{loading?'Sincronizando…':`${history.length} lotes`}</span></header>
+      {history.length?<div className="detail-alerts">{history.map(batch=><div key={batch.id}>
+        <FileSpreadsheet size={17}/>
+        <span><b>{batch.fileName}</b><small>{batch.rowCount} filas · {batch.plantIds.join(', ')} · {new Date(batch.publishedAt).toLocaleString('es-CL')}</small></span>
+        <em>{batch.revertedAt?'Revertido':batch.id===latestActive?.id?'Activo':'Histórico'}</em>
+        {batch.id===latestActive?.id&&!batch.revertedAt?<button className="button secondary" disabled={Boolean(reverting)} onClick={()=>void revert(batch.id)}><RotateCcw size={14}/>{reverting===batch.id?'Revirtiendo…':'Revertir'}</button>:null}
+      </div>)}</div>:<div className="empty-state"><History size={30}/><h3>Aún no hay importaciones publicadas</h3><p>La primera planilla validada creará el estado operacional compartido y su lote de trazabilidad.</p></div>}
+    </section>
+
+    <PlantImportModal open={open} plants={configuredPlants} onClose={()=>setOpen(false)} onPublish={publish}/>
+  </>
+}
