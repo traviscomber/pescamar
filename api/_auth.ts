@@ -6,9 +6,10 @@ export type AuthRequest = { headers?: Headers };
 export type OperatorRole = "admin" | "operations" | "finance" | "quality" | "viewer";
 export type SessionOperator = { id: string; fullName: string; email: string; role: OperatorRole; plantIds: string[] };
 
+declare const process:{env:Record<string,string|undefined>};
 const COOKIE = "pescamar_session";
 const SESSION_DAYS = 7;
-const TEMPORARY_AUTH_BYPASS = true;
+const TEMPORARY_AUTH_BYPASS = process.env.AUTH_BYPASS === "true";
 const TEMPORARY_OPERATOR: SessionOperator = {
   id: "1604b454-ef8a-448a-8788-136f6b224168",
   fullName: "Sebastián",
