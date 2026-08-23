@@ -4,7 +4,8 @@ import { getSql } from "./_db.js";
 
 type Request = { method?: string; body?: unknown; headers?: Record<string, string | string[] | undefined> };
 type Response = { status: (code: number) => Response; setHeader: (name: string, value: string) => void; json: (body: unknown) => void };
-type EvidenceInput = { kind?: unknown; label?: unknown; url?: unknown; note?: unknown };
+type EvidenceInput = { kind?: unknown; label?: unknown; url?: unknown; note?: unknown; fileId?: unknown };
+type NormalizedEvidence = { kind: string; label: string; url: string; note: string; fileId: string | null };
 type ReceptionInput = {
   supplier?: unknown;
   species?: unknown;
@@ -24,18 +25,30 @@ type ReceptionInput = {
 const allowedSpecies = new Set(["Erizo", "Loco", "Jaiba", "Centolla", "Pulpo", "Pescado", "Algas"]);
 const evidenceKinds = new Set(["document", "photo", "certificate", "other"]);
 const httpsUrlPattern = /^https:\/\/[a-z0-9.-]+(?::\d+)?(?:[/?#][^\s]*)?$/i;
+const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const clean=(value:unknown,max=180)=>String(value??"").trim().replace(/\s+/g," ").slice(0,max);
+
+function storedFileId(url:string,explicit:unknown){
+  const supplied=clean(explicit,64);
+  if(uuidPattern.test(supplied))return supplied;
+  try{
+    const parsed=new URL(url);
+    if(parsed.pathname!=="/api/reception-evidence-file")return null;
+    const id=parsed.searchParams.get("id")??"";
+    return uuidPattern.test(id)?id:null;
+  }catch{return null;}
+}
 
 function normalizeEvidence(value: unknown) {
   if (!Array.isArray(value) || value.length > 6) return null;
-  const result: Array<{ kind: string; label: string; url: string; note: string }> = [];
+  const result: NormalizedEvidence[] = [];
   for (const raw of value as EvidenceInput[]) {
     const kind = clean(raw?.kind,32);
     const label = clean(raw?.label,120);
     const url = String(raw?.url ?? "").trim();
     const note = clean(raw?.note,500);
     if (!evidenceKinds.has(kind) || label.length < 2 || url.length > 2048 || !httpsUrlPattern.test(url)) return null;
-    result.push({ kind, label, url, note });
+    result.push({ kind, label, url, note, fileId: storedFileId(url,raw?.fileId) });
   }
   return result;
 }
@@ -69,15 +82,25 @@ export default async function handler(request: Request, response: Response) {
 }
 
 async function listReceptions(response: Response, operator: SessionOperator) {
+  const admin=operator.role==="admin";
+  const plantIds=operator.plantIds;
   const rows = (await getSql()`
     select r.id,r.reception_number,r.plant_id,p.legal_name as supplier,r.species,r.extraction_zone,r.source_reference,r.guide_kg,r.gross_kg,r.tare_kg,r.drained_kg,r.accepted_kg,r.temperature_c,r.quality_status,r.evidence_count,r.received_at,
       coalesce((select jsonb_agg(jsonb_build_object('id',e.id,'kind',e.kind,'label',e.label,'url',e.url,'note',e.note,'createdBy',e.created_by,'createdAt',e.created_at) order by e.created_at) from reception_evidence e where e.reception_id=r.id),'[]'::jsonb) as evidence
-    from receptions r join parties p on p.id=r.supplier_id order by r.received_at desc limit 500
+    from receptions r
+    join parties p on p.id=r.supplier_id
+    where ${admin} or r.plant_id=any(${plantIds}::text[])
+    order by r.received_at desc
+    limit 500
   `) as Array<Record<string, unknown>>;
-  const visible = operator.role === "admin"
-    ? rows
-    : rows.filter((row) => typeof row.plant_id === "string" && hasPlantAccess(operator, row.plant_id));
-  return response.status(200).json({ ok: true, receptions: visible });
+  return response.status(200).json({ ok: true, receptions: rows });
+}
+
+async function validateStoredEvidence(evidence:NormalizedEvidence[],operator:SessionOperator){
+  const fileIds=evidence.map((item)=>item.fileId).filter((id):id is string=>Boolean(id));
+  if(!fileIds.length)return true;
+  const rows=await getSql()`select count(*)::int as allowed from reception_evidence_files where id=any(${fileIds}::uuid[]) and reception_id is null and (${operator.role==="admin"} or created_by_operator_id=${operator.id}::uuid)` as Array<{allowed:number}>;
+  return Number(rows[0]?.allowed??0)===fileIds.length;
 }
 
 async function createReception(body: unknown, response: Response, operator: SessionOperator) {
@@ -120,6 +143,9 @@ async function createReception(body: unknown, response: Response, operator: Sess
     evidence === null
   ) return response.status(400).json({ ok: false, error: "Datos de recepción, pesos, guía o evidencia inválidos" });
 
+  if(!(await validateStoredEvidence(evidence,operator)))
+    return response.status(403).json({ok:false,error:"Una evidencia adjunta no pertenece a tu sesión o ya está asociada"});
+
   const sql=getSql();
   const rows = await sql`
     with existing_party as (
@@ -139,8 +165,14 @@ async function createReception(body: unknown, response: Response, operator: Sess
       select r.id,e->>'kind',e->>'label',e->>'url',nullif(e->>'note',''),${operator.fullName}
       from reception r cross join jsonb_array_elements(${JSON.stringify(evidence)}::jsonb) e
       returning id
+    ), linked_files as (
+      update reception_evidence_files f
+      set reception_id=r.id
+      from reception r, jsonb_array_elements(${JSON.stringify(evidence)}::jsonb) e
+      where nullif(e->>'fileId','') is not null and f.id=(e->>'fileId')::uuid
+      returning f.id
     )
-    select id,reception_number,received_at,source_reference,(select count(*) from inserted_evidence) as evidence_count from reception
+    select id,reception_number,received_at,source_reference,(select count(*) from inserted_evidence) as evidence_count,(select count(*) from linked_files) as linked_file_count from reception
   `;
   return response.status(201).json({ ok: true, reception: Array.isArray(rows) ? rows[0] : null });
 }
