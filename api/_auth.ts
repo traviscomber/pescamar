@@ -6,18 +6,8 @@ export type AuthRequest = { headers?: Headers };
 export type OperatorRole = "admin" | "operations" | "finance" | "quality" | "viewer";
 export type SessionOperator = { id: string; fullName: string; email: string; role: OperatorRole; plantIds: string[] };
 
-declare const process:{env:Record<string,string|undefined>};
 const COOKIE = "pescamar_session";
 const SESSION_DAYS = 7;
-// Authentication bypass is strictly non-production and opt-in. Production can never bypass operator sessions.
-const TEMPORARY_AUTH_BYPASS = process.env.VERCEL_ENV !== "production" && process.env.AUTH_BYPASS === "true";
-const TEMPORARY_OPERATOR: SessionOperator = {
-  id: "1604b454-ef8a-448a-8788-136f6b224168",
-  fullName: "Sebastián",
-  email: "sebastian@pescamarchile.cl",
-  role: "operations",
-  plantIds: ["ancud", "quellon", "iquique", "piedra-azul", "aqua-austral", "natales"],
-};
 
 function header(request: AuthRequest, name: string) {
   const entry = Object.entries(request.headers ?? {}).find(([key]) => key.toLowerCase() === name.toLowerCase())?.[1];
@@ -57,7 +47,6 @@ export async function createSession(operatorId: string) {
 }
 
 export async function destroySession(request: AuthRequest) {
-  if (TEMPORARY_AUTH_BYPASS) return;
   const token = cookieToken(request);
   if (token) await getSql()`delete from operator_sessions where token_hash=${tokenHash(token)}`;
 }
@@ -71,11 +60,6 @@ export function clearSessionCookie() {
 }
 
 export async function requireOperator(request: AuthRequest, roles?: OperatorRole[]) {
-  if (TEMPORARY_AUTH_BYPASS) {
-    if (roles && !roles.includes(TEMPORARY_OPERATOR.role)) return null;
-    return TEMPORARY_OPERATOR;
-  }
-
   const token = cookieToken(request);
   if (!token) return null;
   const rows = await getSql()`
