@@ -6,7 +6,7 @@ const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
 const runtimeDdl=/\b(create table|alter table|create index|drop table|drop index)\b/i
 
-const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaSource,evidenceFileSource,bootstrapSource,visionSource,receptionsSource,inventorySource,commercialSource,settlementsSource,approvalsSource,timelineSource]=await Promise.all([
+const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaSource,evidenceFileSource,bootstrapSource,visionSource,receptionsSource,inventorySource,commercialSource,settlementsSource,approvalsSource,timelineSource,creditsSource,costsSource,dailyCloseSource]=await Promise.all([
   fetch(base,{redirect:'manual'}).then(async response=>({status:response.status,text:await response.text()})),
   readFile(new URL('../src/main.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/app.css',import.meta.url),'utf8'),
@@ -23,6 +23,9 @@ const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaS
   readFile(new URL('../api/settlements.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/approvals.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/timeline.ts',import.meta.url),'utf8'),
+  readFile(new URL('../api/credits.ts',import.meta.url),'utf8'),
+  readFile(new URL('../api/transformation-costs.ts',import.meta.url),'utf8'),
+  readFile(new URL('../api/daily-close.ts',import.meta.url),'utf8'),
 ])
 
 assert(indexHtml.status===200,`home returned HTTP ${indexHtml.status}`)
@@ -63,10 +66,16 @@ assert(timelineSource.includes('financialRole'),'timeline must gate financial da
 assert(timelineSource.includes("aa.entity_type='reception'"),'timeline approval metadata must be scoped by entity')
 assert(timelineSource.includes('plant_ids&&${plantIds}::text[]'),'timeline imports must enforce plant overlap in SQL')
 assert(timelineSource.includes('r.plant_id=any(${plantIds}::text[])'),'timeline operational reads must enforce plant scope in SQL')
+assert(creditsSource.includes("if(!creditRoles.includes(operator.role))"),'credit ledger must reject unauthorized roles before reading')
+assert(costsSource.includes('r.plant_id=any(${plantIds}::text[])'),'transformation cost reads must enforce plant scope in SQL')
+assert(costsSource.includes("insert into transformation_costs")&&costsSource.includes('r.plant_id=any(${plantIds}::text[])'),'transformation cost writes must enforce plant scope in SQL')
+assert(dailyCloseSource.includes("operator.role!=='admin'&&!plantId"),'non-admin users must not write corporate daily closes')
+assert(dailyCloseSource.includes('r.plant_id=any(${plantIds}::text[])'),'daily close operational metrics must enforce plant scope in SQL')
+assert(dailyCloseSource.includes('plant_id=any(${plantIds}::text[])'),'daily close direct plant metrics must enforce plant scope in SQL')
 
 if(failures.length){
   console.error('Release smoke FAILED')
   for(const failure of failures)console.error(`- ${failure}`)
   process.exit(1)
 }
-console.log('Release smoke PASS: shell, layered CSS, mobile, accessibility, auth, migration, bootstrap, SQL role/plant isolation and evidence ownership contracts verified')
+console.log('Release smoke PASS: shell, layered CSS, mobile, accessibility, auth, migration, bootstrap, SQL role/plant isolation, daily close boundaries and evidence ownership contracts verified')
