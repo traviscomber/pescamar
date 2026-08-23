@@ -8,6 +8,7 @@ export type SessionOperator = { id: string; fullName: string; email: string; rol
 
 const COOKIE = "pescamar_session";
 const SESSION_DAYS = 7;
+const SESSION_TOUCH_INTERVAL_MS = 5 * 60 * 1000;
 
 function header(request: AuthRequest, name: string) {
   const entry = Object.entries(request.headers ?? {}).find(([key]) => key.toLowerCase() === name.toLowerCase())?.[1];
@@ -42,7 +43,7 @@ export function verifyPassword(password: string, stored: string | null | undefin
 export async function createSession(operatorId: string) {
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
-  await getSql()`insert into operator_sessions (token_hash,operator_id,expires_at) values (${tokenHash(token)},${operatorId}::uuid,${expiresAt.toISOString()}::timestamptz)`;
+  await getSql()`insert into operator_sessions (token_hash,operator_id,expires_at,last_seen_at) values (${tokenHash(token)},${operatorId}::uuid,${expiresAt.toISOString()}::timestamptz,now())`;
   return { token, maxAge: SESSION_DAYS * 24 * 60 * 60 };
 }
 
@@ -62,12 +63,18 @@ export function clearSessionCookie() {
 export async function requireOperator(request: AuthRequest, roles?: OperatorRole[]) {
   const token = cookieToken(request);
   if (!token) return null;
+  const hash = tokenHash(token);
   const rows = await getSql()`
-    select o.id,o.full_name,o.email,o.role,o.plant_ids
+    select o.id,o.full_name,o.email,o.role,o.plant_ids,s.last_seen_at
     from operator_sessions s join operators o on o.id=s.operator_id
-    where s.token_hash=${tokenHash(token)} and s.expires_at>now() and o.active=true limit 1`;
-  const row = Array.isArray(rows) ? rows[0] as {id:string;full_name:string;email:string;role:OperatorRole;plant_ids:string[]}|undefined : undefined;
+    where s.token_hash=${hash} and s.expires_at>now() and o.active=true limit 1`;
+  const row = Array.isArray(rows) ? rows[0] as {id:string;full_name:string;email:string;role:OperatorRole;plant_ids:string[];last_seen_at:string|Date|null}|undefined : undefined;
   if (!row || (roles && !roles.includes(row.role))) return null;
-  await getSql()`update operator_sessions set last_seen_at=now() where token_hash=${tokenHash(token)}`;
+
+  const lastSeenMs = row.last_seen_at ? new Date(row.last_seen_at).getTime() : 0;
+  if (!Number.isFinite(lastSeenMs) || Date.now() - lastSeenMs >= SESSION_TOUCH_INTERVAL_MS) {
+    await getSql()`update operator_sessions set last_seen_at=now() where token_hash=${hash}`;
+  }
+
   return { id: row.id, fullName: row.full_name, email: row.email, role: row.role, plantIds: row.plant_ids ?? [] } satisfies SessionOperator;
 }
