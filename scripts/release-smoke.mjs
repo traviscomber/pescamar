@@ -6,7 +6,7 @@ const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
 const runtimeDdl=/\b(create table|alter table|create index|drop table|drop index)\b/i
 
-const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaSource,evidenceFileSource,bootstrapSource,visionSource,receptionsSource,inventorySource,commercialSource,settlementsSource,approvalsSource,timelineSource,creditsSource,costsSource,dailyCloseSource,productionLinesSource,overviewSource,lot360Source,lotContinuitySource,dashboardSource]=await Promise.all([
+const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaSource,evidenceFileSource,bootstrapSource,visionSource,receptionsSource,inventorySource,commercialSource,settlementsSource,approvalsSource,timelineSource,creditsSource,costsSource,dailyCloseSource,productionLinesSource,overviewSource,lot360Source,lotContinuitySource,dashboardSource,liveLotDrawerSource]=await Promise.all([
   fetch(base,{redirect:'manual'}).then(async response=>({status:response.status,text:await response.text()})),
   readFile(new URL('../src/main.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/app.css',import.meta.url),'utf8'),
@@ -31,6 +31,7 @@ const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaS
   readFile(new URL('../api/lot-360.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/lot-continuity.ts',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/Dashboard.tsx',import.meta.url),'utf8'),
+  readFile(new URL('../src/components/LiveLotDrawer.tsx',import.meta.url),'utf8'),
 ])
 
 assert(indexHtml.status===200,`home returned HTTP ${indexHtml.status}`)
@@ -86,6 +87,11 @@ assert(overviewSource.includes('financialRole&&canSeeCorporateHistory?sql'),'ope
 assert(dashboardSource.includes('window.setInterval(refresh,60_000)'),'dashboard must refresh operational state on an interval')
 assert(dashboardSource.includes("document.addEventListener('visibilitychange',refresh)"),'dashboard must refresh after returning to the tab')
 assert(dashboardSource.includes('loading&&!overview'),'dashboard must not claim an idle operation before the first overview response')
+assert(liveLotDrawerSource.includes("event.key==='Escape'"),'live lot drawer must close with Escape')
+assert(liveLotDrawerSource.includes("event.key!=='Tab'"),'live lot drawer must trap keyboard focus')
+assert(liveLotDrawerSource.includes("document.body.style.overflow='hidden'"),'live lot drawer must lock background scroll')
+assert(liveLotDrawerSource.includes("aria-labelledby=\"live-lot-title\""),'live lot drawer must expose an accessible dialog title')
+assert(liveLotDrawerSource.includes('previousFocus.current'),'live lot drawer must restore the opening focus target')
 assert(lot360Source.includes('plant_id=any(${operator.plantIds}::text[])'),'lot 360 access must enforce plant scope in SQL')
 assert(lot360Source.includes('financialRole?sql`select s.id,s.gross_amount_clp'),'lot 360 must gate settlement queries by role')
 assert(lot360Source.includes('financialRole?sql`select s.id,s.dispatch_id'),'lot 360 must gate sales queries by role')
@@ -99,4 +105,4 @@ if(failures.length){
   for(const failure of failures)console.error(`- ${failure}`)
   process.exit(1)
 }
-console.log('Release smoke PASS: shell, layered CSS, mobile, accessibility, auth, migration-only schema, SQL role/plant isolation, overview performance/freshness, lot financial boundaries, daily close boundaries and evidence ownership contracts verified')
+console.log('Release smoke PASS: shell, layered CSS, mobile, accessibility, auth, migration-only schema, SQL role/plant isolation, overview performance/freshness, drawer keyboard safety, lot financial boundaries, daily close boundaries and evidence ownership contracts verified')
