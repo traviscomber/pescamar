@@ -27,6 +27,7 @@ const workflowGroups=[
   ]},
   {label:"Gestión",icon:Settings2,items:[
     {to:"/plantas",label:"Plantas",icon:Factory},
+    {to:"/identidades-plantas",label:"Identidades históricas",icon:History},
     {to:"/importaciones",label:"Importaciones",icon:FileSpreadsheet},
     {to:"/operadores",label:"Operadores",icon:Settings2},
   ]},
@@ -40,7 +41,7 @@ export function AppShell({children,onNewReception}:{children:ReactNode;onNewRece
   const {pathname}=useLocation();
   const {status}=usePlatformStatus();
   useEffect(()=>{document.documentElement.dataset.theme=theme;document.documentElement.style.colorScheme=theme;localStorage.setItem("pescamar-theme",theme)},[theme]);
-  const context=pathname==="/"?"Operación de hoy":pathname.startsWith("/timeline")||pathname.startsWith("/operacion-2025")?"Línea de tiempo":pathname.startsWith("/planificacion")?"Planificación":pathname.startsWith("/aprobaciones")?"Decisiones":pathname.startsWith("/recepciones")?"Recepciones":pathname.startsWith("/inventario")?"Inventario":pathname.startsWith("/costos-transformacion")?"Costos":pathname.startsWith("/ordenes-venta")?"Órdenes de venta":pathname.startsWith("/despachos-ventas")?"Despachos y ventas":pathname.startsWith("/cierre-diario")?"Cierre diario":pathname.startsWith("/plantas")?"Plantas":pathname.startsWith("/lineas")?"Producción":pathname.startsWith("/creditos")?"Créditos y anticipos":pathname.startsWith("/liquidaciones")?"Liquidaciones":pathname.startsWith("/importaciones")?"Importaciones":pathname.startsWith("/operadores")?"Operadores":"Configuración";
+  const context=pathname==="/"?"Operación de hoy":pathname.startsWith("/timeline")||pathname.startsWith("/operacion-2025")?"Línea de tiempo":pathname.startsWith("/planificacion")?"Planificación":pathname.startsWith("/aprobaciones")?"Decisiones":pathname.startsWith("/recepciones")?"Recepciones":pathname.startsWith("/inventario")?"Inventario":pathname.startsWith("/costos-transformacion")?"Costos":pathname.startsWith("/ordenes-venta")?"Órdenes de venta":pathname.startsWith("/despachos-ventas")?"Despachos y ventas":pathname.startsWith("/cierre-diario")?"Cierre diario":pathname.startsWith("/identidades-plantas")?"Identidades históricas":pathname.startsWith("/plantas")?"Plantas":pathname.startsWith("/lineas")?"Producción":pathname.startsWith("/creditos")?"Créditos y anticipos":pathname.startsWith("/liquidaciones")?"Liquidaciones":pathname.startsWith("/importaciones")?"Importaciones":pathname.startsWith("/operadores")?"Operadores":"Configuración";
   const initials=operator?.fullName.split(" ").map(part=>part[0]).slice(0,2).join("").toUpperCase()||"PS";
   const visiblePrimary=operator?primaryNavigation.filter(item=>canAccessPath(operator.role,item.to)):[];
   const visibleGroups=operator?workflowGroups.map(group=>({...group,items:group.items.filter(item=>canAccessPath(operator.role,item.to))})).filter(group=>group.items.length):[];
