@@ -17,6 +17,7 @@ const Modules=lazy(()=>import("./pages/Modules").then(module=>({default:module.M
 const Imports=lazy(()=>import("./pages/Imports").then(module=>({default:module.Imports})));
 const Planning=lazy(()=>import("./pages/Planning").then(module=>({default:module.Planning})));
 const PlantControl=lazy(()=>import("./pages/PlantControl").then(module=>({default:module.PlantControl})));
+const PlantIdentities=lazy(()=>import("./pages/PlantIdentities").then(module=>({default:module.PlantIdentities})));
 const ProductionLines=lazy(()=>import("./pages/ProductionLines").then(module=>({default:module.ProductionLines})));
 const Receptions=lazy(()=>import("./pages/Receptions").then(module=>({default:module.Receptions})));
 const SalesOrders=lazy(()=>import("./pages/SalesOrders").then(module=>({default:module.SalesOrders})));
@@ -52,6 +53,7 @@ function AuthenticatedApp(){
         <Route path="/planificacion" element={gate("/planificacion",<Planning/>)}/>
         <Route path="/plantas" element={<PlantControl/>}/>
         <Route path="/plantas/:plantId" element={<PlantControl/>}/>
+        <Route path="/identidades-plantas" element={gate("/identidades-plantas",<PlantIdentities/>)}/>
         <Route path="/importaciones" element={gate("/importaciones",<Imports/>)}/>
         <Route path="/creditos" element={gate("/creditos",<Credits/>)}/>
         <Route path="/liquidaciones" element={gate("/liquidaciones",<Settlements/>)}/>
