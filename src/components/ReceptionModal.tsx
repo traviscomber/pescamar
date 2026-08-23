@@ -11,6 +11,9 @@ const speciesOptions:Species[]=["Erizo","Loco","Jaiba","Centolla","Pulpo","Pesca
 const localDateTime=()=>{const now=new Date();now.setMinutes(now.getMinutes()-now.getTimezoneOffset());return now.toISOString().slice(0,16)};
 const toLocalInput=(value:string)=>{const date=new Date(value);if(Number.isNaN(date.getTime()))return "";date.setMinutes(date.getMinutes()-date.getTimezoneOffset());return date.toISOString().slice(0,16)};
 const clean=(value:string)=>value.trim().replace(/\s+/g," ");
+const numeric=(value:string)=>{if(!value.trim())return null;const number=Number(value);return Number.isFinite(number)?number:null};
+const displayKg=(value:number|null)=>value==null?"—":`${value.toFixed(1)} kg`;
+const displayPct=(value:number|null)=>value==null?"—":`${value.toFixed(1)}%`;
 
 export function ReceptionModal({open,onClose,onSave}:{open:boolean;onClose:()=>void;onSave:(lot:Lot)=>Promise<string>}) {
   const { operator } = useAuth();
@@ -20,11 +23,14 @@ export function ReceptionModal({open,onClose,onSave}:{open:boolean;onClose:()=>v
   const selectedPlantId=accessiblePlants.some((plant)=>plant.id===plantId)?plantId:(accessiblePlants[0]?.id??"");
   const [supplier,setSupplier]=useState(""),[zone,setZone]=useState(""),[guideReference,setGuideReference]=useState("");
   const [species,setSpecies]=useState<Species>("Erizo"),[occurredAt,setOccurredAt]=useState(localDateTime);
-  const [guide,setGuide]=useState(100),[gross,setGross]=useState(100),[tare,setTare]=useState(6),[drained,setDrained]=useState(87),[temperature,setTemperature]=useState(4.2),[saving,setSaving]=useState(false),[error,setError]=useState("");
+  const [guide,setGuide]=useState(""),[gross,setGross]=useState(""),[tare,setTare]=useState(""),[drained,setDrained]=useState(""),[temperature,setTemperature]=useState(""),[saving,setSaving]=useState(false),[error,setError]=useState("");
   const [evidence,setEvidence]=useState<ReceptionEvidence[]>([]);
   const [evidenceKind,setEvidenceKind]=useState<ReceptionEvidence["kind"]>("document");
   const [evidenceLabel,setEvidenceLabel]=useState(""),[evidenceUrl,setEvidenceUrl]=useState(""),[evidenceNote,setEvidenceNote]=useState("");
-  const accepted=Math.max(0,drained-tare),loss=useMemo(()=>(gross?((gross-accepted)/gross)*100:0),[gross,accepted]);
+  const guideValue=numeric(guide),grossValue=numeric(gross),tareValue=numeric(tare),drainedValue=numeric(drained),temperatureValue=numeric(temperature);
+  const accepted=drainedValue!=null&&tareValue!=null?Math.max(0,drainedValue-tareValue):null;
+  const loss=useMemo(()=>grossValue!=null&&grossValue>0&&accepted!=null?((grossValue-accepted)/grossValue)*100:null,[grossValue,accepted]);
+  const guideDifference=accepted!=null&&guideValue!=null?accepted-guideValue:null;
   if(!open)return null;
   function addEvidence(){setError("");if(evidence.length>=6){setError("Puedes registrar hasta seis evidencias por recepción");return}try{const parsed=new URL(evidenceUrl.trim());if(parsed.protocol!=="https:"||evidenceLabel.trim().length<2)throw new Error("invalid");setEvidence((current)=>[...current,{kind:evidenceKind,label:clean(evidenceLabel),url:parsed.toString(),note:clean(evidenceNote)}]);setEvidenceLabel("");setEvidenceUrl("");setEvidenceNote("")}catch{setError("La evidencia necesita un nombre y un enlace HTTPS válido")}}
   function applyVision(fields:{supplier:string|null;guideReference:string|null;zone:string|null;species:string|null;guide:number|null;gross:number|null;tare:number|null;drained:number|null;temperature:number|null;occurredAt:string|null}){
@@ -32,15 +38,15 @@ export function ReceptionModal({open,onClose,onSave}:{open:boolean;onClose:()=>v
     if(fields.guideReference)setGuideReference(clean(fields.guideReference));
     if(fields.zone)setZone(clean(fields.zone));
     if(fields.species&&speciesOptions.includes(fields.species as Species))setSpecies(fields.species as Species);
-    if(Number.isFinite(fields.guide)&&Number(fields.guide)>0)setGuide(Number(fields.guide));
-    if(Number.isFinite(fields.gross)&&Number(fields.gross)>0)setGross(Number(fields.gross));
-    if(Number.isFinite(fields.tare)&&Number(fields.tare)>=0)setTare(Number(fields.tare));
-    if(Number.isFinite(fields.drained)&&Number(fields.drained)>=0)setDrained(Number(fields.drained));
-    if(Number.isFinite(fields.temperature)&&Number(fields.temperature)>=-5&&Number(fields.temperature)<=30)setTemperature(Number(fields.temperature));
+    if(Number.isFinite(fields.guide)&&Number(fields.guide)>0)setGuide(String(Number(fields.guide)));
+    if(Number.isFinite(fields.gross)&&Number(fields.gross)>0)setGross(String(Number(fields.gross)));
+    if(Number.isFinite(fields.tare)&&Number(fields.tare)>=0)setTare(String(Number(fields.tare)));
+    if(Number.isFinite(fields.drained)&&Number(fields.drained)>=0)setDrained(String(Number(fields.drained)));
+    if(Number.isFinite(fields.temperature)&&Number(fields.temperature)>=-5&&Number(fields.temperature)<=30)setTemperature(String(Number(fields.temperature)));
     if(fields.occurredAt){const local=toLocalInput(fields.occurredAt);if(local)setOccurredAt(local)}
   }
-  function validate(){if(!selectedPlantId)return "Tu identidad no tiene una planta habilitada";if(clean(supplier).length<2)return "Ingresa un proveedor válido";if(clean(zone).length<2)return "Ingresa la zona de extracción";if(clean(guideReference).length<2)return "Ingresa el folio o referencia de la guía";const occurred=new Date(occurredAt);if(Number.isNaN(occurred.getTime())||occurred.getTime()>Date.now()+15*60*1000)return "La fecha/hora de recepción no es válida";if(guide<=0||gross<=0)return "Los pesos de guía y bruto deben ser mayores a cero";if(tare<0||tare>gross)return "La tara no puede superar el peso bruto";if(drained<0||drained>gross)return "El peso escurrido debe estar entre 0 y el peso bruto";if(tare>drained)return "La tara no puede superar el peso escurrido";if(temperature< -5||temperature>30)return "La temperatura está fuera del rango operativo admitido (-5 a 30 °C)";return ""}
-  async function submit(event:FormEvent){event.preventDefault();setError("");const issue=validate();if(issue){setError(issue);return}setSaving(true);const normalizedSupplier=clean(supplier),initials=normalizedSupplier.split(" ").map((x)=>x[0]).slice(0,2).join("");const id=`ER-${Date.now()}`;try{const receptionId=await onSave({id,plantId:selectedPlantId,species,supplier:normalizedSupplier,initials,zone:clean(zone),guide,guideReference:clean(guideReference),gross,tare,drained,accepted,loss,gonadYield:null,premiumYield:null,temperature,status:"Muestreo",receivedAt:new Date(occurredAt).toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"}),occurredAt:new Date(occurredAt).toISOString(),evidenceCount:evidence.length,evidence});onClose();openLive(receptionId)}catch(cause){setError(cause instanceof Error?cause.message:"No fue posible crear la recepción")}finally{setSaving(false)}}
+  function validate(){if(!selectedPlantId)return "Tu identidad no tiene una planta habilitada";if(clean(supplier).length<2)return "Ingresa un proveedor válido";if(clean(zone).length<2)return "Ingresa la zona de extracción";if(clean(guideReference).length<2)return "Ingresa el folio o referencia de la guía";const occurred=new Date(occurredAt);if(Number.isNaN(occurred.getTime())||occurred.getTime()>Date.now()+15*60*1000)return "La fecha/hora de recepción no es válida";if(guideValue==null||grossValue==null||tareValue==null||drainedValue==null||temperatureValue==null)return "Completa los pesos y la temperatura con valores reales";if(guideValue<=0||grossValue<=0)return "Los pesos de guía y bruto deben ser mayores a cero";if(tareValue<0||tareValue>grossValue)return "La tara no puede superar el peso bruto";if(drainedValue<0||drainedValue>grossValue)return "El peso escurrido debe estar entre 0 y el peso bruto";if(tareValue>drainedValue)return "La tara no puede superar el peso escurrido";if(temperatureValue< -5||temperatureValue>30)return "La temperatura está fuera del rango operativo admitido (-5 a 30 °C)";return ""}
+  async function submit(event:FormEvent){event.preventDefault();setError("");const issue=validate();if(issue){setError(issue);return}const finalGuide=guideValue!,finalGross=grossValue!,finalTare=tareValue!,finalDrained=drainedValue!,finalTemperature=temperatureValue!,finalAccepted=accepted!,finalLoss=loss??0;setSaving(true);const normalizedSupplier=clean(supplier),initials=normalizedSupplier.split(" ").map((x)=>x[0]).slice(0,2).join("");const id=`ER-${Date.now()}`;try{const receptionId=await onSave({id,plantId:selectedPlantId,species,supplier:normalizedSupplier,initials,zone:clean(zone),guide:finalGuide,guideReference:clean(guideReference),gross:finalGross,tare:finalTare,drained:finalDrained,accepted:finalAccepted,loss:finalLoss,gonadYield:null,premiumYield:null,temperature:finalTemperature,status:"Muestreo",receivedAt:new Date(occurredAt).toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"}),occurredAt:new Date(occurredAt).toISOString(),evidenceCount:evidence.length,evidence});onClose();openLive(receptionId)}catch(cause){setError(cause instanceof Error?cause.message:"No fue posible crear la recepción")}finally{setSaving(false)}}
   return <div className="modal-backdrop" onMouseDown={(event)=>{if(event.target===event.currentTarget&&!saving)onClose()}}><form className="modal-panel" onSubmit={submit}>
     <header><div><span className="overline teal">Inicio de operación viva</span><h2>Nueva recepción</h2><p>Este registro continúa la base canónica 2025 y crea la identidad 360 del lote.</p></div><button type="button" className="icon-btn" onClick={onClose} aria-label="Cerrar" disabled={saving}><X size={19}/></button></header>
     <div className="step-indicator"><span className="active">1 <b>Recepción</b></span><i/><span>2 <b>Calidad</b></span><i/><span>3 <b>Producción</b></span></div>
@@ -51,11 +57,11 @@ export function ReceptionModal({open,onClose,onSave}:{open:boolean;onClose:()=>v
       <label>Folio / referencia guía<input required value={guideReference} onChange={(event)=>setGuideReference(event.target.value)} placeholder="Ej. GD-10482" maxLength={120}/></label>
       <label>Zona de extracción<input required value={zone} onChange={(event)=>setZone(event.target.value)} placeholder="Zona declarada" maxLength={180}/></label>
       <label>Especie<select value={species} onChange={(event)=>setSpecies(event.target.value as Species)}>{speciesOptions.map((item)=><option value={item} key={item}>{item}</option>)}</select></label>
-      <label>Peso guía (kg)<div className="input-icon"><Scale size={16}/><input type="number" min="0.1" step=".1" value={guide} onChange={(event)=>setGuide(+event.target.value)} required/></div></label>
-      <label>Peso bruto (kg)<div className="input-icon"><Scale size={16}/><input type="number" min="0.1" step=".1" value={gross} onChange={(event)=>setGross(+event.target.value)} required/></div></label>
-      <label>Tara (kg)<input type="number" min="0" step=".1" value={tare} onChange={(event)=>setTare(+event.target.value)} required/></label>
-      <label>Peso después de escurrido (kg)<input type="number" min="0" step=".1" value={drained} onChange={(event)=>setDrained(+event.target.value)} required/></label>
-      <label>Temperatura (°C)<input type="number" min="-5" max="30" step=".1" value={temperature} onChange={(event)=>setTemperature(+event.target.value)} required/></label>
+      <label>Peso guía (kg)<div className="input-icon"><Scale size={16}/><input type="number" inputMode="decimal" min="0.1" step=".1" value={guide} onChange={(event)=>setGuide(event.target.value)} placeholder="0,0" required/></div></label>
+      <label>Peso bruto (kg)<div className="input-icon"><Scale size={16}/><input type="number" inputMode="decimal" min="0.1" step=".1" value={gross} onChange={(event)=>setGross(event.target.value)} placeholder="0,0" required/></div></label>
+      <label>Tara (kg)<input type="number" inputMode="decimal" min="0" step=".1" value={tare} onChange={(event)=>setTare(event.target.value)} placeholder="0,0" required/></label>
+      <label>Peso después de escurrido (kg)<input type="number" inputMode="decimal" min="0" step=".1" value={drained} onChange={(event)=>setDrained(event.target.value)} placeholder="0,0" required/></label>
+      <label>Temperatura (°C)<input type="number" inputMode="decimal" min="-5" max="30" step=".1" value={temperature} onChange={(event)=>setTemperature(event.target.value)} placeholder="0,0" required/></label>
     </div>
     <section className="reception-evidence-panel"><header><div><span className="overline teal">Respaldo documental</span><h3>Evidencia de recepción</h3></div><span>{evidence.length}/6</span></header>
       <ReceptionVisionUpload disabled={saving||evidence.length>=6} onEvidence={(item)=>setEvidence((current)=>current.length>=6?current:[...current,item])} onExtract={applyVision}/>
@@ -67,7 +73,7 @@ export function ReceptionModal({open,onClose,onSave}:{open:boolean;onClose:()=>v
         <button type="button" className="button secondary evidence-add" onClick={addEvidence} disabled={!evidenceLabel.trim()||!evidenceUrl.trim()}><FileCheck2 size={16}/>Agregar evidencia</button>
       </div></details>
       {evidence.length?<div className="evidence-list">{evidence.map((item,index)=><article key={`${item.url}-${index}`}><FileCheck2 size={17}/><div><b>{item.label}</b><small>{item.note||item.url}</small></div><button type="button" className="icon-btn" aria-label={`Quitar ${item.label}`} onClick={()=>setEvidence((current)=>current.filter((_,itemIndex)=>itemIndex!==index))}><Trash2 size={15}/></button></article>)}</div>:<p className="evidence-empty">Sube una foto para que Vision lea la guía y complete los datos visibles. También puedes seguir sin evidencia.</p>}</section>
-    <div className="calculation-strip"><div><small>Peso neto aceptado inicial</small><b>{accepted.toFixed(1)} kg</b></div><div><small>Merma inicial calculada</small><b className={loss>18?"negative":""}>{loss.toFixed(1)}%</b></div><div><small>Diferencia sobre guía</small><b className={accepted<guide?"negative":""}>{(accepted-guide).toFixed(1)} kg</b></div><div><small>Siguiente paso</small><b>Control de calidad</b></div></div>
+    <div className="calculation-strip"><div><small>Peso neto aceptado inicial</small><b>{displayKg(accepted)}</b></div><div><small>Merma inicial calculada</small><b className={loss!=null&&loss>18?"negative":""}>{displayPct(loss)}</b></div><div><small>Diferencia sobre guía</small><b className={guideDifference!=null&&guideDifference<0?"negative":""}>{displayKg(guideDifference)}</b></div><div><small>Siguiente paso</small><b>Control de calidad</b></div></div>
     {error?<p className="form-error" role="alert">{error}</p>:null}<footer><button type="button" className="button secondary" onClick={onClose} disabled={saving}>Cancelar</button><button className="button primary" type="submit" disabled={saving||!selectedPlantId}>{saving?"Guardando recepción…":"Crear recepción y abrir Ficha 360"}</button></footer>
   </form></div>
 }
