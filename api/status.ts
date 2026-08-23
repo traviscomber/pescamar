@@ -1,5 +1,4 @@
 import { requireOperator } from './_auth.js'
-import { ensureReceptionSchema } from './_reception-schema.js'
 import { getSql } from './_db.js'
 
 type ApiRequest={headers?:Record<string,string|string[]|undefined>}
@@ -17,7 +16,6 @@ export default async function handler(request:ApiRequest,response:ApiResponse){
   let database=databaseConfigured,files=databaseConfigured,metrics=emptyMetrics
   if(databaseConfigured){
     try{
-      await ensureReceptionSchema()
       const plantIds=operator.plantIds
       const admin=operator.role==='admin'
       const finance=operator.role==='finance'
