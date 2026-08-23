@@ -17,12 +17,6 @@ const visionPrompt=`Analiza esta fotografía de un documento o respaldo de recep
 
 function header(request:Request,name:string){const entry=Object.entries(request.headers??{}).find(([key])=>key.toLowerCase()===name.toLowerCase())?.[1];return Array.isArray(entry)?entry[0]:entry}
 function chatOutput(payload:unknown){const data=payload as {choices?:Array<{message?:{content?:string}}>};return data.choices?.[0]?.message?.content??""}
-function responsesOutput(payload:unknown){
-  const data=payload as {output_text?:string;output?:Array<{content?:Array<{type?:string;text?:string}>}>};
-  if(data.output_text)return data.output_text;
-  for(const item of data.output??[])for(const part of item.content??[])if(part.type==="output_text"&&part.text)return part.text;
-  return "";
-}
 function parseVision(text:string):VisionResult{
   const normalized=text.trim().replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,"");
   const raw=JSON.parse(normalized) as Record<string,unknown>;
@@ -32,21 +26,16 @@ function parseVision(text:string):VisionResult{
   const allowedSpecies=new Set(["Erizo","Loco","Jaiba","Centolla","Pulpo","Pescado","Algas"]);
   return {supplier:nullableText("supplier"),guideReference:nullableText("guideReference"),zone:nullableText("zone"),species:species&&allowedSpecies.has(species)?species:null,guide:nullableNumber("guide"),gross:nullableNumber("gross"),tare:nullableNumber("tare"),drained:nullableNumber("drained"),temperature:nullableNumber("temperature"),occurredAt:nullableText("occurredAt"),documentType:nullableText("documentType"),ocrText:typeof raw.ocrText==="string"?clean(raw.ocrText,2000):"",confidence:typeof raw.confidence==="number"&&Number.isFinite(raw.confidence)?Math.max(0,Math.min(1,raw.confidence)):0};
 }
-function credentials(request:Request){
-  const gatewayToken=process.env.AI_GATEWAY_API_KEY||process.env.VERCEL_OIDC_TOKEN||header(request,"x-vercel-oidc-token");
-  if(gatewayToken)return {provider:"vercel-ai-gateway" as const,token:gatewayToken,model:process.env.PESCAMAR_VISION_MODEL||"anthropic/claude-opus-5"};
-  if(process.env.OPENAI_API_KEY)return {provider:"openai" as const,token:process.env.OPENAI_API_KEY,model:process.env.OPENAI_VISION_MODEL||"gpt-4o-mini"};
-  return null;
-}
 
 export default async function handler(request:Request,response:Response){
   response.setHeader("Cache-Control","no-store");
   const operator=await requireOperator(request);
   if(!operator)return response.status(401).json({ok:false,error:"Sesión requerida"});
-  const aiCredentials=credentials(request);
+  const apiKey=process.env.OPENAI_API_KEY;
+  const model=process.env.OPENAI_VISION_MODEL||"gpt-4o-mini";
   if(request.method==="GET"){
     await ensureReceptionSchema();
-    return response.status(200).json({ok:true,configured:Boolean(aiCredentials),provider:aiCredentials?.provider??null,model:aiCredentials?.model??null});
+    return response.status(200).json({ok:true,configured:Boolean(apiKey),provider:"openai",model});
   }
   if(request.method!=="POST"){response.setHeader("Allow","GET, POST");return response.status(405).json({ok:false,error:"Método no permitido"})}
   if(!["admin","operations","quality"].includes(operator.role))return response.status(403).json({ok:false,error:"Tu rol no puede registrar evidencia"});
@@ -67,19 +56,13 @@ export default async function handler(request:Request,response:Response){
   const evidenceUrl=`https://${host}/api/reception-evidence-file?id=${encodeURIComponent(id)}`;
   const evidence={kind:"photo",label:fileName,url:evidenceUrl,note:"Fotografía de recepción"};
 
-  if(!aiCredentials)return response.status(200).json({ok:true,evidence,vision:null,warning:"La foto quedó guardada. Vision aún no tiene credenciales de servidor"});
+  if(!apiKey)return response.status(200).json({ok:true,evidence,vision:null,warning:"La foto quedó guardada. Agrega OPENAI_API_KEY en Vercel para activar Vision"});
 
   try{
-    if(aiCredentials.provider==="vercel-ai-gateway"){
-      const ai=await fetch("https://ai-gateway.vercel.sh/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${aiCredentials.token}`,"Content-Type":"application/json"},body:JSON.stringify({model:aiCredentials.model,input:[{role:"user",content:[{type:"input_text",text:visionPrompt},{type:"input_image",image_url:`data:${mimeType};base64,${dataBase64}`,detail:"high"}]}]})});
-      if(!ai.ok){await ai.json();return response.status(200).json({ok:true,evidence,vision:null,warning:`La foto quedó guardada, pero Vision no pudo analizarla (${ai.status})`})}
-      const payload=await ai.json();const vision=parseVision(responsesOutput(payload));
-      return response.status(200).json({ok:true,evidence:{...evidence,note:vision.guideReference?`IA: ${vision.guideReference}`:"Analizada con Vision"},vision,provider:aiCredentials.provider});
-    }
-    const ai=await fetch("https://api.openai.com/v1/chat/completions",{method:"POST",headers:{Authorization:`Bearer ${aiCredentials.token}`,"Content-Type":"application/json"},body:JSON.stringify({model:aiCredentials.model,temperature:0,messages:[{role:"user",content:[{type:"text",text:visionPrompt},{type:"image_url",image_url:{url:`data:${mimeType};base64,${dataBase64}`,detail:"high"}}]}]})});
-    if(!ai.ok){await ai.json();return response.status(200).json({ok:true,evidence,vision:null,warning:`La foto quedó guardada, pero Vision no pudo analizarla (${ai.status})`})}
+    const ai=await fetch("https://api.openai.com/v1/chat/completions",{method:"POST",headers:{Authorization:`Bearer ${apiKey}`,"Content-Type":"application/json"},body:JSON.stringify({model,temperature:0,messages:[{role:"user",content:[{type:"text",text:visionPrompt},{type:"image_url",image_url:{url:`data:${mimeType};base64,${dataBase64}`,detail:"high"}}]}]})});
+    if(!ai.ok){await ai.json();return response.status(200).json({ok:true,evidence,vision:null,warning:`La foto quedó guardada, pero OpenAI Vision respondió ${ai.status}`})}
     const payload=await ai.json();const vision=parseVision(chatOutput(payload));
-    return response.status(200).json({ok:true,evidence:{...evidence,note:vision.guideReference?`IA: ${vision.guideReference}`:"Analizada con Vision"},vision,provider:aiCredentials.provider});
+    return response.status(200).json({ok:true,evidence:{...evidence,note:vision.guideReference?`IA: ${vision.guideReference}`:"Analizada con Vision"},vision,provider:"openai",model});
   }catch{
     return response.status(200).json({ok:true,evidence,vision:null,warning:"La foto quedó guardada, pero no fue posible completar el análisis Vision"});
   }
