@@ -13,6 +13,7 @@ type AuthContextValue = {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  revalidate: () => Promise<boolean>;
 };
 
 type AuthPayload = {
@@ -22,10 +23,12 @@ type AuthPayload = {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+const SESSION_REVALIDATE_MS = 5 * 60 * 1000;
 
 async function authRequest(input: RequestInfo | URL, init?: RequestInit) {
   const response = await fetch(input, {
     credentials: "same-origin",
+    cache: "no-store",
     ...init,
     headers: {
       "Content-Type": "application/json",
@@ -40,23 +43,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [operator, setOperator] = useState<Operator | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const revalidate = useCallback(async () => {
+    try {
+      const { response, payload } = await authRequest("/api/auth");
+      if (response.ok && payload.operator) {
+        setOperator(payload.operator);
+        return true;
+      }
+      if (response.status === 401) setOperator(null);
+      return false;
+    } catch {
+      return false;
+    }
+  }, []);
+
   useEffect(() => {
     let active = true;
-    void authRequest("/api/auth")
-      .then(({ response, payload }) => {
-        if (!active) return;
-        setOperator(response.ok && payload.operator ? payload.operator : null);
-      })
-      .catch(() => {
-        if (active) setOperator(null);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+    void revalidate().finally(() => {
+      if (active) setLoading(false);
+    });
     return () => {
       active = false;
     };
-  }, []);
+  }, [revalidate]);
+
+  useEffect(() => {
+    const onFocus = () => {
+      if (document.visibilityState === "visible") void revalidate();
+    };
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") void revalidate();
+    }, SESSION_REVALIDATE_MS);
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+  }, [revalidate]);
 
   const login = useCallback(async (email: string, password: string) => {
     const { response, payload } = await authRequest("/api/auth", {
@@ -64,6 +89,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ email, password }),
     });
     if (!response.ok || !payload.operator) {
+      if (response.status === 429) {
+        const retryAfter = Number(response.headers.get("Retry-After") ?? "0");
+        const minutes = retryAfter > 0 ? Math.max(1, Math.ceil(retryAfter / 60)) : null;
+        throw new Error(minutes ? `Demasiados intentos. Intenta nuevamente en ${minutes} min.` : payload.error || "Demasiados intentos. Intenta nuevamente más tarde.");
+      }
       throw new Error(payload.error || "No fue posible iniciar sesión");
     }
     setOperator(payload.operator);
@@ -78,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ operator, loading, login, logout }}>
+    <AuthContext.Provider value={{ operator, loading, login, logout, revalidate }}>
       {children}
     </AuthContext.Provider>
   );
@@ -129,6 +159,7 @@ export function LoginScreen() {
               required
               maxLength={254}
               disabled={submitting}
+              autoFocus
             />
           </label>
           <label>
@@ -145,7 +176,7 @@ export function LoginScreen() {
               disabled={submitting}
             />
           </label>
-          {error ? <p className="form-error" role="alert">{error}</p> : null}
+          {error ? <p className="form-error" role="alert" aria-live="polite">{error}</p> : null}
           <button className="button primary" type="submit" disabled={submitting || !email || password.length < 12}>
             {submitting ? "Validando…" : "Entrar"}
           </button>
