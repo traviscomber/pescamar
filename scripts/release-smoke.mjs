@@ -27,7 +27,7 @@ assert(mobileCss.includes('safe-area-inset-bottom'),'safe-area support is missin
 assert(a11yCss.includes(':focus-visible'),'visible focus contract is missing')
 assert(a11yCss.includes('prefers-reduced-motion'),'reduced-motion contract is missing')
 assert(a11yCss.includes('min-width:44px')&&a11yCss.includes('min-height:44px'),'touch target contract is missing')
-assert(authSource.includes('process.env.VERCEL_ENV !== "production" && process.env.AUTH_BYPASS === "true"'),'production auth bypass must remain impossible')
+assert(!authSource.includes('AUTH_BYPASS')&&!authSource.includes('TEMPORARY_OPERATOR'),'authentication bypass code must not exist')
 
 if(failures.length){
   console.error('Release smoke FAILED')
