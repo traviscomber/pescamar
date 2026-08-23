@@ -45,11 +45,11 @@ export default async function handler(request:Request,response:Response){
   if(bytes<100||bytes>3*1024*1024)return response.status(400).json({ok:false,error:"La fotografía procesada no puede superar 3 MB"});
 
   const sql=getSql();
-  const stored=await sql`insert into reception_evidence_files(file_name,mime_type,data_base64,byte_size,created_by) values(${fileName},${mimeType},${dataBase64},${bytes},${operator.fullName}) returning id` as Array<Record<string,unknown>>;
+  const stored=await sql`insert into reception_evidence_files(file_name,mime_type,data_base64,byte_size,created_by,created_by_operator_id) values(${fileName},${mimeType},${dataBase64},${bytes},${operator.fullName},${operator.id}::uuid) returning id` as Array<Record<string,unknown>>;
   const id=String(stored[0]?.id??"");
   const host=header(request,"x-forwarded-host")||header(request,"host")||"pescamar-three.vercel.app";
   const evidenceUrl=`https://${host}/api/reception-evidence-file?id=${encodeURIComponent(id)}`;
-  const evidence={kind:"photo",label:fileName,url:evidenceUrl,note:"Fotografía de recepción"};
+  const evidence={kind:"photo",label:fileName,url:evidenceUrl,note:"Fotografía de recepción",fileId:id};
 
   if(!apiKey)return response.status(200).json({ok:true,evidence,vision:null,warning:"La foto quedó guardada. Agrega OPENAI_API_KEY en Vercel para activar Vision"});
 
