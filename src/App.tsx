@@ -9,6 +9,7 @@ import { Dashboard } from "./pages/Dashboard";
 import { useLots } from "./store";
 
 const Approvals=lazy(()=>import("./pages/Approvals").then(module=>({default:module.Approvals})));
+const Audit=lazy(()=>import("./pages/Audit").then(module=>({default:module.Audit})));
 const Commercial=lazy(()=>import("./pages/Commercial").then(module=>({default:module.Commercial})));
 const Credits=lazy(()=>import("./pages/Credits").then(module=>({default:module.Credits})));
 const DailyClose=lazy(()=>import("./pages/DailyClose").then(module=>({default:module.DailyClose})));
@@ -49,6 +50,7 @@ function AuthenticatedApp(){
       <Routes>
         <Route path="/" element={<Dashboard lots={lots} onNewReception={open}/>}/>
         <Route path="/timeline" element={<Timeline/>}/>
+        <Route path="/auditoria" element={gate("/auditoria",<Audit/>)}/>
         <Route path="/operacion-2025" element={<Navigate to="/timeline" replace/>}/>
         <Route path="/planificacion" element={gate("/planificacion",<Planning/>)}/>
         <Route path="/plantas" element={<PlantControl/>}/>
