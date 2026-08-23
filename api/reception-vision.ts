@@ -13,17 +13,40 @@ type VisionResult={supplier:string|null;guideReference:string|null;zone:string|n
 
 const allowedMime=new Set(["image/jpeg","image/png","image/webp"]);
 const clean=(value:unknown,max=180)=>String(value??"").trim().replace(/\s+/g," ").slice(0,max);
+const visionPrompt=`Analiza esta fotografía de un documento o respaldo de recepción pesquera chilena. Extrae únicamente valores visibles y legibles; nunca infieras ni completes datos ausentes. Devuelve SOLO JSON válido, sin markdown, con exactamente estas claves: supplier, guideReference, zone, species, guide, gross, tare, drained, temperature, occurredAt, documentType, ocrText, confidence. supplier, guideReference, zone, documentType y occurredAt son string o null. species debe ser exactamente Erizo, Loco, Jaiba, Centolla, Pulpo, Pescado o Algas si es inequívoco; si no, null. guide, gross, tare, drained y temperature son number o null. Pesos en kg sin unidad y temperatura en °C. occurredAt en ISO 8601 únicamente si fecha y hora son explícitas; si falta hora, null. ocrText es una transcripción breve de los campos relevantes visibles. confidence es un número entre 0 y 1.`;
 
-function header(request:Request,name:string){const value=request.headers?.[name]??request.headers?.[name.toLowerCase()];return Array.isArray(value)?value[0]:value}
-function outputText(payload:unknown){const data=payload as {choices?:Array<{message?:{content?:string}}>};return data.choices?.[0]?.message?.content??""}
+function header(request:Request,name:string){const entry=Object.entries(request.headers??{}).find(([key])=>key.toLowerCase()===name.toLowerCase())?.[1];return Array.isArray(entry)?entry[0]:entry}
+function chatOutput(payload:unknown){const data=payload as {choices?:Array<{message?:{content?:string}}>};return data.choices?.[0]?.message?.content??""}
+function responsesOutput(payload:unknown){
+  const data=payload as {output_text?:string;output?:Array<{content?:Array<{type?:string;text?:string}>}>};
+  if(data.output_text)return data.output_text;
+  for(const item of data.output??[])for(const part of item.content??[])if(part.type==="output_text"&&part.text)return part.text;
+  return "";
+}
+function parseVision(text:string):VisionResult{
+  const normalized=text.trim().replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,"");
+  const raw=JSON.parse(normalized) as Record<string,unknown>;
+  const nullableText=(key:string)=>typeof raw[key]==="string"&&String(raw[key]).trim()?clean(raw[key],500):null;
+  const nullableNumber=(key:string)=>typeof raw[key]==="number"&&Number.isFinite(raw[key])?Number(raw[key]):null;
+  const species=nullableText("species");
+  const allowedSpecies=new Set(["Erizo","Loco","Jaiba","Centolla","Pulpo","Pescado","Algas"]);
+  return {supplier:nullableText("supplier"),guideReference:nullableText("guideReference"),zone:nullableText("zone"),species:species&&allowedSpecies.has(species)?species:null,guide:nullableNumber("guide"),gross:nullableNumber("gross"),tare:nullableNumber("tare"),drained:nullableNumber("drained"),temperature:nullableNumber("temperature"),occurredAt:nullableText("occurredAt"),documentType:nullableText("documentType"),ocrText:typeof raw.ocrText==="string"?clean(raw.ocrText,2000):"",confidence:typeof raw.confidence==="number"&&Number.isFinite(raw.confidence)?Math.max(0,Math.min(1,raw.confidence)):0};
+}
+function credentials(request:Request){
+  const gatewayToken=process.env.AI_GATEWAY_API_KEY||process.env.VERCEL_OIDC_TOKEN||header(request,"x-vercel-oidc-token");
+  if(gatewayToken)return {provider:"vercel-ai-gateway" as const,token:gatewayToken,model:process.env.PESCAMAR_VISION_MODEL||"anthropic/claude-opus-5"};
+  if(process.env.OPENAI_API_KEY)return {provider:"openai" as const,token:process.env.OPENAI_API_KEY,model:process.env.OPENAI_VISION_MODEL||"gpt-4o-mini"};
+  return null;
+}
 
 export default async function handler(request:Request,response:Response){
   response.setHeader("Cache-Control","no-store");
   const operator=await requireOperator(request);
   if(!operator)return response.status(401).json({ok:false,error:"Sesión requerida"});
+  const aiCredentials=credentials(request);
   if(request.method==="GET"){
     await ensureReceptionSchema();
-    return response.status(200).json({ok:true,configured:Boolean(process.env.OPENAI_API_KEY),model:process.env.OPENAI_VISION_MODEL||"gpt-4o-mini"});
+    return response.status(200).json({ok:true,configured:Boolean(aiCredentials),provider:aiCredentials?.provider??null,model:aiCredentials?.model??null});
   }
   if(request.method!=="POST"){response.setHeader("Allow","GET, POST");return response.status(405).json({ok:false,error:"Método no permitido"})}
   if(!["admin","operations","quality"].includes(operator.role))return response.status(403).json({ok:false,error:"Tu rol no puede registrar evidencia"});
@@ -42,19 +65,22 @@ export default async function handler(request:Request,response:Response){
   const id=String(stored[0]?.id??"");
   const host=header(request,"x-forwarded-host")||header(request,"host")||"pescamar-three.vercel.app";
   const evidenceUrl=`https://${host}/api/reception-evidence-file?id=${encodeURIComponent(id)}`;
+  const evidence={kind:"photo",label:fileName,url:evidenceUrl,note:"Fotografía de recepción"};
 
-  const apiKey=process.env.OPENAI_API_KEY;
-  if(!apiKey)return response.status(200).json({ok:true,evidence:{kind:"photo",label:fileName,url:evidenceUrl,note:"Fotografía de recepción"},vision:null,warning:"La foto quedó guardada, pero Vision requiere OPENAI_API_KEY en Vercel"});
-
-  const schema={type:"object",additionalProperties:false,properties:{supplier:{type:["string","null"]},guideReference:{type:["string","null"]},zone:{type:["string","null"]},species:{type:["string","null"]},guide:{type:["number","null"]},gross:{type:["number","null"]},tare:{type:["number","null"]},drained:{type:["number","null"]},temperature:{type:["number","null"]},occurredAt:{type:["string","null"]},documentType:{type:["string","null"]},ocrText:{type:"string"},confidence:{type:"number",minimum:0,maximum:1}},required:["supplier","guideReference","zone","species","guide","gross","tare","drained","temperature","occurredAt","documentType","ocrText","confidence"]};
-  const prompt="Analiza esta fotografía de un documento o respaldo de recepción pesquera chilena. Extrae únicamente valores visibles y legibles. No infieras ni completes datos ausentes. Para species usa, si corresponde claramente, uno de: Erizo, Loco, Jaiba, Centolla, Pulpo, Pescado, Algas; si no, null. Los pesos deben ser números en kg sin unidad. temperature en °C. occurredAt debe ser ISO 8601 sólo si fecha y hora son explícitas; si falta hora, usa null. guideReference es folio, número de guía o documento. ocrText debe contener una transcripción breve de los campos relevantes visibles. confidence resume la confianza global entre 0 y 1.";
+  if(!aiCredentials)return response.status(200).json({ok:true,evidence,vision:null,warning:"La foto quedó guardada. Vision aún no tiene credenciales de servidor"});
 
   try{
-    const ai=await fetch("https://api.openai.com/v1/chat/completions",{method:"POST",headers:{"Authorization":`Bearer ${apiKey}`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_VISION_MODEL||"gpt-4o-mini",temperature:0,messages:[{role:"user",content:[{type:"text",text:prompt},{type:"image_url",image_url:{url:`data:${mimeType};base64,${dataBase64}`,detail:"high"}}]}],response_format:{type:"json_schema",json_schema:{name:"pescamar_reception_document",strict:true,schema}}})});
-    if(!ai.ok){const detail=await ai.json();return response.status(200).json({ok:true,evidence:{kind:"photo",label:fileName,url:evidenceUrl,note:"Fotografía de recepción"},vision:null,warning:`La foto quedó guardada, pero Vision respondió ${ai.status}`,detail})}
-    const parsed=await ai.json();const text=outputText(parsed);const vision=JSON.parse(text) as VisionResult;
-    return response.status(200).json({ok:true,evidence:{kind:"photo",label:fileName,url:evidenceUrl,note:vision.guideReference?`IA: ${vision.guideReference}`:"Analizada con Vision"},vision});
+    if(aiCredentials.provider==="vercel-ai-gateway"){
+      const ai=await fetch("https://ai-gateway.vercel.sh/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${aiCredentials.token}`,"Content-Type":"application/json"},body:JSON.stringify({model:aiCredentials.model,input:[{role:"user",content:[{type:"input_text",text:visionPrompt},{type:"input_image",image_url:`data:${mimeType};base64,${dataBase64}`,detail:"high"}]}]})});
+      if(!ai.ok){await ai.json();return response.status(200).json({ok:true,evidence,vision:null,warning:`La foto quedó guardada, pero Vision no pudo analizarla (${ai.status})`})}
+      const payload=await ai.json();const vision=parseVision(responsesOutput(payload));
+      return response.status(200).json({ok:true,evidence:{...evidence,note:vision.guideReference?`IA: ${vision.guideReference}`:"Analizada con Vision"},vision,provider:aiCredentials.provider});
+    }
+    const ai=await fetch("https://api.openai.com/v1/chat/completions",{method:"POST",headers:{Authorization:`Bearer ${aiCredentials.token}`,"Content-Type":"application/json"},body:JSON.stringify({model:aiCredentials.model,temperature:0,messages:[{role:"user",content:[{type:"text",text:visionPrompt},{type:"image_url",image_url:{url:`data:${mimeType};base64,${dataBase64}`,detail:"high"}}]}]})});
+    if(!ai.ok){await ai.json();return response.status(200).json({ok:true,evidence,vision:null,warning:`La foto quedó guardada, pero Vision no pudo analizarla (${ai.status})`})}
+    const payload=await ai.json();const vision=parseVision(chatOutput(payload));
+    return response.status(200).json({ok:true,evidence:{...evidence,note:vision.guideReference?`IA: ${vision.guideReference}`:"Analizada con Vision"},vision,provider:aiCredentials.provider});
   }catch{
-    return response.status(200).json({ok:true,evidence:{kind:"photo",label:fileName,url:evidenceUrl,note:"Fotografía de recepción"},vision:null,warning:"La foto quedó guardada, pero no fue posible completar el análisis Vision"});
+    return response.status(200).json({ok:true,evidence,vision:null,warning:"La foto quedó guardada, pero no fue posible completar el análisis Vision"});
   }
 }
