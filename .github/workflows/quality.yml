@@ -27,5 +27,22 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci
-      - name: Lint and build
+      - name: Lint, typecheck and build
         run: npm run quality
+      - name: Start production preview
+        run: |
+          npm run preview -- --host 127.0.0.1 > /tmp/pescamar-preview.log 2>&1 &
+          echo $! > /tmp/pescamar-preview.pid
+      - name: Wait for production preview
+        run: |
+          for i in {1..20}; do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/pescamar-preview.log
+          exit 1
+      - name: Release smoke
+        run: node scripts/release-smoke.mjs
+      - name: Preview logs on failure
+        if: failure()
+        run: cat /tmp/pescamar-preview.log || true
