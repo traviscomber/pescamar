@@ -6,7 +6,7 @@ const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
 const runtimeDdl=/\b(create table|alter table|create index|drop table|drop index)\b/i
 
-const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaSource,evidenceFileSource,bootstrapSource,visionSource,receptionsSource,inventorySource,commercialSource,settlementsSource,approvalsSource]=await Promise.all([
+const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaSource,evidenceFileSource,bootstrapSource,visionSource,receptionsSource,inventorySource,commercialSource,settlementsSource,approvalsSource,timelineSource]=await Promise.all([
   fetch(base,{redirect:'manual'}).then(async response=>({status:response.status,text:await response.text()})),
   readFile(new URL('../src/main.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/app.css',import.meta.url),'utf8'),
@@ -22,6 +22,7 @@ const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaS
   readFile(new URL('../api/commercial.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/settlements.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/approvals.ts',import.meta.url),'utf8'),
+  readFile(new URL('../api/timeline.ts',import.meta.url),'utf8'),
 ])
 
 assert(indexHtml.status===200,`home returned HTTP ${indexHtml.status}`)
@@ -58,10 +59,14 @@ assert(settlementsSource.includes('r.plant_id=any(${operator.plantIds}::text[])'
 assert(approvalsSource.includes("cr.status='pending' and ${finance}"),'approval credit visibility must enforce role in SQL')
 assert(approvalsSource.includes('r.plant_id=any(${plantIds}::text[])'),'approval reads must enforce plant scope in SQL')
 assert(approvalsSource.includes('plant_id=any(${plantIds}::text[])'),'approval writes must enforce plant scope in SQL')
+assert(timelineSource.includes('financialRole'),'timeline must gate financial data before querying')
+assert(timelineSource.includes("aa.entity_type='reception'"),'timeline approval metadata must be scoped by entity')
+assert(timelineSource.includes('plant_ids&&${plantIds}::text[]'),'timeline imports must enforce plant overlap in SQL')
+assert(timelineSource.includes('r.plant_id=any(${plantIds}::text[])'),'timeline operational reads must enforce plant scope in SQL')
 
 if(failures.length){
   console.error('Release smoke FAILED')
   for(const failure of failures)console.error(`- ${failure}`)
   process.exit(1)
 }
-console.log('Release smoke PASS: shell, layered CSS, mobile, accessibility, auth, migration, bootstrap, SQL plant scope and evidence ownership contracts verified')
+console.log('Release smoke PASS: shell, layered CSS, mobile, accessibility, auth, migration, bootstrap, SQL role/plant isolation and evidence ownership contracts verified')
