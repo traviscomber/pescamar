@@ -5,9 +5,10 @@ const base=process.env.SMOKE_BASE_URL||'http://127.0.0.1:4173'
 const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
 
-const [indexHtml,mainSource,mobileCss,a11yCss]=await Promise.all([
+const [indexHtml,mainSource,appCss,mobileCss,a11yCss]=await Promise.all([
   fetch(base,{redirect:'manual'}).then(async response=>({status:response.status,text:await response.text()})),
   readFile(new URL('../src/main.tsx',import.meta.url),'utf8'),
+  readFile(new URL('../src/app.css',import.meta.url),'utf8'),
   readFile(new URL('../src/mobile.css',import.meta.url),'utf8'),
   readFile(new URL('../src/a11y.css',import.meta.url),'utf8'),
 ])
@@ -16,8 +17,10 @@ assert(indexHtml.status===200,`home returned HTTP ${indexHtml.status}`)
 assert(/<html\s+lang=["']es["']/.test(indexHtml.text),'document language must be es')
 assert(/name=["']viewport["'][^>]*width=device-width/.test(indexHtml.text),'mobile viewport meta is missing')
 assert(indexHtml.text.includes('id="root"'),'application root is missing')
-assert(mainSource.includes("import './mobile.css'"),'mobile.css is not loaded')
-assert(mainSource.includes("import './a11y.css'"),'a11y.css is not loaded')
+assert(mainSource.includes("import './app.css'"),'governed app.css entrypoint is not loaded')
+assert(appCss.includes('@layer base, premium, control, modules, auth, brand, responsive, accessibility'),'CSS cascade layer order is missing')
+assert(appCss.includes("@import './mobile.css' layer(responsive)"),'mobile.css is not assigned to responsive layer')
+assert(appCss.includes("@import './a11y.css' layer(accessibility)"),'a11y.css is not assigned to accessibility layer')
 assert(mobileCss.includes('@media(max-width:720px)'),'mobile breakpoint contract is missing')
 assert(mobileCss.includes('safe-area-inset-bottom'),'safe-area support is missing')
 assert(a11yCss.includes(':focus-visible'),'visible focus contract is missing')
@@ -29,4 +32,4 @@ if(failures.length){
   for(const failure of failures)console.error(`- ${failure}`)
   process.exit(1)
 }
-console.log('Release smoke PASS: build surface, mobile and accessibility contracts verified')
+console.log('Release smoke PASS: shell, layered CSS, mobile and accessibility contracts verified')
