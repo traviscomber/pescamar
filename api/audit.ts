@@ -7,6 +7,10 @@ const one=(v:string|string[]|undefined)=>Array.isArray(v)?v[0]:v
 const text=(v:unknown,max=120)=>String(v??'').trim().slice(0,max)
 const validDate=(v:string)=>!v||/^\d{4}-\d{2}-\d{2}$/.test(v)
 const canAudit=(o:SessionOperator)=>['admin','operations'].includes(o.role)
+const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const chileDate=(date:Date)=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Santiago',year:'numeric',month:'2-digit',day:'2-digit'}).format(date)
+function defaultFrom(){const date=new Date();date.setUTCDate(date.getUTCDate()-29);return chileDate(date)}
+function parseCursor(value:string){if(!value)return null;const split=value.lastIndexOf('|');if(split<1)return null;const occurredAt=value.slice(0,split),id=value.slice(split+1);const parsed=new Date(occurredAt);return !Number.isNaN(parsed.getTime())&&uuid.test(id)?{occurredAt:parsed.toISOString(),id}:null}
 
 export default async function handler(req:Request,res:Response){
   res.setHeader('Cache-Control','no-store')
@@ -15,9 +19,13 @@ export default async function handler(req:Request,res:Response){
     const operator=await requireOperator(req)
     if(!operator)return res.status(401).json({ok:false,error:'Sesión requerida'})
     if(!canAudit(operator))return res.status(403).json({ok:false,error:'Tu rol no puede acceder a auditoría operacional'})
-    const from=text(one(req.query?.from),10),to=text(one(req.query?.to),10),plantId=text(one(req.query?.plantId),80),operatorId=text(one(req.query?.operatorId),40),module=text(one(req.query?.module),40)
-    if(!validDate(from)||!validDate(to)||operatorId&&!/^[0-9a-f-]{36}$/i.test(operatorId))return res.status(400).json({ok:false,error:'Filtros inválidos'})
-    const sql=getSql(),admin=operator.role==='admin',financial=operator.role==='admin',plantIds=operator.plantIds
+    const requestedFrom=text(one(req.query?.from),10),requestedTo=text(one(req.query?.to),10),plantId=text(one(req.query?.plantId),80),operatorId=text(one(req.query?.operatorId),40),module=text(one(req.query?.module),40),cursorRaw=text(one(req.query?.cursor),100)
+    if(!validDate(requestedFrom)||!validDate(requestedTo)||operatorId&&!uuid.test(operatorId))return res.status(400).json({ok:false,error:'Filtros inválidos'})
+    const cursor=parseCursor(cursorRaw)
+    if(cursorRaw&&!cursor)return res.status(400).json({ok:false,error:'Cursor inválido'})
+    const from=requestedFrom||defaultFrom(),to=requestedTo||chileDate(new Date())
+    if(from>to)return res.status(400).json({ok:false,error:'El rango de fechas es inválido'})
+    const sql=getSql(),admin=operator.role==='admin',financial=operator.role==='admin',plantIds=operator.plantIds,pageSize=200
     const rows=await sql`
       with audit as (
         select r.id::text id,r.created_at occurred_at,'recepciones' module,'Recepción registrada' action,p.legal_name||' · '||r.species detail,r.plant_id,r.created_by_operator_id operator_id,r.source operator_name,'REC-'||r.reception_number reference,false financial from receptions r join parties p on p.id=r.supplier_id
@@ -31,13 +39,18 @@ export default async function handler(req:Request,res:Response){
       )
       select a.*,coalesce(op.full_name,a.operator_name) operator_name from audit a left join operators op on op.id=a.operator_id
       where (${admin} or a.plant_id is null or a.plant_id=any(${plantIds}::text[])) and (${financial} or not a.financial)
-        and (${from||null}::date is null or (a.occurred_at at time zone 'America/Santiago')::date>=${from||null}::date)
-        and (${to||null}::date is null or (a.occurred_at at time zone 'America/Santiago')::date<=${to||null}::date)
+        and (a.occurred_at at time zone 'America/Santiago')::date>=${from}::date
+        and (a.occurred_at at time zone 'America/Santiago')::date<=${to}::date
         and (${plantId||null}::text is null or a.plant_id=${plantId||null})
         and (${operatorId||null}::uuid is null or a.operator_id=${operatorId||null}::uuid)
         and (${module||null}::text is null or a.module=${module||null})
-      order by a.occurred_at desc limit 1000`
-    const operators=await sql`select id,full_name,role from operators where active order by full_name`
-    return res.status(200).json({ok:true,items:Array.isArray(rows)?rows:[],operators:Array.isArray(operators)?operators:[],permissions:{canSeeFinancial:financial},generatedAt:new Date().toISOString()})
+        and (${cursor?.occurredAt??null}::timestamptz is null or (a.occurred_at,a.id)<(${cursor?.occurredAt??null}::timestamptz,${cursor?.id??null}::text))
+      order by a.occurred_at desc,a.id desc limit ${pageSize+1}`
+    const page=Array.isArray(rows)?rows:[],hasMore=page.length>pageSize,items=hasMore?page.slice(0,pageSize):page,last=items.at(-1) as {occurred_at?:unknown;id?:unknown}|undefined
+    const nextCursor=hasMore&&last?.occurred_at&&last?.id?`${new Date(String(last.occurred_at)).toISOString()}|${String(last.id)}`:null
+    const operators=admin
+      ?await sql`select id,full_name,role from operators where active order by full_name`
+      :await sql`select id,full_name,role from operators where active and role in ('operations','quality','viewer') and plant_ids && ${plantIds}::text[] order by full_name`
+    return res.status(200).json({ok:true,items,operators:Array.isArray(operators)?operators:[],permissions:{canSeeFinancial:financial},range:{from,to},nextCursor,generatedAt:new Date().toISOString()})
   }catch{return res.status(500).json({ok:false,error:'No fue posible cargar auditoría operacional'})}
 }
