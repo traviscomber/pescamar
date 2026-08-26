@@ -8,5 +8,6 @@
 @import './auth.css' layer(auth);
 @import './login-premium.css' layer(auth);
 @import './frida.css' layer(brand);
+@import './readability.css' layer(brand);
 @import './mobile.css' layer(responsive);
 @import './a11y.css' layer(accessibility);
