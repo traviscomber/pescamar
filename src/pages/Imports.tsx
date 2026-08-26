@@ -1,4 +1,4 @@
-import { CheckCircle2, Database, FileSpreadsheet, History, RotateCcw, ShieldCheck, Upload } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Database, FileSpreadsheet, History, RotateCcw, ShieldCheck, Upload } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { PlantImportModal } from '../components/PlantImportModal'
 import { PageHeader } from '../components/PageHeader'
@@ -7,9 +7,16 @@ import { fetchSharedPlantState, publishSharedPlantState, revertSharedPlantState 
 import { createImportBatch, type ImportBatch, type PlantState, type ValidatedImport } from '../plantImport'
 import { plants as configuredPlants } from '../plants'
 
+type CanonicalSource={file_hash:string;file_name:string;source_kind:string;period_start:string|null;period_end:string|null;record_count:number|string;notes:string|null}
+type CanonicalRow={rows:number|string;flagged:number|string;guide_kg?:number|string;received_kg?:number|string;inflow_clp?:number|string;outflow_clp?:number|string;final_balance_clp?:number|string;amount_clp?:number|string;kg?:number|string;product_family?:string;pack_format?:string}
+type CanonicalStatus={sources?:CanonicalSource[];datasets?:{production?:CanonicalRow[];ledger?:CanonicalRow[];stock?:CanonicalRow[];transfers?:CanonicalRow[];packing?:CanonicalRow[]};error?:string}
+const nf=new Intl.NumberFormat('es-CL',{maximumFractionDigits:1})
+const clp=new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0})
+
 export function Imports(){
   const [plants,setPlants]=useState<PlantState[]>(configuredPlants)
   const [history,setHistory]=useState<ImportBatch[]>([])
+  const [canonical,setCanonical]=useState<CanonicalStatus|null>(null)
   const [open,setOpen]=useState(false)
   const [loading,setLoading]=useState(true)
   const [error,setError]=useState('')
@@ -19,9 +26,10 @@ export function Imports(){
   const load=async()=>{
     setLoading(true)
     try{
-      const state=await fetchSharedPlantState()
+      const [state,canonicalResponse]=await Promise.all([fetchSharedPlantState(),fetch('/api/canonical-status',{cache:'no-store'})])
       setPlants(state.plants?.length?state.plants:configuredPlants)
       setHistory(state.history??[])
+      if(canonicalResponse.ok)setCanonical(await canonicalResponse.json() as CanonicalStatus)
       setError('')
     }catch(cause){
       setError(cause instanceof Error?cause.message:'No fue posible cargar las importaciones')
@@ -40,6 +48,10 @@ export function Imports(){
   }
 
   const latestActive=useMemo(()=>history.find(batch=>!batch.revertedAt),[history])
+  const canonicalRows=useMemo(()=>Object.values(canonical?.datasets??{}).flat().reduce((sum,row)=>sum+Number(row.rows??0),0),[canonical])
+  const flaggedRows=useMemo(()=>Object.values(canonical?.datasets??{}).flat().reduce((sum,row)=>sum+Number(row.flagged??0),0),[canonical])
+  const production=canonical?.datasets?.production?.[0],ledger=canonical?.datasets?.ledger?.[0],transfers=canonical?.datasets?.transfers?.[0]
+  const packingKg=(canonical?.datasets?.packing??[]).reduce((sum,row)=>sum+Number(row.kg??0),0)
   const revert=async(batchId:string)=>{
     setReverting(batchId)
     try{
@@ -57,43 +69,54 @@ export function Imports(){
     <PageHeader
       eyebrow="Gobierno de datos"
       title="Importar planilla"
-      description="Carga una planilla operacional, valida todas sus filas y publícala como una actualización compartida de las plantas. Ningún dato se modifica antes de confirmar la publicación."
+      description="Carga planillas operacionales y controla las fuentes canónicas que alimentan producción, stock, packing y finanzas sin escribir directamente sobre transacciones live."
       actions={<button className="button primary" onClick={()=>setOpen(true)}><Upload size={16}/>Importar XLSX o CSV</button>}
     />
 
     <section className="platform-strip">
       <div><span className={`platform-dot ${status?.ok?'online':'pending'}`}/><span><small>Vercel Functions</small><b>{status?.ok?'Conectado':statusError?'No disponible':'Comprobando…'}</b></span></div>
       <div><small>Base de datos</small><b>{status?.persistence.database?'Conectada':'Pendiente'}</b></div>
-      <div><small>Persistencia</small><b>{status?.persistence.files?'Neon activo':'Pendiente'}</b></div>
-      <div><small>Entorno</small><b>{status?.environment??'—'}</b></div>
+      <div><small>Fuentes canónicas</small><b>{canonical?.sources?.length??0} registradas</b></div>
+      <div><small>Filas publicadas</small><b>{nf.format(canonicalRows)}</b></div>
     </section>
 
     {error?<div className="system-banner error" role="alert">{error}</div>:null}
 
+    <section className="signal-grid">
+      <article className="signal-card"><span><FileSpreadsheet size={16}/>Producción 2026</span><b>{nf.format(Number(production?.received_kg??0))} kg</b><small>{nf.format(Number(production?.rows??0))} filas · guía {nf.format(Number(production?.guide_kg??0))} kg</small></article>
+      <article className="signal-card"><span><Database size={16}/>Packing</span><b>{nf.format(packingKg)} kg</b><small>{nf.format((canonical?.datasets?.packing??[]).reduce((s,r)=>s+Number(r.rows??0),0))} cajas publicadas</small></article>
+      <article className="signal-card"><span><CheckCircle2 size={16}/>Transferencias</span><b>{clp.format(Number(transfers?.amount_clp??0))}</b><small>{nf.format(Number(transfers?.rows??0))} movimientos recibidos</small></article>
+      <article className="signal-card"><span><AlertTriangle size={16}/>Revisión</span><b>{nf.format(flaggedRows)}</b><small>filas con flags de linaje, fórmula o calidad</small></article>
+    </section>
+
+    <section className="panel import-history">
+      <header className="panel-header"><div><span className="overline">Fuentes canónicas</span><h2>Registro de evidencia</h2></div><span>{canonicalRows?`${nf.format(canonicalRows)} filas staging`:'Pendiente de publicación'}</span></header>
+      <div className="detail-alerts">{(canonical?.sources??[]).map(source=><div key={source.file_hash}>
+        <FileSpreadsheet size={17}/><span><b>{source.file_name}</b><small>{source.source_kind} · {Number(source.record_count)} filas declaradas · hash {source.file_hash.slice(0,10)}…</small></span><em>{canonicalRows?'CANON':'REGISTRADO'}</em>
+      </div>)}</div>
+      {ledger?<div className="governance-note"><ShieldCheck size={19}/><div><b>Cuenta corriente preservada como staging</b><p>Entradas {clp.format(Number(ledger.inflow_clp??0))} · salidas {clp.format(Number(ledger.outflow_clp??0))} · saldo recalculado {clp.format(Number(ledger.final_balance_clp??0))}. No se interpreta aún como caja, deuda o saldo bancario.</p></div></div>:null}
+    </section>
+
     <section className="import-layout">
       <article className="panel import-upload">
-        <div className="import-step"><span>01</span><div><h2>Seleccionar y validar</h2><p>Formatos admitidos: Excel `.xlsx` y CSV. Máximo 15 MB, 10.000 filas y 200 columnas. Se procesa la primera hoja.</p></div></div>
-        <button className="file-drop" onClick={()=>setOpen(true)}>
-          <Upload size={28}/><b>Seleccionar planilla real</b><small>La vista previa valida la estructura antes de publicar</small>
-        </button>
-        <div className="governance-note"><ShieldCheck size={19}/><div><b>Validación previa obligatoria</b><p>No se publica si existe una fila inválida, una planta no reconocida, números negativos, una meta en cero o una fecha incorrecta.</p></div></div>
+        <div className="import-step"><span>01</span><div><h2>Seleccionar y validar</h2><p>Formatos admitidos: Excel `.xlsx` y CSV. Máximo 15 MB, 10.000 filas y 200 columnas. La fuente operacional existente sigue disponible para snapshots de planta.</p></div></div>
+        <button className="file-drop" onClick={()=>setOpen(true)}><Upload size={28}/><b>Seleccionar planilla operacional</b><small>La vista previa valida la estructura antes de publicar</small></button>
+        <div className="governance-note"><ShieldCheck size={19}/><div><b>Canonical Intake separado</b><p>Los tres libros 2026 usan hash, hoja y fila como linaje. Su publicación ocurre primero en staging y nunca crea recepciones, ventas, inventario o liquidaciones por inferencia.</p></div></div>
       </article>
 
       <aside className="panel import-assignment">
-        <div className="import-step"><span>02</span><div><h2>Publicación compartida</h2><p>Al confirmar, el snapshot se guarda en Neon y queda disponible para todos los usuarios con acceso a esas plantas.</p></div></div>
+        <div className="import-step"><span>02</span><div><h2>Publicación compartida</h2><p>Los snapshots de planta continúan guardándose en Neon con trazabilidad y reversión administrativa.</p></div></div>
         <div className="import-contract"><Database/><div><b>{plants.filter(plant=>plant.sourceStatus==='linked').length} de {configuredPlants.length} plantas con fuente</b><p>La publicación conserva el lote anterior para trazabilidad y reversión administrativa.</p></div></div>
-        <div className="import-contract"><CheckCircle2/><div><b>Deduplicación por planta</b><p>Una misma planta no puede aparecer más de una vez dentro del mismo archivo.</p></div></div>
+        <div className="import-contract"><CheckCircle2/><div><b>Idempotencia canónica</b><p>Los libros canónicos se deduplican por hash + hoja + fila; volver a publicar el mismo origen actualiza la misma evidencia.</p></div></div>
       </aside>
     </section>
 
     <section className="panel import-history">
-      <header className="panel-header"><div><span className="overline">Trazabilidad</span><h2>Historial de importaciones</h2></div><span>{loading?'Sincronizando…':`${history.length} lotes`}</span></header>
+      <header className="panel-header"><div><span className="overline">Trazabilidad operacional</span><h2>Historial de importaciones</h2></div><span>{loading?'Sincronizando…':`${history.length} lotes`}</span></header>
       {history.length?<div className="detail-alerts">{history.map(batch=><div key={batch.id}>
-        <FileSpreadsheet size={17}/>
-        <span><b>{batch.fileName}</b><small>{batch.rowCount} filas · {batch.plantIds.join(', ')} · {new Date(batch.publishedAt).toLocaleString('es-CL')}</small></span>
-        <em>{batch.revertedAt?'Revertido':batch.id===latestActive?.id?'Activo':'Histórico'}</em>
+        <FileSpreadsheet size={17}/><span><b>{batch.fileName}</b><small>{batch.rowCount} filas · {batch.plantIds.join(', ')} · {new Date(batch.publishedAt).toLocaleString('es-CL')}</small></span><em>{batch.revertedAt?'Revertido':batch.id===latestActive?.id?'Activo':'Histórico'}</em>
         {batch.id===latestActive?.id&&!batch.revertedAt?<button className="button secondary" disabled={Boolean(reverting)} onClick={()=>void revert(batch.id)}><RotateCcw size={14}/>{reverting===batch.id?'Revirtiendo…':'Revertir'}</button>:null}
-      </div>)}</div>:<div className="empty-state"><History size={30}/><h3>Aún no hay importaciones publicadas</h3><p>La primera planilla validada creará el estado operacional compartido y su lote de trazabilidad.</p></div>}
+      </div>)}</div>:<div className="empty-state"><History size={30}/><h3>Aún no hay snapshots operacionales publicados</h3><p>El registro canónico 2026 se mantiene separado de estos snapshots para no mezclar evidencia histórica con estado live.</p></div>}
     </section>
 
     <PlantImportModal open={open} plants={configuredPlants} onClose={()=>setOpen(false)} onPublish={publish}/>
