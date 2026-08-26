@@ -1,5 +1,6 @@
 -- Pescamar sea urchin process control
 -- Stages and target values come from the 2026 sea urchin process material and operational input.
+-- Stage rows are initialized by the API when a sea urchin run starts.
 
 create table if not exists sea_urchin_process_runs (
   id uuid primary key default gen_random_uuid(),
@@ -64,22 +65,3 @@ create table if not exists sea_urchin_labels (
 create index if not exists idx_urchin_runs_status on sea_urchin_process_runs(status,updated_at desc);
 create index if not exists idx_urchin_checks_run on sea_urchin_stage_checks(run_id,sequence_no);
 create index if not exists idx_urchin_labels_run_status on sea_urchin_labels(run_id,status);
-
-create or replace function ensure_sea_urchin_stage_checks(target_run uuid)
-returns void language plpgsql as $$
-begin
-  insert into sea_urchin_stage_checks(run_id,stage,sequence_no,target_temperature_c,target_duration_seconds)
-  values
-    (target_run,'pinching',10,-10,null),
-    (target_run,'blanching',20,95,8),
-    (target_run,'thermal_shock',30,-1,null),
-    (target_run,'sanitary_break',40,null,null),
-    (target_run,'dripping',50,null,1200),
-    (target_run,'draining',60,0,null),
-    (target_run,'molding',70,null,null),
-    (target_run,'color',80,null,null),
-    (target_run,'xray',90,null,null),
-    (target_run,'freezing',100,-45,null),
-    (target_run,'packing',110,null,null)
-  on conflict(run_id,stage) do nothing;
-end $$;
