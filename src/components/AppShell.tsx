@@ -70,7 +70,7 @@ export function AppShell({children,onNewReception}:{children:ReactNode;onNewRece
   const visibleGroups=operator?workflowGroups.map(group=>({...group,items:group.items.filter(item=>canAccessPath(operator.role,item.to))})).filter(group=>group.items.length):[];
   const mayCreate=operator?canCreateReception(operator.role):false;
   const platformLabel=!status?"Verificando":status.ok?"Plataforma activa":"Revisar plataforma";
-  const databaseLabel=!status?"Sincronizando estado":status.persistence.database?"Neon conectado":"Base pendiente";
+  const databaseLabel=!status?"Sincronizando estado":status.persistence.database?"Base de Datos Pescamar conectada":"Base de Datos Pescamar pendiente";
   return <div className="app-shell">
     <a className="skip-link" href="#main-content">Ir al contenido principal</a>
     <aside ref={drawerRef} className={`sidebar ${mobileOpen?"is-open":""}`} aria-label="Navegación de Pescamar" aria-hidden={!mobileOpen&&typeof window!=="undefined"&&window.matchMedia("(max-width: 720px)").matches?true:undefined}>
@@ -81,7 +81,7 @@ export function AppShell({children,onNewReception}:{children:ReactNode;onNewRece
         {visibleGroups.map(({label,icon:GroupIcon,items})=><details className="nav-more" key={label} open={items.some(item=>pathname.startsWith(item.to))}><summary><GroupIcon size={18}/><span>{label}</span></summary><div>{items.map(({to,label:itemLabel,icon:Icon})=><NavLink key={to} to={to} onClick={()=>setMobileOpen(false)}><Icon size={18}/><span>{itemLabel}</span></NavLink>)}</div></details>)}
       </nav>
       <div className="sidebar-spacer"/>
-      <div className="pilot-card"><span className="overline">Continuidad operacional</span><b>2025 es el origen, no el límite</b><p>La fuente canónica 2025 abre la línea. Cada evento real posterior continúa el mismo sistema.</p><span className="n3-signature">PESCAMAR · CONTROL OPERACIONAL</span></div>
+      <div className="pilot-card"><span className="overline">Continuidad operacional</span><b>2025 es el origen, no el límite</b><p>La Base de Datos Pescamar 2025 abre la línea histórica. Cada evento real posterior continúa el mismo sistema.</p><span className="n3-signature">PESCAMAR · CONTROL OPERACIONAL</span></div>
       {operator&&canAccessPath(operator.role,"/modulos")?<NavLink className="settings-link" to="/modulos"><Settings2 size={18}/><span>Configuración</span></NavLink>:null}
     </aside>
     {mobileOpen?<button className="mobile-nav-backdrop" type="button" onClick={()=>setMobileOpen(false)} aria-label="Cerrar navegación"/>:null}
