@@ -1,8 +1,8 @@
-import {AlertTriangle,CheckCircle2,FlaskConical,PackageCheck,Plus,ScanLine,Snowflake,Thermometer} from 'lucide-react'
+import {AlertTriangle,CheckCircle2,FlaskConical,PackageCheck,Plus,ScanLine,Thermometer} from 'lucide-react'
 import {useEffect,useMemo,useState} from 'react'
 import {useSearchParams} from 'react-router-dom'
 import {PageHeader} from '../components/PageHeader'
-import {LotContextBar} from '../components/LotContextBar'
+import {LotModuleContext} from '../components/LotModuleContext'
 
 type Stage={id:string;stage:string;sequenceNo:number;targetTemperatureC:number|null;targetDurationSeconds:number|null;actualTemperatureC:number|null;actualDurationSeconds:number|null;status:string;note:string|null;checkedAt:string|null}
 type Label={id:string;labelCode:string;product:string|null;grade:string|null;lotCode:string|null;netKg:number|null;destination:string|null;status:string;mismatchReason:string|null;sourceDocumentUrl:string|null}
@@ -22,7 +22,7 @@ export function SeaUrchinProcess(){
  async function act(body:Record<string,unknown>,key:string){setBusy(key);setError('');try{const r=await fetch('/api/sea-urchin-process',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),p=await r.json() as {error?:string;runId?:string};if(!r.ok)throw new Error(p.error??'No fue posible guardar');await load()}catch(e){setError(e instanceof Error?e.message:'No fue posible guardar')}finally{setBusy('')}}
  return <>
   <PageHeader eyebrow="Proceso específico" title="Erizo · Control de proceso" description="Trazabilidad desde recepción hasta packing: temperatura, tiempo, clasificación, color, rayos X y etiquetas sensibles."/>
-  {requested?<LotContextBar receptionId={requested} current="erizo"/>:null}
+  {requested?<LotModuleContext receptionId={requested} current="erizo" label="Proceso de erizo" detail="Temperatura · clasificación · etiquetas · liberación"/>:null}
   {error?<div className="system-banner error" role="alert">{error}</div>:null}{loading?<div className="system-banner">Sincronizando proceso de erizo…</div>:null}
   <section className="signal-grid"><article className="signal-card"><span><FlaskConical size={16}/>Procesos activos</span><b>{runs.filter(r=>r.status!=='closed').length}</b><small>{runs.length} lotes registrados</small></article><article className="signal-card"><span><Thermometer size={16}/>Desviaciones</span><b>{deviations}</b><small>Temperatura, etapa o etiqueta</small></article><article className="signal-card"><span><PackageCheck size={16}/>Listos para packing</span><b>{runs.filter(r=>r.status==='ready_for_packing').length}</b><small>Color + rayos X + clasificación conformes</small></article></section>
   <section className="panel"><div className="section-heading"><div><span className="overline">Lote de erizo</span><h2>Selecciona recepción</h2></div></div><label className="inline-field">Lote<select value={selectedId} onChange={e=>setSelectedId(e.target.value)}><option value="">Seleccionar</option>{runs.map(r=><option key={r.id} value={r.reception_id}>REC-{r.reception_number} · {r.supplier} · {r.status}</option>)}{candidates.map(c=><option key={c.id} value={c.id}>REC-{c.reception_number} · {c.supplier} · iniciar proceso</option>)}</select></label>{candidate&&!run&&data?.permissions?.canWrite?<button className="button primary" disabled={!!busy} onClick={()=>void act({action:'start',receptionId:candidate.id},'start')}><Plus size={15}/>{busy==='start'?'Iniciando…':'Iniciar proceso de erizo'}</button>:null}</section>
