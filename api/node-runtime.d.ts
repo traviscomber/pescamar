@@ -14,8 +14,17 @@ declare module "node:crypto" {
   export function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean;
 }
 
+type NodeBuffer = Uint8Array & {
+  slice(start?: number, end?: number): NodeBuffer;
+  readonly [Symbol.toStringTag]: "Buffer";
+};
+
 declare const Buffer: {
-  from(value: string, encoding: "hex" | "base64"): Uint8Array;
+  from(value: string, encoding: "hex" | "base64"): NodeBuffer;
+};
+
+declare const console: {
+  error(...args: unknown[]): void;
 };
 
 declare class URL {
