@@ -1,0 +1,63 @@
+/* Approved readability scale: increase legibility without changing layout language. */
+body{font-size:14px}
+
+/* Navigation and shell */
+.side-nav a,.settings-link{font-size:14px}
+.brand strong{font-size:18px}
+.brand small,.plant-chip small,.pilot-card p,.pilot-stat,.topbar-context span,.user-menu small{font-size:11px}
+.plant-chip b,.topbar-context b,.user-menu b{font-size:13px}
+.overline,.system-label{font-size:11px}
+
+/* Page hierarchy */
+.page-header h1{font-size:clamp(34px,3vw,46px)}
+.page-header p{font-size:15px;line-height:1.55}
+.button{font-size:13px}
+
+/* Panels, metrics and explanatory copy */
+.panel-header h2,.panel h2,.section-heading h2{font-size:17px}
+.panel-header span,.rule-note,.signal-card>span,.signal-card>small,.summary-strip small,.operational-strip small,.data-caveat,.commercial-summary small,.commercial-summary em{font-size:10px}
+.metric>span,.metric>small,.mass-note,.flow-step>span,.flow-step small,.inline-link,.view-all{font-size:11px}
+.metric>strong{font-size:30px}
+.signal-card>b{font-size:25px}
+.summary-strip b{font-size:20px}
+.operational-strip b{font-size:21px}
+.operational-strip span{font-size:11px}
+
+/* Tables and work queues */
+.data-table{font-size:12px}
+.data-table th{font-size:10px;padding-bottom:11px}
+.data-table td{font-size:12px;padding-top:14px;padding-bottom:14px}
+.data-table td>b,.supplier b{font-size:12px}
+.data-table td>small{font-size:10px}
+.search-box input{font-size:13px}
+.status{font-size:10px}
+.queue-row div b,.alert-row div b,.empty-inline b{font-size:12px}
+.queue-row div small,.alert-row div small,.empty-inline small{font-size:10px}
+.queue-row strong{font-size:11px}
+
+/* Financial / compact operational data */
+.balance-summary small,.economics-hero small,.economics-hero span,.economics-suppliers small,.compact-list small,.compact-ledger small{font-size:10px}
+.balance-summary b,.economics-hero b{font-size:25px}
+.balance-table{font-size:11px}
+.balance-table th{font-size:10px}
+.balance-scope{font-size:9px}
+.compact-list b,.economics-suppliers b,.compact-ledger b{font-size:11px}
+
+/* Inputs and forms */
+label,.commercial-form-grid label{font-size:11px}
+input,select,textarea{font-size:13px}
+.commercial-form header p{font-size:11px}
+
+@media(max-width:900px){
+  .side-nav a,.settings-link{font-size:13px}
+  .page-header h1{font-size:34px}
+  .page-header p{font-size:14px}
+  .data-table{font-size:11px}
+}
+
+@media(max-width:620px){
+  body{font-size:13px}
+  .page-header h1{font-size:31px}
+  .page-header p{font-size:13px}
+  .data-table{font-size:11px}
+}
