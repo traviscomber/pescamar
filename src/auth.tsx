@@ -120,6 +120,10 @@ export function useAuth() {
   return value;
 }
 
+function PescamarMark() {
+  return <span className="pescamar-symbol" aria-hidden="true"><svg viewBox="0 0 52 34"><path d="M4 17c8-8 17-12 27-10 5 1 10 4 15 10-5 6-10 9-15 10-10 2-19-2-27-10Z"/><path d="M36 11c4-4 8-6 12-6-1 5-1 8 0 12-4 0-8-2-12-6Z"/><circle cx="14" cy="15" r="1.35"/><path className="brand-wave" d="M3 27c8-3 15-3 22 0s15 3 24-1"/></svg></span>;
+}
+
 export function LoginScreen() {
   const { login } = useAuth();
   const [email, setEmail] = useState("");
@@ -142,46 +146,39 @@ export function LoginScreen() {
 
   return (
     <main className="login-shell">
-      <section className="login-card panel" aria-labelledby="login-title">
-        <div className="eyebrow">PESCAMAR · CONTROL OPERACIONAL</div>
-        <h1 id="login-title">Acceso</h1>
-        <p>Ingresa con tu identidad operacional. El sistema limita automáticamente la información y las acciones según tu rol y plantas autorizadas.</p>
-        <form onSubmit={submit}>
-          <label>
-            Correo
-            <input
-              type="email"
-              autoComplete="username"
-              inputMode="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="nombre@pescamarchile.cl"
-              required
-              maxLength={254}
-              disabled={submitting}
-              autoFocus
-            />
-          </label>
-          <label>
-            Contraseña
-            <input
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="••••••••"
-              required
-              minLength={8}
-              maxLength={256}
-              disabled={submitting}
-            />
-          </label>
-          {error ? <p className="form-error" role="alert" aria-live="polite">{error}</p> : null}
-          <button className="button primary" type="submit" disabled={submitting}>
-            {submitting ? "Validando…" : "Entrar"}
-          </button>
-        </form>
-      </section>
+      <div className="login-frame">
+        <section className="login-intro" aria-label="Pescamar Control Operacional">
+          <div className="login-brand-lockup"><PescamarMark/><div><b>PESCAMAR</b><small>CONTROL OPERACIONAL</small></div></div>
+          <div className="login-intro-copy">
+            <span className="overline">OPERACIÓN CONECTADA</span>
+            <h2>De la recepción al despacho, un solo lote.</h2>
+            <p>Producción, inventario, etiquetas, planificación y comunicaciones trabajan sobre la misma trazabilidad operacional.</p>
+          </div>
+          <div className="login-proof" aria-label="Cobertura de la plataforma">
+            <div><b>6 plantas</b><span>Una red operacional</span></div>
+            <div><b>360°</b><span>Trazabilidad por lote</span></div>
+            <div><b>Tiempo real</b><span>Excepciones y decisiones</span></div>
+          </div>
+        </section>
+        <section className="login-card panel" aria-labelledby="login-title">
+          <div className="overline">ACCESO OPERACIONAL</div>
+          <h1 id="login-title">Ingresa a Pescamar</h1>
+          <p>Tu sesión muestra únicamente las plantas, datos y acciones correspondientes a tu rol.</p>
+          <form onSubmit={submit}>
+            <label>
+              Correo
+              <input type="email" autoComplete="username" inputMode="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="nombre@pescamarchile.cl" required maxLength={254} disabled={submitting} autoFocus />
+            </label>
+            <label>
+              Contraseña
+              <input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="••••••••" required minLength={8} maxLength={256} disabled={submitting} />
+            </label>
+            {error ? <p className="form-error" role="alert" aria-live="polite">{error}</p> : null}
+            <button className="button primary" type="submit" disabled={submitting}>{submitting ? "Validando acceso…" : "Entrar"}</button>
+          </form>
+          <div className="login-security-note"><span className="live-dot"/>Acceso protegido · sesión por rol y planta</div>
+        </section>
+      </div>
     </main>
   );
 }
