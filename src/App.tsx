@@ -24,6 +24,7 @@ const PlantIdentities=lazy(()=>import("./pages/PlantIdentities").then(module=>({
 const ProductionLines=lazy(()=>import("./pages/ProductionLines").then(module=>({default:module.ProductionLines})));
 const Receptions=lazy(()=>import("./pages/Receptions").then(module=>({default:module.Receptions})));
 const SalesOrders=lazy(()=>import("./pages/SalesOrders").then(module=>({default:module.SalesOrders})));
+const SeaUrchinProcess=lazy(()=>import("./pages/SeaUrchinProcess").then(module=>({default:module.SeaUrchinProcess})));
 const Settlements=lazy(()=>import("./pages/Settlements").then(module=>({default:module.Settlements})));
 const TransformationCosts=lazy(()=>import("./pages/TransformationCosts").then(module=>({default:module.TransformationCosts})));
 const Operators=lazy(()=>import("./pages/Operators").then(module=>({default:module.Operators})));
@@ -57,6 +58,7 @@ function AuthenticatedApp(){
         <Route path="/rollout" element={gate("/rollout",<Rollout/>)}/>
         <Route path="/operacion-2025" element={<Navigate to="/timeline" replace/>}/>
         <Route path="/planificacion" element={gate("/planificacion",<Planning/>)}/>
+        <Route path="/proceso-erizo" element={gate("/proceso-erizo",<SeaUrchinProcess/>)}/>
         <Route path="/plantas" element={<PlantControl/>}/>
         <Route path="/plantas/:plantId" element={<PlantControl/>}/>
         <Route path="/identidades-plantas" element={gate("/identidades-plantas",<PlantIdentities/>)}/>
