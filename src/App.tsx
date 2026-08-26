@@ -11,6 +11,7 @@ import { useLots } from "./store";
 const Approvals=lazy(()=>import("./pages/Approvals").then(module=>({default:module.Approvals})));
 const Audit=lazy(()=>import("./pages/Audit").then(module=>({default:module.Audit})));
 const Commercial=lazy(()=>import("./pages/Commercial").then(module=>({default:module.Commercial})));
+const Communications=lazy(()=>import("./pages/Communications").then(module=>({default:module.Communications})));
 const Credits=lazy(()=>import("./pages/Credits").then(module=>({default:module.Credits})));
 const DailyClose=lazy(()=>import("./pages/DailyClose").then(module=>({default:module.DailyClose})));
 const Inventory=lazy(()=>import("./pages/Inventory").then(module=>({default:module.Inventory})));
@@ -51,6 +52,7 @@ function AuthenticatedApp(){
       <Routes>
         <Route path="/" element={<Dashboard lots={lots} onNewReception={open}/>}/>
         <Route path="/timeline" element={<Timeline/>}/>
+        <Route path="/comunicaciones" element={gate("/comunicaciones",<Communications/>)}/>
         <Route path="/auditoria" element={gate("/auditoria",<Audit/>)}/>
         <Route path="/rollout" element={gate("/rollout",<Rollout/>)}/>
         <Route path="/operacion-2025" element={<Navigate to="/timeline" replace/>}/>

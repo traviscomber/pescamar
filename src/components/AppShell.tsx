@@ -1,4 +1,4 @@
-import {Activity,Blocks,Boxes,CalendarCheck2,CheckCheck,CircleDollarSign,ClipboardList,Factory,FileSpreadsheet,History,Landmark,LayoutDashboard,LogOut,Menu,Moon,PackageSearch,ReceiptText,Settings2,ShoppingCart,Sun,Target,X} from "lucide-react";
+import {Activity,Blocks,Boxes,CalendarCheck2,CheckCheck,CircleDollarSign,ClipboardList,Factory,FileSpreadsheet,History,Landmark,LayoutDashboard,LogOut,Menu,MessageCircleMore,Moon,PackageSearch,ReceiptText,Settings2,ShoppingCart,Sun,Target,X} from "lucide-react";
 import {NavLink,useLocation} from "react-router-dom";
 import {useEffect,useRef,useState,type ReactNode} from "react";
 import {canAccessPath,canCreateReception} from "../access";
@@ -10,6 +10,7 @@ const primaryNavigation=[
   {to:"/recepciones",label:"Recepciones",icon:Boxes},
   {to:"/lineas",label:"Producción",icon:Blocks},
   {to:"/inventario",label:"Inventario",icon:PackageSearch},
+  {to:"/comunicaciones",label:"Comunicaciones",icon:MessageCircleMore},
   {to:"/timeline",label:"Línea de tiempo",icon:History},
 ];
 const workflowGroups=[
@@ -63,7 +64,7 @@ export function AppShell({children,onNewReception}:{children:ReactNode;onNewRece
     window.addEventListener("keydown",onKeyDown);
     return()=>{document.body.style.overflow=previous;window.removeEventListener("keydown",onKeyDown);menuButtonRef.current?.focus()};
   },[mobileOpen]);
-  const context=pathname==="/"?"Operación de hoy":pathname.startsWith("/timeline")||pathname.startsWith("/operacion-2025")?"Línea de tiempo":pathname.startsWith("/auditoria")?"Auditoría operacional":pathname.startsWith("/planificacion")?"Planificación":pathname.startsWith("/aprobaciones")?"Decisiones":pathname.startsWith("/recepciones")?"Recepciones":pathname.startsWith("/inventario")?"Inventario":pathname.startsWith("/costos-transformacion")?"Costos":pathname.startsWith("/ordenes-venta")?"Órdenes de venta":pathname.startsWith("/despachos-ventas")?"Despachos y ventas":pathname.startsWith("/cierre-diario")?"Cierre diario":pathname.startsWith("/identidades-plantas")?"Identidades históricas":pathname.startsWith("/plantas")?"Plantas":pathname.startsWith("/lineas")?"Producción":pathname.startsWith("/creditos")?"Créditos y anticipos":pathname.startsWith("/liquidaciones")?"Liquidaciones":pathname.startsWith("/importaciones")?"Importaciones":pathname.startsWith("/operadores")?"Operadores":"Configuración";
+  const context=pathname==="/"?"Operación de hoy":pathname.startsWith("/timeline")||pathname.startsWith("/operacion-2025")?"Línea de tiempo":pathname.startsWith("/comunicaciones")?"Comunicaciones":pathname.startsWith("/auditoria")?"Auditoría operacional":pathname.startsWith("/planificacion")?"Planificación":pathname.startsWith("/aprobaciones")?"Decisiones":pathname.startsWith("/recepciones")?"Recepciones":pathname.startsWith("/inventario")?"Inventario":pathname.startsWith("/costos-transformacion")?"Costos":pathname.startsWith("/ordenes-venta")?"Órdenes de venta":pathname.startsWith("/despachos-ventas")?"Despachos y ventas":pathname.startsWith("/cierre-diario")?"Cierre diario":pathname.startsWith("/identidades-plantas")?"Identidades históricas":pathname.startsWith("/plantas")?"Plantas":pathname.startsWith("/lineas")?"Producción":pathname.startsWith("/creditos")?"Créditos y anticipos":pathname.startsWith("/liquidaciones")?"Liquidaciones":pathname.startsWith("/importaciones")?"Importaciones":pathname.startsWith("/operadores")?"Operadores":"Configuración";
   const initials=operator?.fullName.split(" ").map(part=>part[0]).slice(0,2).join("").toUpperCase()||"PS";
   const visiblePrimary=operator?primaryNavigation.filter(item=>canAccessPath(operator.role,item.to)):[];
   const visibleGroups=operator?workflowGroups.map(group=>({...group,items:group.items.filter(item=>canAccessPath(operator.role,item.to))})).filter(group=>group.items.length):[];
