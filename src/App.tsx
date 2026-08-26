@@ -18,12 +18,14 @@ const Inventory=lazy(()=>import("./pages/Inventory").then(module=>({default:modu
 const Modules=lazy(()=>import("./pages/Modules").then(module=>({default:module.Modules})));
 const Imports=lazy(()=>import("./pages/Imports").then(module=>({default:module.Imports})));
 const Planning=lazy(()=>import("./pages/Planning").then(module=>({default:module.Planning})));
+const ProductLabels=lazy(()=>import("./pages/ProductLabels").then(module=>({default:module.ProductLabels})));
 const Rollout=lazy(()=>import("./pages/Rollout").then(module=>({default:module.Rollout})));
 const PlantControl=lazy(()=>import("./pages/PlantControl").then(module=>({default:module.PlantControl})));
 const PlantIdentities=lazy(()=>import("./pages/PlantIdentities").then(module=>({default:module.PlantIdentities})));
 const ProductionLines=lazy(()=>import("./pages/ProductionLines").then(module=>({default:module.ProductionLines})));
 const Receptions=lazy(()=>import("./pages/Receptions").then(module=>({default:module.Receptions})));
 const SalesOrders=lazy(()=>import("./pages/SalesOrders").then(module=>({default:module.SalesOrders})));
+const SeaUrchinProcess=lazy(()=>import("./pages/SeaUrchinProcess").then(module=>({default:module.SeaUrchinProcess})));
 const Settlements=lazy(()=>import("./pages/Settlements").then(module=>({default:module.Settlements})));
 const TransformationCosts=lazy(()=>import("./pages/TransformationCosts").then(module=>({default:module.TransformationCosts})));
 const Operators=lazy(()=>import("./pages/Operators").then(module=>({default:module.Operators})));
@@ -31,51 +33,5 @@ const Timeline=lazy(()=>import("./pages/Timeline").then(module=>({default:module
 
 function RouteFallback(){return <div className="system-banner">Cargando módulo…</div>}
 
-export default function App(){
-  const {operator,loading:authLoading}=useAuth();
-  if(authLoading)return <div className="login-shell"><div className="system-banner">Validando sesión…</div></div>;
-  if(!operator)return <LoginScreen/>;
-  return <AuthenticatedApp/>;
-}
-
-function AuthenticatedApp(){
-  const {operator}=useAuth();
-  const [modalOpen,setModalOpen]=useState(false);
-  const {lots,loading,error,addLot}=useLots();
-  if(!operator)return null;
-  const mayCreate=canCreateReception(operator.role);
-  const open=()=>{if(mayCreate)setModalOpen(true)};
-  const gate=(path:string,node:ReactNode)=>canAccessPath(operator.role,path)?node:<Navigate to="/" replace/>;
-  return <Lot360Provider><AppShell onNewReception={open}>
-    {loading?<div className="system-banner">Sincronizando recepciones…</div>:error?<div className="system-banner error" role="alert">{error}</div>:null}
-    <Suspense fallback={<RouteFallback/>}>
-      <Routes>
-        <Route path="/" element={<Dashboard lots={lots} onNewReception={open}/>}/>
-        <Route path="/timeline" element={<Timeline/>}/>
-        <Route path="/comunicaciones" element={gate("/comunicaciones",<Communications/>)}/>
-        <Route path="/auditoria" element={gate("/auditoria",<Audit/>)}/>
-        <Route path="/rollout" element={gate("/rollout",<Rollout/>)}/>
-        <Route path="/operacion-2025" element={<Navigate to="/timeline" replace/>}/>
-        <Route path="/planificacion" element={gate("/planificacion",<Planning/>)}/>
-        <Route path="/plantas" element={<PlantControl/>}/>
-        <Route path="/plantas/:plantId" element={<PlantControl/>}/>
-        <Route path="/identidades-plantas" element={gate("/identidades-plantas",<PlantIdentities/>)}/>
-        <Route path="/importaciones" element={gate("/importaciones",<Imports/>)}/>
-        <Route path="/creditos" element={gate("/creditos",<Credits/>)}/>
-        <Route path="/liquidaciones" element={gate("/liquidaciones",<Settlements/>)}/>
-        <Route path="/despachos-ventas" element={gate("/despachos-ventas",<Commercial/>)}/>
-        <Route path="/ordenes-venta" element={gate("/ordenes-venta",<SalesOrders/>)}/>
-        <Route path="/inventario" element={gate("/inventario",<Inventory/>)}/>
-        <Route path="/costos-transformacion" element={gate("/costos-transformacion",<TransformationCosts/>)}/>
-        <Route path="/cierre-diario" element={gate("/cierre-diario",<DailyClose/>)}/>
-        <Route path="/aprobaciones" element={gate("/aprobaciones",<Approvals/>)}/>
-        <Route path="/modulos" element={gate("/modulos",<Modules/>)}/>
-        <Route path="/operadores" element={gate("/operadores",<Operators/>)}/>
-        <Route path="/lineas" element={<ProductionLines lots={lots}/>}/>
-        <Route path="/recepciones" element={<Receptions lots={lots} onNew={open}/>}/>
-        <Route path="*" element={<Navigate to="/" replace/>}/>
-      </Routes>
-    </Suspense>
-    {mayCreate?<ReceptionModal open={modalOpen} onClose={()=>setModalOpen(false)} onSave={addLot}/>:null}
-  </AppShell></Lot360Provider>;
-}
+export default function App(){const {operator,loading:authLoading}=useAuth();if(authLoading)return <div className="login-shell"><div className="system-banner">Validando sesión…</div></div>;if(!operator)return <LoginScreen/>;return <AuthenticatedApp/>}
+function AuthenticatedApp(){const {operator}=useAuth();const [modalOpen,setModalOpen]=useState(false);const {lots,loading,error,addLot}=useLots();if(!operator)return null;const mayCreate=canCreateReception(operator.role),open=()=>{if(mayCreate)setModalOpen(true)},gate=(path:string,node:ReactNode)=>canAccessPath(operator.role,path)?node:<Navigate to="/" replace/>;return <Lot360Provider><AppShell onNewReception={open}>{loading?<div className="system-banner">Sincronizando recepciones…</div>:error?<div className="system-banner error" role="alert">{error}</div>:null}<Suspense fallback={<RouteFallback/>}><Routes><Route path="/" element={<Dashboard lots={lots} onNewReception={open}/>}/><Route path="/timeline" element={<Timeline/>}/><Route path="/comunicaciones" element={gate("/comunicaciones",<Communications/>)}/><Route path="/auditoria" element={gate("/auditoria",<Audit/>)}/><Route path="/rollout" element={gate("/rollout",<Rollout/>)}/><Route path="/operacion-2025" element={<Navigate to="/timeline" replace/>}/><Route path="/planificacion" element={gate("/planificacion",<Planning/>)}/><Route path="/etiquetas" element={gate("/etiquetas",<ProductLabels/>)}/><Route path="/proceso-erizo" element={gate("/proceso-erizo",<SeaUrchinProcess/>)}/><Route path="/plantas" element={<PlantControl/>}/><Route path="/plantas/:plantId" element={<PlantControl/>}/><Route path="/identidades-plantas" element={gate("/identidades-plantas",<PlantIdentities/>)}/><Route path="/importaciones" element={gate("/importaciones",<Imports/>)}/><Route path="/creditos" element={gate("/creditos",<Credits/>)}/><Route path="/liquidaciones" element={gate("/liquidaciones",<Settlements/>)}/><Route path="/despachos-ventas" element={gate("/despachos-ventas",<Commercial/>)}/><Route path="/ordenes-venta" element={gate("/ordenes-venta",<SalesOrders/>)}/><Route path="/inventario" element={gate("/inventario",<Inventory/>)}/><Route path="/costos-transformacion" element={gate("/costos-transformacion",<TransformationCosts/>)}/><Route path="/cierre-diario" element={gate("/cierre-diario",<DailyClose/>)}/><Route path="/aprobaciones" element={gate("/aprobaciones",<Approvals/>)}/><Route path="/modulos" element={gate("/modulos",<Modules/>)}/><Route path="/operadores" element={gate("/operadores",<Operators/>)}/><Route path="/lineas" element={<ProductionLines lots={lots}/>}/><Route path="/recepciones" element={<Receptions lots={lots} onNew={open}/>}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes></Suspense>{mayCreate?<ReceptionModal open={modalOpen} onClose={()=>setModalOpen(false)} onSave={addLot}/>:null}</AppShell></Lot360Provider>}

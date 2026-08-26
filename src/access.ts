@@ -7,6 +7,8 @@ const access:Record<string,AppRole[]|"all">={
   "/auditoria":["admin","operations"],
   "/rollout":["admin","operations"],
   "/planificacion":["admin","operations","finance","viewer"],
+  "/etiquetas":["admin","operations","quality","viewer"],
+  "/proceso-erizo":["admin","operations","quality","viewer"],
   "/plantas":"all",
   "/identidades-plantas":["admin","operations"],
   "/lineas":"all",
@@ -25,13 +27,5 @@ const access:Record<string,AppRole[]|"all">={
   "/modulos":["admin","operations"],
 };
 
-export function canAccessPath(role:AppRole,path:string){
-  const key=Object.keys(access).filter(candidate=>candidate==="/"?path==="/":path===candidate||path.startsWith(`${candidate}/`)).sort((a,b)=>b.length-a.length)[0];
-  if(!key)return false;
-  const roles=access[key];
-  return roles==="all"||roles.includes(role);
-}
-
-export function canCreateReception(role:AppRole){
-  return ["admin","operations","quality"].includes(role);
-}
+export function canAccessPath(role:AppRole,path:string){const key=Object.keys(access).filter(candidate=>candidate==="/"?path==="/":path===candidate||path.startsWith(`${candidate}/`)).sort((a,b)=>b.length-a.length)[0];if(!key)return false;const roles=access[key];return roles==="all"||roles.includes(role)}
+export function canCreateReception(role:AppRole){return ["admin","operations","quality"].includes(role)}
