@@ -2,7 +2,7 @@ import {AlertTriangle,CheckCircle2,PackageCheck} from 'lucide-react'
 import {useEffect,useMemo,useState} from 'react'
 import {PageHeader} from '../components/PageHeader'
 
-type Label={id:string;reception_id:string;label_code:string;product:string|null;grade:string|null;lot_code:string|null;net_kg:number|null;destination:string|null;status:string;mismatch_reason:string|null;packing_format:string|null;process_type:string|null;species:string|null;reception_number:string|number;plant_id:string|null;supplier:string;order_number:string|number|null;source_message_id:string|null;source_document_url:string|null}
+type Label={id:string;reception_id:string;label_code:string;product:string|null;grade:string|null;lot_code:string|null;net_kg:number|null;destination:string|null;status:string;mismatch_reason:string|null;packing_format:string|null;process_type:string|null;species:string|null;reception_species:string|null;reception_number:string|number;plant_id:string|null;supplier:string;order_number:string|number|null;source_message_id:string|null;source_document_url:string|null}
 type Lot={id:string;reception_number:string|number;plant_id:string|null;species:string;supplier:string}
 type Message={id:string;sender_name:string|null;occurred_at:string;message_type:string;text_body:string|null;media:unknown;channel:string|null}
 type Payload={labels?:Label[];lots?:Lot[];messages?:Message[];permissions?:{canWrite:boolean};error?:string}
