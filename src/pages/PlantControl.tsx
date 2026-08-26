@@ -42,15 +42,18 @@ export function PlantControl() {
     fetchSharedPlantState()
       .then((state) => {
         if (!active) return;
-        setPlants(state.plants ?? configuredPlants);
+        const sharedPlants = Array.isArray(state.plants) && state.plants.length ? state.plants : configuredPlants;
+        setPlants(sharedPlants);
+        setError("");
       })
       .catch((cause: unknown) => {
-        if (active)
-          setError(
-            cause instanceof Error
-              ? cause.message
-              : "No fue posible sincronizar plantas",
-          );
+        if (!active) return;
+        setPlants(configuredPlants);
+        setError(
+          cause instanceof Error
+            ? cause.message
+            : "No fue posible sincronizar plantas",
+        );
       })
       .finally(() => {
         if (active) setLoading(false);
