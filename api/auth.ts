@@ -18,7 +18,7 @@ export default async function handler(request:Request,response:Response){
     if(request.method==="POST"){
       const input=(request.body??{}) as LoginInput;
       const email=String(input.email??"").trim().toLowerCase(),password=String(input.password??"");
-      if(!emailPattern.test(email)||email.length>254||password.length<12||password.length>256)
+      if(!emailPattern.test(email)||email.length>254||password.length<8||password.length>256)
         return response.status(400).json({ok:false,error:"Correo o contraseña inválidos"});
 
       const rate=await loginRateState(request,email);

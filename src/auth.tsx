@@ -169,15 +169,15 @@ export function LoginScreen() {
               autoComplete="current-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              placeholder="••••••••••••"
+              placeholder="••••••••"
               required
-              minLength={12}
+              minLength={8}
               maxLength={256}
               disabled={submitting}
             />
           </label>
           {error ? <p className="form-error" role="alert" aria-live="polite">{error}</p> : null}
-          <button className="button primary" type="submit" disabled={submitting || !email || password.length < 12}>
+          <button className="button primary" type="submit" disabled={submitting || !email || password.length < 8}>
             {submitting ? "Validando…" : "Entrar"}
           </button>
         </form>
