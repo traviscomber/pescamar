@@ -7,6 +7,7 @@ const access:Record<string,AppRole[]|"all">={
   "/auditoria":["admin","operations"],
   "/rollout":["admin","operations"],
   "/planificacion":["admin","operations","finance","viewer"],
+  "/proceso-erizo":["admin","operations","quality","viewer"],
   "/plantas":"all",
   "/identidades-plantas":["admin","operations"],
   "/lineas":"all",
