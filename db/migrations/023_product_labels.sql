@@ -21,9 +21,9 @@ join receptions r on r.id = u.reception_id
 where l.run_id = u.id
   and l.reception_id is null;
 
-alter table product_labels
-  alter column reception_id set not null;
+alter table product_labels alter column reception_id set not null;
 
+create unique index if not exists uq_product_labels_reception_code on product_labels(reception_id,label_code);
 create index if not exists idx_product_labels_reception_status on product_labels(reception_id,status);
 create index if not exists idx_product_labels_order_status on product_labels(sales_order_id,status) where sales_order_id is not null;
 create index if not exists idx_product_labels_message on product_labels(source_message_id) where source_message_id is not null;
