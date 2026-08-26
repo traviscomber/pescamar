@@ -17,6 +17,7 @@ const Inventory=lazy(()=>import("./pages/Inventory").then(module=>({default:modu
 const Modules=lazy(()=>import("./pages/Modules").then(module=>({default:module.Modules})));
 const Imports=lazy(()=>import("./pages/Imports").then(module=>({default:module.Imports})));
 const Planning=lazy(()=>import("./pages/Planning").then(module=>({default:module.Planning})));
+const Rollout=lazy(()=>import("./pages/Rollout").then(module=>({default:module.Rollout})));
 const PlantControl=lazy(()=>import("./pages/PlantControl").then(module=>({default:module.PlantControl})));
 const PlantIdentities=lazy(()=>import("./pages/PlantIdentities").then(module=>({default:module.PlantIdentities})));
 const ProductionLines=lazy(()=>import("./pages/ProductionLines").then(module=>({default:module.ProductionLines})));
@@ -51,6 +52,7 @@ function AuthenticatedApp(){
         <Route path="/" element={<Dashboard lots={lots} onNewReception={open}/>}/>
         <Route path="/timeline" element={<Timeline/>}/>
         <Route path="/auditoria" element={gate("/auditoria",<Audit/>)}/>
+        <Route path="/rollout" element={gate("/rollout",<Rollout/>)}/>
         <Route path="/operacion-2025" element={<Navigate to="/timeline" replace/>}/>
         <Route path="/planificacion" element={gate("/planificacion",<Planning/>)}/>
         <Route path="/plantas" element={<PlantControl/>}/>
