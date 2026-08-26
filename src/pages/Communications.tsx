@@ -1,6 +1,8 @@
 import {AlertTriangle,Building2,CheckCircle2,MessageCircleMore,RefreshCw,Sparkles,Users} from 'lucide-react'
 import {useEffect,useMemo,useState} from 'react'
+import {useSearchParams} from 'react-router-dom'
 import {communicationPeople,communicationSources} from '../communicationsDirectory'
+import {LotModuleContext} from '../components/LotModuleContext'
 import {PageHeader} from '../components/PageHeader'
 
 type Channel={id:string;name:string;category:string;plant_id:string|null;counterparty:string|null;message_count:number|string;pending_count:number|string;last_message_at:string|null}
@@ -10,6 +12,7 @@ const dt=(v:string)=>new Intl.DateTimeFormat('es-CL',{dateStyle:'medium',timeSty
 const title=(value:string)=>value.charAt(0).toUpperCase()+value.slice(1)
 
 export function Communications(){
+  const [params]=useSearchParams(),requestedReceptionId=params.get('receptionId')
   const [data,setData]=useState<Payload|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[filter,setFilter]=useState('all'),[busy,setBusy]=useState('')
   async function load(){setLoading(true);try{const r=await fetch('/api/communications',{cache:'no-store'}),p=await r.json() as Payload;if(!r.ok)throw new Error(p.error??'No fue posible cargar comunicaciones');setData(p);setError('')}catch(e){setError(e instanceof Error?e.message:'No fue posible cargar comunicaciones')}finally{setLoading(false)}}
   useEffect(()=>{void load()},[])
@@ -21,7 +24,8 @@ export function Communications(){
   const pending=messages.filter(m=>m.insight_status==='pending').length,newCount=messages.filter(m=>!m.insight_id).length
   async function act(body:Record<string,unknown>,key:string){setBusy(key);try{const r=await fetch('/api/communications',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),p=await r.json() as {error?:string};if(!r.ok)throw new Error(p.error??'No fue posible procesar');await load()}catch(e){setError(e instanceof Error?e.message:'No fue posible procesar')}finally{setBusy('')}}
   return <>
-    <PageHeader eyebrow="WhatsApp Intelligence" title="Comunicaciones" description="Red de personas, contrapartes y grupos operacionales. Cada fuente tiene un propósito de inteligencia definido antes de transformar mensajes en datos canónicos." actions={<button className="button" onClick={()=>void load()}><RefreshCw size={15}/>Actualizar</button>}/>
+    <PageHeader eyebrow="WhatsApp Intelligence" title="Comunicaciones" description="Red de personas, contrapartes y grupos operacionales. Cada fuente tiene un propósito de inteligencia definido antes de transformar mensajes en datos de la Base Pescamar." actions={<button className="button" onClick={()=>void load()}><RefreshCw size={15}/>Actualizar</button>}/>
+    <LotModuleContext current="communications" receptionId={requestedReceptionId} label={requestedReceptionId?'Lote seleccionado':null} detail={requestedReceptionId?'Las comunicaciones vinculadas al lote aparecerán aquí cuando el mensaje tenga referencia verificable de lote, guía o recepción.':null}/>
     {error?<div className="system-banner">Catálogo base disponible · conexión live pendiente: {error}</div>:null}
     {loading?<div className="system-banner">Sincronizando comunicaciones…</div>:null}
 
@@ -30,7 +34,7 @@ export function Communications(){
       <article className="signal-card"><span><Users size={16}/>Personas</span><b>{communicationPeople.length}</b><small>Identificadas por nombre · rol por confirmar</small></article>
       <article className="signal-card"><span><Building2 size={16}/>Contrapartes</span><b>{counterparties.length}</b><small>Clientes, proveedores y socios logísticos</small></article>
       <article className="signal-card"><span><Sparkles size={16}/>Sin interpretar</span><b>{newCount}</b><small>Mensajes RAW pendientes de inteligencia</small></article>
-      <article className="signal-card"><span><AlertTriangle size={16}/>Requieren validación</span><b>{pending}</b><small>Insights que todavía no son dato canónico</small></article>
+      <article className="signal-card"><span><AlertTriangle size={16}/>Requieren validación</span><b>{pending}</b><small>Insights que todavía no son dato confirmado</small></article>
     </section>
 
     <section className="communications-directory-grid">
@@ -41,7 +45,7 @@ export function Communications(){
       <article className="panel counterpart-directory">
         <div className="section-heading"><div><span className="overline">Ecosistema</span><h2>Contrapartes detectadas</h2></div><span>{counterparties.length} relaciones</span></div>
         <div className="counterparty-cloud">{counterparties.map(name=><span key={name}>{name}</span>)}</div>
-        <p className="source-note">La relación se toma del nombre visible del grupo. Cliente, proveedor o rol contractual se confirma con mensajes y documentos antes de quedar canónico.</p>
+        <p className="source-note">La relación se toma del nombre visible del grupo. Cliente, proveedor o rol contractual se confirma con mensajes y documentos antes de quedar en la Base Pescamar.</p>
       </article>
     </section>
 
