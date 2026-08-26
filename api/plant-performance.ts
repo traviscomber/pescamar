@@ -11,7 +11,7 @@ export default async function handler(req:Request,res:Response){
     if(!operator)return res.status(401).json({ok:false,error:'Sesión requerida'})
     if(req.method!=='GET'){res.setHeader('Allow','GET');return res.status(405).json({ok:false,error:'Método no permitido'})}
     const admin=operator.role==='admin',plantIds=operator.plantIds,sql=getSql()
-    const [rows,historicalRows]=await Promise.all([
+    const [rows,historicalRows,yieldRankingRows]=await Promise.all([
       sql`
         with reception_base as (
           select r.id,r.plant_id,
@@ -81,8 +81,37 @@ export default async function handler(req:Request,res:Response){
           case when s.lots>0 then 100.0*s.yield_rows/s.lots else 0 end yield_coverage_pct,
           coalesce(j.supplier_drivers,'[]'::jsonb) supplier_drivers
         from site_summary s left join supplier_json j using(historical_key)
-        order by s.received_kg desc nulls last`:Promise.resolve([])
+        order by s.received_kg desc nulls last`:Promise.resolve([]),
+      admin?sql`
+        with cohort as (
+          select
+            lower(coalesce(nullif(trim(plant_id),''),nullif(trim(process_site_original),''),'sin planta')) plant_key,
+            coalesce(nullif(trim(plant_id),''),nullif(trim(process_site_original),''),'Sin planta') plant_name,
+            coalesce(received_kg,guide_kg,0) received_kg,
+            case when yields ? 'total' and nullif(yields->>'total','') is not null and (yields->>'total')::numeric>0 and (yields->>'total')::numeric<=1 then (yields->>'total')::numeric else null end yield_total
+          from historical_production_records
+          where record_status='operational' and source_file='planilla de produccion 2025.xlsx'
+        ),
+        benchmark as (
+          select avg(yield_total) filter(where yield_total is not null) network_yield from cohort
+        ),
+        plant_summary as (
+          select plant_key,min(plant_name) plant_name,count(*)::int total_lots,
+            count(*) filter(where yield_total is not null)::int yield_lots,
+            sum(received_kg) filter(where yield_total is not null) observed_received_kg,
+            avg(yield_total) filter(where yield_total is not null) avg_yield
+          from cohort group by plant_key
+        )
+        select p.*,
+          b.network_yield,
+          case when p.avg_yield is not null then 100*(p.avg_yield-b.network_yield) else null end yield_gap_pp,
+          case when p.total_lots>0 then 100.0*p.yield_lots/p.total_lots else 0 end coverage_pct,
+          case when p.avg_yield<b.network_yield then (b.network_yield-p.avg_yield)*coalesce(p.observed_received_kg,0) else 0 end estimated_recoverable_kg,
+          case when p.yield_lots>=30 and (100.0*p.yield_lots/nullif(p.total_lots,0))>=20 then 'alta' when p.yield_lots>=10 then 'media' when p.yield_lots>0 then 'baja' else 'sin_dato' end confidence
+        from plant_summary p cross join benchmark b
+        where p.yield_lots>0 and p.plant_key<>'sin planta'
+        order by p.avg_yield desc nulls last`:Promise.resolve([])
     ])
-    return res.status(200).json({ok:true,plants:Array.isArray(rows)?rows:[],historicalPlants:Array.isArray(historicalRows)?historicalRows:[]})
+    return res.status(200).json({ok:true,plants:Array.isArray(rows)?rows:[],historicalPlants:Array.isArray(historicalRows)?historicalRows:[],yieldRanking:Array.isArray(yieldRankingRows)?yieldRankingRows:[],yieldBenchmark:{cohort:'Proceso histórico 2025',classification:'La fuente no incluye una especie/producto normalizado; no se mezclan datos vivos con este benchmark.'}})
   }catch{return res.status(500).json({ok:false,error:'No fue posible calcular desempeño por planta'})}
 }
