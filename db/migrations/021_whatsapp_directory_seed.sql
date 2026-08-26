@@ -1,0 +1,47 @@
+-- 021_whatsapp_directory_seed.sql
+-- Completa el catálogo de grupos levantado desde las capturas compartidas.
+-- No crea mensajes, transacciones ni eventos operacionales sintéticos.
+
+insert into whatsapp_channels(name,category,plant_id,counterparty) values
+('Supervisores Pescamar','operacion',null,null),
+('Pescamar Ancud','operacion','ancud',null),
+('despachos pescamar ancud','logistica','ancud',null),
+('Calidad Erizo Pescamar','calidad',null,null),
+('Leyla Moldeo pescamar','produccion',null,'Leyla'),
+('Guafó/pescamar','abastecimiento',null,'Guafó'),
+('Aqua austral/pescamar','abastecimiento','aqua-austral','Aqua Austral'),
+('Pescamar - Luisa Neira spa','abastecimiento',null,'Luisa Neira SpA'),
+('Pescamar - Caleta Corral','abastecimiento',null,'Caleta Corral'),
+('Pescamar/rio bueno','abastecimiento',null,'Río Bueno'),
+('Pescamar - Pota Perú','abastecimiento',null,'Pota Perú'),
+('Pescamar - Queulen Salmón','abastecimiento',null,'Queilen/Queulen Salmón'),
+('Pescamar & Fooden','comercial',null,'Fooden'),
+('Hanwa/Pescamar','comercial',null,'Hanwa'),
+('Megacarrier&Pescamar','comercial',null,'Megacarrier'),
+('Arrom - Pescamar Chile','comercial',null,'Arrom'),
+('Pescamar - Central Valley','comercial',null,'Central Valley'),
+('Pescamar - Gulf Pacific','comercial',null,'Gulf Pacific'),
+('Pescamar & Kingsun foods','comercial',null,'Kingsun Foods'),
+('Pescamar & ProChile','comercial',null,'ProChile'),
+('Pescamar & Supreme Seafood','comercial',null,'Supreme Seafood'),
+('Pescamar - Viking','comercial',null,'Viking'),
+('Pescamar Mexico','comercial',null,'Pescamar México'),
+('Pescamar Octopus Business','comercial',null,null),
+('Product of the sea/Pescamar','comercial',null,'Product of the Sea'),
+('Pescamar - Seafich','comercial',null,'Seafich'),
+('Embarques Com. Pescamar','logistica',null,null),
+('Coordinación embarque Arrom/Pescamar','logistica',null,'Arrom'),
+('Seafrigo / Pescamar','logistica',null,'Seafrigo'),
+('Temas contables PESCAMAR','finanzas',null,null),
+('Pato Diaz/Pescamar','personas',null,'Pato Díaz'),
+('Pescamar/Cesar González','personas',null,'César González'),
+('Paulina Pescamar','personas',null,'Paulina'),
+('Pescamar-Ed','personas',null,'Ed'),
+('Proyecto Pescamar&Ed','personas',null,'Ed')
+on conflict(name) do update set
+  category=excluded.category,
+  plant_id=excluded.plant_id,
+  counterparty=excluded.counterparty,
+  active=true,
+  interpret=true,
+  updated_at=now();
