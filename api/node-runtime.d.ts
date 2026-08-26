@@ -14,11 +14,9 @@ declare module "node:crypto" {
   export function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean;
 }
 
-declare module "node:buffer" {
-  export const Buffer: {
-    from(value: string, encoding: "hex" | "base64"): any;
-  };
-}
+declare const Buffer: {
+  from(value: string, encoding: "hex" | "base64"): any;
+};
 
 declare const console: {
   error(...args: unknown[]): void;
