@@ -39,19 +39,49 @@ export default async function handler(req:Request,res:Response){
         group by plant_id
         order by plant_id`,
       admin?sql`
-        select
-          lower(coalesce(nullif(trim(plant_id),''),nullif(trim(process_site_original),''),'sin planta')) historical_key,
-          min(coalesce(nullif(trim(plant_id),''),nullif(trim(process_site_original),''),'Sin planta')) display_name,
-          count(*) filter(where record_status='operational')::int lots,
-          sum(coalesce(received_kg,guide_kg,0)) filter(where record_status='operational') received_kg,
-          sum(coalesce(guide_kg,0)) filter(where record_status='operational') guide_kg,
-          sum(coalesce(difference_kg,0)) filter(where record_status='operational') difference_kg,
-          count(*) filter(where record_status='operational' and cardinality(data_quality_flags)>0)::int flagged_rows,
-          min(event_date) filter(where record_status='operational') first_date,
-          max(event_date) filter(where record_status='operational') last_date
-        from historical_production_records
-        group by lower(coalesce(nullif(trim(plant_id),''),nullif(trim(process_site_original),''),'sin planta'))
-        order by received_kg desc nulls last`:Promise.resolve([])
+        with hist_base as (
+          select
+            lower(coalesce(nullif(trim(plant_id),''),nullif(trim(process_site_original),''),'sin planta')) historical_key,
+            coalesce(nullif(trim(plant_id),''),nullif(trim(process_site_original),''),'Sin planta') display_name,
+            coalesce(nullif(trim(supplier_name),''),'Sin proveedor') supplier,
+            coalesce(received_kg,guide_kg,0) received_kg,
+            coalesce(guide_kg,0) guide_kg,
+            coalesce(difference_kg,0) difference_kg,
+            guide_price_clp,
+            case when yields ? 'total' and (yields->>'total')::numeric > 0 and (yields->>'total')::numeric <= 1 then (yields->>'total')::numeric else null end yield_total,
+            cardinality(data_quality_flags)>0 flagged,
+            event_date
+          from historical_production_records
+          where record_status='operational'
+        ),
+        site_summary as (
+          select historical_key,min(display_name) display_name,count(*)::int lots,
+            sum(received_kg) received_kg,sum(guide_kg) guide_kg,sum(difference_kg) difference_kg,
+            count(*) filter(where yield_total is not null)::int yield_rows,
+            avg(yield_total) filter(where yield_total is not null) yield_avg,
+            count(*) filter(where flagged)::int flagged_rows,
+            min(event_date) first_date,max(event_date) last_date
+          from hist_base group by historical_key
+        ),
+        supplier_summary as (
+          select historical_key,supplier,count(*)::int lots,sum(received_kg) received_kg,sum(difference_kg) difference_kg,
+            avg(guide_price_clp) filter(where guide_price_clp is not null) avg_price_clp
+          from hist_base group by historical_key,supplier
+        ),
+        supplier_ranked as (
+          select *,row_number() over(partition by historical_key order by abs(difference_kg) desc,received_kg desc) rn
+          from supplier_summary
+        ),
+        supplier_json as (
+          select historical_key,jsonb_agg(jsonb_build_object('supplier',supplier,'lots',lots,'received_kg',received_kg,'difference_kg',difference_kg,'avg_price_clp',avg_price_clp) order by rn) filter(where rn<=3) supplier_drivers
+          from supplier_ranked group by historical_key
+        )
+        select s.*,
+          case when s.guide_kg>0 then 100*s.difference_kg/s.guide_kg else null end reception_variance_pct,
+          case when s.lots>0 then 100.0*s.yield_rows/s.lots else 0 end yield_coverage_pct,
+          coalesce(j.supplier_drivers,'[]'::jsonb) supplier_drivers
+        from site_summary s left join supplier_json j using(historical_key)
+        order by s.received_kg desc nulls last`:Promise.resolve([])
     ])
     return res.status(200).json({ok:true,plants:Array.isArray(rows)?rows:[],historicalPlants:Array.isArray(historicalRows)?historicalRows:[]})
   }catch{return res.status(500).json({ok:false,error:'No fue posible calcular desempeño por planta'})}
