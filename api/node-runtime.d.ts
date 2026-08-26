@@ -4,7 +4,7 @@ declare module "node:crypto" {
   };
 
   export function createHash(algorithm: string): {
-    update(data: string): {
+    update(data: string | Uint8Array): {
       digest(encoding: "hex"): string;
     };
   };
@@ -15,7 +15,11 @@ declare module "node:crypto" {
 }
 
 declare const Buffer: {
-  from(value: string, encoding: "hex"): Uint8Array;
+  from(value: string, encoding: "hex" | "base64"): any;
+};
+
+declare const console: {
+  error(...args: unknown[]): void;
 };
 
 declare class URL {

@@ -1,5 +1,5 @@
 import { AlertTriangle, CheckCircle2, Database, FileSpreadsheet, History, RotateCcw, ShieldCheck, Upload } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { PlantImportModal } from '../components/PlantImportModal'
 import { PageHeader } from '../components/PageHeader'
 import { usePlatformStatus } from '../hooks/usePlatformStatus'
@@ -10,8 +10,10 @@ import { plants as configuredPlants } from '../plants'
 type CanonicalSource={file_hash:string;file_name:string;source_kind:string;period_start:string|null;period_end:string|null;record_count:number|string;notes:string|null}
 type CanonicalRow={rows:number|string;flagged:number|string;guide_kg?:number|string;received_kg?:number|string;inflow_clp?:number|string;outflow_clp?:number|string;final_balance_clp?:number|string;amount_clp?:number|string;kg?:number|string;product_family?:string;pack_format?:string}
 type CanonicalStatus={sources?:CanonicalSource[];datasets?:{production?:CanonicalRow[];ledger?:CanonicalRow[];stock?:CanonicalRow[];transfers?:CanonicalRow[];packing?:CanonicalRow[]};error?:string}
+type CanonicalUploadResult={ok?:boolean;fileName?:string;fileHash?:string;result?:Record<string,number>;error?:string}
 const nf=new Intl.NumberFormat('es-CL',{maximumFractionDigits:1})
 const clp=new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0})
+const approvedNames=new Set(['planilla de produccion 2026.xlsx','CUENTA2.xlsx','packing pulpo pescamar 2026-2.xlsx'])
 
 export function Imports(){
   const [plants,setPlants]=useState<PlantState[]>(configuredPlants)
@@ -21,6 +23,9 @@ export function Imports(){
   const [loading,setLoading]=useState(true)
   const [error,setError]=useState('')
   const [reverting,setReverting]=useState('')
+  const [canonicalBusy,setCanonicalBusy]=useState(false)
+  const [canonicalResult,setCanonicalResult]=useState<CanonicalUploadResult|null>(null)
+  const canonicalInput=useRef<HTMLInputElement>(null)
   const {status,error:statusError}=usePlatformStatus()
 
   const load=async()=>{
@@ -47,6 +52,21 @@ export function Imports(){
     await load()
   }
 
+  const uploadCanonical=async(file:File)=>{
+    if(!approvedNames.has(file.name)){setCanonicalResult({ok:false,error:'El archivo no corresponde a una de las tres fuentes canónicas aprobadas.'});return}
+    if(file.size>15*1024*1024){setCanonicalResult({ok:false,error:'El archivo supera 15 MB.'});return}
+    setCanonicalBusy(true);setCanonicalResult(null);setError('')
+    try{
+      const base64=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onerror=()=>reject(new Error('No fue posible leer el archivo'));reader.onload=()=>resolve(String(reader.result??''));reader.readAsDataURL(file)})
+      const response=await fetch('/api/canonical-upload',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fileName:file.name,base64})})
+      const payload=await response.json() as CanonicalUploadResult
+      if(!response.ok)throw new Error(payload.error??'No fue posible publicar la fuente canónica')
+      setCanonicalResult(payload)
+      await load()
+    }catch(cause){setCanonicalResult({ok:false,error:cause instanceof Error?cause.message:'No fue posible publicar la fuente canónica'})}
+    finally{setCanonicalBusy(false);if(canonicalInput.current)canonicalInput.current.value=''}
+  }
+
   const latestActive=useMemo(()=>history.find(batch=>!batch.revertedAt),[history])
   const canonicalRows=useMemo(()=>Object.values(canonical?.datasets??{}).flat().reduce((sum,row)=>sum+Number(row.rows??0),0),[canonical])
   const flaggedRows=useMemo(()=>Object.values(canonical?.datasets??{}).flat().reduce((sum,row)=>sum+Number(row.flagged??0),0),[canonical])
@@ -70,7 +90,7 @@ export function Imports(){
       eyebrow="Gobierno de datos"
       title="Importar planilla"
       description="Carga planillas operacionales y controla las fuentes canónicas que alimentan producción, stock, packing y finanzas sin escribir directamente sobre transacciones live."
-      actions={<button className="button primary" onClick={()=>setOpen(true)}><Upload size={16}/>Importar XLSX o CSV</button>}
+      actions={<button className="button primary" onClick={()=>setOpen(true)}><Upload size={16}/>Importar operacional</button>}
     />
 
     <section className="platform-strip">
@@ -90,16 +110,27 @@ export function Imports(){
     </section>
 
     <section className="panel import-history">
-      <header className="panel-header"><div><span className="overline">Fuentes canónicas</span><h2>Registro de evidencia</h2></div><span>{canonicalRows?`${nf.format(canonicalRows)} filas staging`:'Pendiente de publicación'}</span></header>
+      <header className="panel-header"><div><span className="overline">Fuentes canónicas</span><h2>Publicar evidencia 2026</h2></div><span>{canonicalRows?`${nf.format(canonicalRows)} filas staging`:'Pendiente de publicación'}</span></header>
+      <div className="import-layout canonical-upload-layout">
+        <article className="import-upload">
+          <input ref={canonicalInput} type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden onChange={event=>{const file=event.target.files?.[0];if(file)void uploadCanonical(file)}}/>
+          <button className="file-drop" disabled={canonicalBusy} onClick={()=>canonicalInput.current?.click()}><Upload size={28}/><b>{canonicalBusy?'Validando y publicando…':'Seleccionar XLSX canónico'}</b><small>Se acepta sólo uno de los tres archivos aprobados y el SHA-256 debe coincidir exactamente</small></button>
+          {canonicalResult?<div className={`system-banner ${canonicalResult.ok?'':'error'}`}>{canonicalResult.ok?<><CheckCircle2 size={16}/><span><b>{canonicalResult.fileName}</b> publicado · {Object.entries(canonicalResult.result??{}).map(([key,value])=>`${key}: ${value}`).join(' · ')}</span></>:<><AlertTriangle size={16}/>{canonicalResult.error}</>}</div>:null}
+        </article>
+        <aside className="import-assignment">
+          <div className="governance-note"><ShieldCheck size={19}/><div><b>Promoción bloqueada</b><p>Esta acción sólo publica staging canónico. No crea recepciones, movimientos de inventario, ventas, liquidaciones ni pagos.</p></div></div>
+          <div className="import-contract"><Database/><div><b>Hash + hoja + fila</b><p>La evidencia es idempotente y conserva el valor original en cada registro para auditoría posterior.</p></div></div>
+        </aside>
+      </div>
       <div className="detail-alerts">{(canonical?.sources??[]).map(source=><div key={source.file_hash}>
-        <FileSpreadsheet size={17}/><span><b>{source.file_name}</b><small>{source.source_kind} · {Number(source.record_count)} filas declaradas · hash {source.file_hash.slice(0,10)}…</small></span><em>{canonicalRows?'CANON':'REGISTRADO'}</em>
+        <FileSpreadsheet size={17}/><span><b>{source.file_name}</b><small>{source.source_kind} · {Number(source.record_count)} filas declaradas · hash {source.file_hash.slice(0,10)}…</small></span><em>{datasetPublished(source.file_name,canonical)?'CANON':'REGISTRADO'}</em>
       </div>)}</div>
       {ledger?<div className="governance-note"><ShieldCheck size={19}/><div><b>Cuenta corriente preservada como staging</b><p>Entradas {clp.format(Number(ledger.inflow_clp??0))} · salidas {clp.format(Number(ledger.outflow_clp??0))} · saldo recalculado {clp.format(Number(ledger.final_balance_clp??0))}. No se interpreta aún como caja, deuda o saldo bancario.</p></div></div>:null}
     </section>
 
     <section className="import-layout">
       <article className="panel import-upload">
-        <div className="import-step"><span>01</span><div><h2>Seleccionar y validar</h2><p>Formatos admitidos: Excel `.xlsx` y CSV. Máximo 15 MB, 10.000 filas y 200 columnas. La fuente operacional existente sigue disponible para snapshots de planta.</p></div></div>
+        <div className="import-step"><span>01</span><div><h2>Snapshot operacional</h2><p>Este flujo permanece separado para planillas de estado por planta. Valida estructura y publica el estado compartido actual.</p></div></div>
         <button className="file-drop" onClick={()=>setOpen(true)}><Upload size={28}/><b>Seleccionar planilla operacional</b><small>La vista previa valida la estructura antes de publicar</small></button>
         <div className="governance-note"><ShieldCheck size={19}/><div><b>Canonical Intake separado</b><p>Los tres libros 2026 usan hash, hoja y fila como linaje. Su publicación ocurre primero en staging y nunca crea recepciones, ventas, inventario o liquidaciones por inferencia.</p></div></div>
       </article>
@@ -122,3 +153,5 @@ export function Imports(){
     <PlantImportModal open={open} plants={configuredPlants} onClose={()=>setOpen(false)} onPublish={publish}/>
   </>
 }
+
+function datasetPublished(fileName:string,status:CanonicalStatus|null){if(fileName==='planilla de produccion 2026.xlsx')return Number(status?.datasets?.production?.[0]?.rows??0)>0;if(fileName==='CUENTA2.xlsx')return Number(status?.datasets?.ledger?.[0]?.rows??0)>0||Number(status?.datasets?.stock?.[0]?.rows??0)>0;if(fileName==='packing pulpo pescamar 2026-2.xlsx')return (status?.datasets?.packing??[]).some(row=>Number(row.rows??0)>0);return false}
