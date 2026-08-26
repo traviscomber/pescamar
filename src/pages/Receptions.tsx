@@ -1,5 +1,6 @@
 import {ChevronRight,Search} from 'lucide-react'
-import {useDeferredValue,useMemo,useState} from 'react'
+import {useDeferredValue,useEffect,useMemo,useState} from 'react'
+import {useSearchParams} from 'react-router-dom'
 import {canCreateReception} from '../access'
 import {useAuth} from '../auth'
 import {DataContinuityBanner} from '../components/DataContinuityBanner'
@@ -14,11 +15,14 @@ const date=(value:string|null)=>value?new Intl.DateTimeFormat('es-CL',{day:'2-di
 export function Receptions({lots,onNew}:{lots:Lot[];onNew:()=>void}){
   const {operator}=useAuth()
   const {records:history,summary,error:historyError,openRecord,openLive}=useLot360()
+  const [params]=useSearchParams()
+  const requestedReceptionId=params.get('receptionId')
   const [query,setQuery]=useState('')
   const deferred=useDeferredValue(query.toLowerCase())
   const filtered=lots.filter(l=>`${l.id} ${l.supplier} ${l.zone}`.toLowerCase().includes(deferred))
   const historicalFiltered=useMemo(()=>history.filter(item=>`${item.lot_code} ${item.supplier_name??item.supplier_original??''} ${item.guide_number??''} ${item.extraction_zone??''} ${item.process_site_original??''}`.toLowerCase().includes(deferred)),[history,deferred])
   const mayCreate=operator?canCreateReception(operator.role):false
+  useEffect(()=>{if(requestedReceptionId&&lots.some(l=>l.receptionId===requestedReceptionId))openLive(requestedReceptionId)},[requestedReceptionId,lots,openLive])
 
   return <>
     <PageHeader eyebrow="Recepciones" title="Recepciones" description="La operación nueva continúa sobre la Base de Datos Pescamar 2025. Abre cualquier lote para ver el detalle completo en su Ficha 360." actions={mayCreate?<button className="button primary" onClick={onNew}>+ Nueva recepción</button>:undefined}/>
