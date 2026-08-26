@@ -177,7 +177,7 @@ export function LoginScreen() {
             />
           </label>
           {error ? <p className="form-error" role="alert" aria-live="polite">{error}</p> : null}
-          <button className="button primary" type="submit" disabled={submitting || !email || password.length < 8}>
+          <button className="button primary" type="submit" disabled={submitting}>
             {submitting ? "Validando…" : "Entrar"}
           </button>
         </form>
