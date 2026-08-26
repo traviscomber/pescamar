@@ -1,11 +1,12 @@
-import {ArrowRight,Boxes,CircleDollarSign,ClipboardList,MessageCircleMore,ReceiptText} from 'lucide-react'
+import {ArrowRight,Boxes,CircleDollarSign,ClipboardList,FlaskConical,MessageCircleMore,ReceiptText} from 'lucide-react'
 import {Link,useSearchParams} from 'react-router-dom'
 import {canAccessPath} from '../access'
 import {useAuth} from '../auth'
 
-type Props={current:'orders'|'inventory'|'costs'|'settlements'|'communications';receptionId?:string|null;label?:string|null;detail?:string|null}
+type Props={current:'orders'|'inventory'|'costs'|'settlements'|'communications'|'erizo';receptionId?:string|null;label?:string|null;detail?:string|null}
 const modules=[
   {id:'orders',label:'Órdenes',path:'/ordenes-venta',icon:ClipboardList},
+  {id:'erizo',label:'Proceso erizo',path:'/proceso-erizo',icon:FlaskConical},
   {id:'inventory',label:'Inventario',path:'/inventario',icon:Boxes},
   {id:'costs',label:'Costos',path:'/costos-transformacion',icon:CircleDollarSign},
   {id:'settlements',label:'Liquidación',path:'/liquidaciones',icon:ReceiptText},
