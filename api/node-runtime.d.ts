@@ -14,7 +14,7 @@ declare module "node:crypto" {
   export function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean;
 }
 
-type RuntimeBuffer = import("buffer").Buffer;
+type RuntimeBuffer = import("exceljs").Buffer;
 declare const Buffer: {
   from(value: string, encoding: "hex" | "base64"): RuntimeBuffer;
 };
