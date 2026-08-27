@@ -34,6 +34,19 @@ const intelligence={
  exceptions:[{severity:'warning',kind:'consistencia-masa',title:'100 filas requieren reconciliar salidas reportadas',detail:'La suma de categorías de producto supera los kilos recibidos en esas filas. Se conserva como evidencia, pero no se usa como rendimiento oficial.'}]
 }
 
+const categoryMix={
+ ok:true,method:{version:'canonical-category-mix-v1',rule:'Sólo suma categorías A1, A2, Vj100, Vj50, C1, C2, D, PT y R en filas donde esa suma no supera los kg recibidos. Las filas no reconciliadas se excluyen del mix y no se transforman en rendimiento ni Supplier Score.'},
+ summary:{rows:224,eligibleRows:121,excludedRows:100,missingOutputRows:3,reconciledCategoryKg:19384.2},
+ categories:[
+  {label:'Vj100',kg:9249.6,sharePct:47.7},{label:'A1',kg:5226.8,sharePct:27},{label:'C1',kg:2440,sharePct:12.6},{label:'R',kg:1213.8,sharePct:6.3},{label:'Vj50',kg:1072.5,sharePct:5.5},{label:'PT',kg:158.5,sharePct:.8},{label:'D',kg:23,sharePct:.1}
+ ],
+ suppliers:[
+  {supplier:'Patricio Diaz',rows:92,receivedKg:16401.4,massReviewRows:41,eligibleRows:50,massReconciledPct:55.4,reconciledCategoryKg:7610.8},
+  {supplier:'Eugenio Mardones',rows:50,receivedKg:12282,massReviewRows:49,eligibleRows:0,massReconciledPct:2,reconciledCategoryKg:0},
+  {supplier:'Gladys Mansilla',rows:43,receivedKg:11591,massReviewRows:0,eligibleRows:42,massReconciledPct:100,reconciledCategoryKg:6986}
+ ]
+}
+
 async function mockApp(page:Page,role:'admin'|'quality'='admin'){
  await page.route('**/api/**',async route=>{
   const path=new URL(route.request().url()).pathname
@@ -41,6 +54,7 @@ async function mockApp(page:Page,role:'admin'|'quality'='admin'){
   if(path==='/api/receptions')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({receptions:[]})})
   if(path==='/api/status')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,platform:'vercel-functions',environment:'test',persistence:{database:true,files:true},metrics:{pendingDecisions:0,pendingCredits:0,activeOperators:1,receptions:0},commit:'qa',checkedAt:new Date().toISOString()})})
   if(path==='/api/pescamar-intelligence')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(role==='quality'?{...intelligence,finance:null}:intelligence)})
+  if(path==='/api/canonical-category-mix')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(categoryMix)})
   return route.fulfill({status:200,contentType:'application/json',body:'{}'})
  })
 }
@@ -62,6 +76,12 @@ test('canonical intelligence renders uploaded-source KPIs without inventing yiel
  await expect(page.getByRole('heading',{name:'Formato y estabilidad de caja'})).toBeVisible()
  await expect(page.getByRole('cell',{name:'BLOQUE'})).toBeVisible()
  await expect(page.getByRole('cell',{name:'IQF'})).toBeVisible()
+ await expect(page.getByRole('heading',{name:'Mix de categorías reconciliadas'})).toBeVisible()
+ await expect(page.getByText('121').first()).toBeVisible()
+ await expect(page.getByText('19.384,2 kg')).toBeVisible()
+ await expect(page.getByRole('cell',{name:'Vj100'})).toBeVisible()
+ await expect(page.getByRole('cell',{name:'47,7%'})).toBeVisible()
+ await expect(page.getByText('Eugenio Mardones')).toBeVisible()
  await expect(page.getByText('100 filas requieren reconciliar salidas reportadas')).toBeVisible()
  await expect(page.getByText(/Saldo reconstruido del archivo/)).toBeVisible()
  await expect(page.getByText(/87,6% rendimiento/)).toHaveCount(0)
