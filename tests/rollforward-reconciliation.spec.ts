@@ -29,7 +29,7 @@ async function mockApp(page:Page,role:'admin'|'quality'='admin',resolutions:Reso
   if(path==='/api/rollforward-resolutions')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,status:'ready',resolutions})})
   if(path==='/api/rollforward-resolution')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,writesLive:false})})
   if(path==='/api/production-support-import')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,blocks:89,rows:332,flagged:23})})
-  if(path==='/api/pescamar-intelligence')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,sources:{count:0,files:[]},production:{rows:0,guideKg:0,receivedKg:0,receptionPct:null,rowMassBalanceRows:0,rollforwardRows:110},suppliers:[],packing:[],packingSummary:{boxes:0,kg:0,lots:0,flagged:0},stock:[],finance:null,dataQuality:{totalRows:0,totalFlagged:0,flaggedPct:null,rowMassBalanceRows:110,massInconsistentRows:0},exceptions:[]})})
+  if(path==='/api/pescamar-intelligence')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,sources:{count:0,files:[]},production:{rows:0,guideKg:0,receivedKg:0,receptionPct:null,rowMassBalanceRows:0,rollforwardRows:110},suppliers:[],packing:[],packingSummary:{boxes:0,kg:0,lots:0,flagged:0},stock:[],finance:null,dataQuality:{totalRows:0,totalFlagged:0,flaggedPct:null,rowMassBalanceRows:0,rollforwardRows:110,massInconsistentRows:0},exceptions:[]})})
   if(path==='/api/canonical-category-mix')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,method:{version:'canonical-category-mix-v1.2-rollforward-semantics',rule:'test'},summary:{rows:0,rowMassBalanceRows:0,rollforwardRows:110,eligibleRows:0,massReviewRows:0,missingOutputRows:0,reconciledCategoryKg:0},categories:[],suppliers:[],sites:[]})})
   return route.fulfill({status:200,contentType:'application/json',body:'{}'})
  })
@@ -67,7 +67,10 @@ test('quality sees effective coverage after an audited human resolution',async({
  await expect(queue.getByText('3/3 bloques enlazados tras revisión',{exact:true})).toBeVisible()
  await expect(queue.getByText('3/110 filas roll-forward cubiertas',{exact:true})).toBeVisible()
  await expect(queue.getByText('1 vinculados · 0 sin vínculo · 0 pospuestos',{exact:true})).toBeVisible()
- await expect(queue.getByText('Guía física verificada por Calidad',{exact:true})).toBeVisible()
+ const closed=queue.locator('details').filter({hasText:'Decisiones cerradas'}).first()
+ await expect(closed).toBeAttached()
+ await closed.evaluate(element=>element.setAttribute('open',''))
+ await expect(closed.getByText('Guía física verificada por Calidad',{exact:true})).toBeVisible()
 })
 
 test('admin can republish exact canonical workbook into support staging',async({page})=>{
