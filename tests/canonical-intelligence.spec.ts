@@ -81,7 +81,7 @@ test('canonical intelligence distinguishes roll-forward capture without inventin
  await expect(page.getByText('Conciliar 110 filas roll-forward por lote',{exact:true})).toBeVisible()
  await expect(page.getByText('Completar precio en 183 registros',{exact:true})).toBeVisible()
  await expect(page.getByRole('heading',{name:'Mix de categorías comparables'})).toBeVisible()
- await expect(page.getByText('18.244,9 kg',{exact:true})).toBeVisible()
+ await expect(page.locator('b').filter({hasText:'18.244,9 kg'}).first()).toBeVisible()
  await expect(page.getByRole('cell',{name:'Vj100'})).toBeVisible()
  await expect(page.getByRole('cell',{name:'46,8%'})).toBeVisible()
  await expect(page.getByText('Eugenio Mardones',{exact:true})).toBeVisible()
