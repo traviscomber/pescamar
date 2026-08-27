@@ -19,7 +19,7 @@ test('erizo mobile station exposes camera and analyzes an uploaded photo',async(
     if(path==='/api/sea-urchin-color'&&route.request().method()==='POST'){
       const body=route.request().postDataJSON() as {action?:string;sourceImageSha256?:string}
       if(body.action==='capture')submittedSourceHash=body.sourceImageSha256??''
-      return route.fulfill({status:201,contentType:'application/json',body:JSON.stringify({ok:true,capture:{id:'33333333-3333-4333-8333-333333333333',evidence_file_id:'44444444-4444-4444-8444-444444444444',l_mean:55,a_mean:16,b_mean:52,l_std:4,a_std:3,b_std:5,chroma:54,hue_deg:73,suggested_grade:null,delta_e:null,operator_grade:null,decision:'pending',created_at:new Date().toISOString()},evidenceUrl:'/api/reception-evidence-file?id=44444444-4444-4444-8444-444444444444'})
+      return route.fulfill({status:201,contentType:'application/json',body:JSON.stringify({ok:true,capture:{id:'33333333-3333-4333-8333-333333333333',evidence_file_id:'44444444-4444-4444-8444-444444444444',l_mean:55,a_mean:16,b_mean:52,l_std:4,a_std:3,b_std:5,chroma:54,hue_deg:73,suggested_grade:null,delta_e:null,operator_grade:null,decision:'pending',created_at:new Date().toISOString()},evidenceUrl:'/api/reception-evidence-file?id=44444444-4444-4444-8444-444444444444'})})
     }
     return route.fulfill({status:200,contentType:'application/json',body:'{}'})
   })
