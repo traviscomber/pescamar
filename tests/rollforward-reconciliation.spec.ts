@@ -1,6 +1,7 @@
 import {expect,test,type Page} from '@playwright/test'
 
-type ResolutionMock={sheet_name:string;source_block:number;selected_main_source_row:number|null;resolution_status:'linked'|'unmatched'|'deferred';resolution_basis:string;review_note:string|null;reviewed_at:string;reviewed_by:string}
+type CandidateSnapshotMock={version:string;support:{sheetName:string;sourceBlock:number;familyKey:string;supplier:string;guide:string|null;lotReference:string|null};guideCandidates:Array<{sourceRow:number;eventDate:string|null;guide:string|null;lot:string|null;supplier:string;site:string;guideKg:number|null;receivedKg:number|null;guideMatch:boolean;lotMatch:boolean}>;lotCandidates:Array<{sourceRow:number;eventDate:string|null;guide:string|null;lot:string|null;supplier:string;site:string;guideKg:number|null;receivedKg:number|null;guideMatch:boolean;lotMatch:boolean}>;selected:{sourceRow:number;eventDate:string|null;guide:string|null;lot:string|null;supplier:string;site:string;guideKg:number|null;receivedKg:number|null;guideMatch:boolean;lotMatch:boolean}|null}
+type ResolutionMock={sheet_name:string;source_block:number;selected_main_source_row:number|null;resolution_status:'linked'|'unmatched'|'deferred';resolution_basis:string;review_note:string|null;candidate_snapshot?:CandidateSnapshotMock;reviewed_at:string;reviewed_by:string}
 
 const rollforward={
  ok:true,
@@ -69,7 +70,8 @@ test('roll-forward workspace links support evidence and leaves contradictions fo
 })
 
 test('quality sees effective coverage after an audited human resolution',async({page})=>{
- await mockApp(page,'quality',[{sheet_name:'Isla Guafo',source_block:7,selected_main_source_row:7,resolution_status:'linked',resolution_basis:'guide',review_note:'Guía física verificada por Calidad',reviewed_at:'2026-08-27T22:00:00Z',reviewed_by:'QA quality'}])
+ const candidateSnapshot:CandidateSnapshotMock={version:'rollforward-resolution-snapshot-v2',support:{sheetName:'Isla Guafo',sourceBlock:7,familyKey:'IG',supplier:'Eugenio Mardones',guide:'3346',lotReference:'ig05'},guideCandidates:[{sourceRow:7,eventDate:'2026-04-08',guide:'3346',lot:'IG-04',supplier:'Eugenio Mardones',site:'Curanue',guideKg:400,receivedKg:390,guideMatch:true,lotMatch:false}],lotCandidates:[{sourceRow:8,eventDate:'2026-04-09',guide:'3347',lot:'IG-05',supplier:'Eugenio Mardones',site:'Curanue',guideKg:410,receivedKg:405.2,guideMatch:false,lotMatch:true}],selected:{sourceRow:7,eventDate:'2026-04-08',guide:'3346',lot:'IG-04',supplier:'Eugenio Mardones',site:'Curanue',guideKg:400,receivedKg:390,guideMatch:true,lotMatch:false}}
+ await mockApp(page,'quality',[{sheet_name:'Isla Guafo',source_block:7,selected_main_source_row:7,resolution_status:'linked',resolution_basis:'guide',review_note:'Guía física verificada por Calidad',candidate_snapshot:candidateSnapshot,reviewed_at:'2026-08-27T22:00:00Z',reviewed_by:'QA quality'}])
  await page.goto('/')
  const queue=page.getByRole('region',{name:'Revisión humana de conflictos roll-forward'})
  await expect(queue).toBeVisible()
@@ -81,6 +83,8 @@ test('quality sees effective coverage after an audited human resolution',async({
  const closed=queue.locator('details').filter({hasText:'Decisiones cerradas'}).first()
  await expect(closed).toBeAttached()
  await closed.evaluate(element=>element.setAttribute('open',''))
+ await expect(closed.getByText('Fila 7 · guía 3346 · lote IG-04 · Curanue · 390 kg recibidos',{exact:true})).toBeVisible()
+ await expect(closed.getByText('Comparados: guía [7] · lote [8]',{exact:true})).toBeVisible()
  await expect(closed.getByText('Guía física verificada por Calidad',{exact:true})).toBeVisible()
 })
 
