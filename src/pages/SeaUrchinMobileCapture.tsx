@@ -13,8 +13,8 @@ export function SeaUrchinMobileCapture(){
  useEffect(()=>{void load()},[runId])
  const run=data?.run??null
  return <>
-  <PageHeader eyebrow="Estación móvil" title="Erizo · Cámara de color" description="Captura rápida desde celular para medir color CIELAB y homogeneidad antes de confirmar Grade." actions={<div className="page-actions"><Link className="button secondary" to={run?`/proceso-erizo?receptionId=${encodeURIComponent(run.receptionId)}${run.plantId?`&plantId=${encodeURIComponent(run.plantId)}`:''}`:'/proceso-erizo'}><ChevronLeft size={15}/>Volver al proceso</Link></div>}/>
-  <div className="notice"><Camera size={16}/><div><b>Modo celular</b><small>Usa cámara trasera 1×, soporte fijo, luz blanca difusa y fondo neutro. Evita zoom digital y flash.</small></div></div>
+  <PageHeader eyebrow="Estación móvil" title="Erizo · Cámara o foto" description="Toma una foto con el celular o sube una imagen existente para medir color CIELAB y homogeneidad antes de confirmar Grade." actions={<div className="page-actions"><Link className="button secondary" to={run?`/proceso-erizo?receptionId=${encodeURIComponent(run.receptionId)}${run.plantId?`&plantId=${encodeURIComponent(run.plantId)}`:''}`:'/proceso-erizo'}><ChevronLeft size={15}/>Volver al proceso</Link></div>}/>
+  <div className="notice"><Camera size={16}/><div><b>Dos modos, mismo análisis</b><small>Cámara: usa trasera 1×, soporte fijo, luz blanca difusa y fondo neutro. Foto existente: sube JPG, PNG o WebP sin filtros ni edición de color.</small></div></div>
   {loading?<div className="system-banner">Abriendo estación móvil…</div>:null}
   {error?<div className="system-banner error" role="alert">{error}</div>:null}
   {run?<div className="notice"><ShieldCheck size={16}/><div><b>REC-{run.receptionNumber} · {run.supplier}</b><small>{run.plantId?`Planta ${run.plantId} · `:''}{run.grade?`Grade actual ${run.grade} · `:''}Color {run.colorStatus} · {run.status}</small></div></div>:null}
