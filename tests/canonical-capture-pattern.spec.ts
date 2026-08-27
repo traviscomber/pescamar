@@ -1,7 +1,7 @@
 import {expect,test,type Page} from '@playwright/test'
 
 const mix={
- ok:true,method:{version:'canonical-category-mix-v1.2-rollforward-semantics',rule:'La fuente 2026 usa captura directa y roll-forward por planta; las filas roll-forward no se convierten en inconsistencia del proveedor.'},
+ ok:true,method:{version:'canonical-category-mix-v1.2-rollforward-semantics',rule:'La fuente 2026 usa dos semánticas distintas. Filas Pescamar de captura directa pueden compararse fila a fila. Curanue/Isla Guafo (lotes IG), Santa Rosa (MDQ) y candelaria/Cesar (MI) usan hojas de seguimiento por grado/destino con arrastre entre lotes; sus columnas no se suman contra una sola recepción. Esas filas se conservan como evidencia roll-forward y no se marcan como inconsistencia del proveedor.'},
  summary:{rows:224,rowMassBalanceRows:114,rollforwardRows:110,eligibleRows:113,massReviewRows:0,missingOutputRows:1,reconciledCategoryKg:18244.9},
  categories:[{label:'Vj100',kg:8540.8,sharePct:46.8},{label:'A1',kg:5109.9,sharePct:28}],suppliers:[],
  sites:[
