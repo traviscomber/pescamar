@@ -1,7 +1,11 @@
 import {expect,test,type Page} from '@playwright/test'
 
 const intelligence={
- ok:true,sources:{count:3,files:[]},
+ ok:true,sources:{count:3,files:[
+  {fileName:'planilla de produccion 2026.xlsx',kind:'production',recordCount:224,periodStart:'2026-04-07',periodEnd:'2026-06-10',importedAt:'2026-08-26T00:00:00Z'},
+  {fileName:'CUENTA2.xlsx',kind:'account',recordCount:1094,periodStart:'2025-05-20',periodEnd:'2026-08-21',importedAt:'2026-08-26T00:00:00Z'},
+  {fileName:'packing pulpo pescamar 2026-2.xlsx',kind:'packing',recordCount:562,periodStart:'2026-08-05',periodEnd:'2026-08-24',importedAt:'2026-08-26T00:00:00Z'}
+ ]},
  production:{rows:224,guideKg:50959.7,receivedKg:49183.6,differenceKg:1776.1,receptionPct:96.5,flagged:2,pricedRows:41,priceCoveragePct:18.3,pricedValueClp:131276400,firstDate:'2026-04-07',lastDate:'2026-06-10',reportedOutputKg:43066.3,reportedOutputPct:87.6,massInconsistentRows:100,missingOutputRows:3,reportedOutputUsable:false},
  suppliers:[{supplier:'Patricio Diaz',rows:92,guideKg:17319,receivedKg:16401.4,receptionPct:94.7,reportedOutputKg:0,reportedOutputPct:null,massInconsistentRows:0,flagged:1,priceCoveragePct:20}],
  packing:[{format:'BLOQUE',boxes:446,kg:8920,lots:4,flagged:0,avgBoxKg:20,minBoxKg:20,maxBoxKg:20,boxStddevKg:0,firstDate:'2026-08-05',lastDate:'2026-08-24'},{format:'IQF',boxes:116,kg:2372,lots:0,flagged:116,avgBoxKg:20.45,minBoxKg:20.1,maxBoxKg:20.9,boxStddevKg:.2,firstDate:'2026-08-05',lastDate:'2026-08-24'}],
@@ -27,9 +31,13 @@ test('canonical intelligence renders uploaded-source KPIs without inventing yiel
  await mockApp(page,'admin')
  await page.goto('/')
  await expect(page.getByRole('heading',{name:'Resultado de la data subida'})).toBeVisible()
+ await expect(page.getByText('planilla de produccion 2026.xlsx',{exact:false})).toBeVisible()
  await expect(page.getByText('49.183,6 kg')).toBeVisible()
  await expect(page.getByText('11.292 kg')).toBeVisible()
  await expect(page.getByText('12.449,2 kg')).toBeVisible()
+ await expect(page.getByRole('heading',{name:'Formato y estabilidad de caja'})).toBeVisible()
+ await expect(page.getByRole('cell',{name:'BLOQUE'})).toBeVisible()
+ await expect(page.getByRole('cell',{name:'IQF'})).toBeVisible()
  await expect(page.getByText('100 filas requieren reconciliar salidas reportadas')).toBeVisible()
  await expect(page.getByText(/Saldo reconstruido del archivo/)).toBeVisible()
  await expect(page.getByText(/87,6% rendimiento/)).toHaveCount(0)
