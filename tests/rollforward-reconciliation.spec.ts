@@ -1,5 +1,7 @@
 import {expect,test,type Page} from '@playwright/test'
 
+type ResolutionMock={sheet_name:string;source_block:number;selected_main_source_row:number|null;resolution_status:'linked'|'unmatched'|'deferred';resolution_basis:string;review_note:string|null;reviewed_at:string;reviewed_by:string}
+
 const rollforward={
  ok:true,
  method:{version:'rollforward-linkage-v2-support-evidence',rule:'Las hojas auxiliares se vinculan sólo cuando guía y/o lote identifican una fila única sin contradicción. Kilos aceptados o destinados/RGA no se publican como rendimiento.'},
@@ -17,15 +19,17 @@ const rollforward={
  ]
 }
 
-async function mockApp(page:Page,role:'admin'|'quality'='admin'){
+async function mockApp(page:Page,role:'admin'|'quality'='admin',resolutions:ResolutionMock[]=[]){
  await page.route('**/api/**',async route=>{
   const path=new URL(route.request().url()).pathname
   if(path==='/api/auth')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,operator:{id:`qa-${role}`,fullName:`QA ${role}`,email:`${role}@example.test`,role,plantIds:['ancud']}})})
   if(path==='/api/status')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,platform:'vercel-functions',environment:'test',persistence:{database:true,files:true},metrics:{pendingDecisions:0,pendingCredits:0,activeOperators:1,receptions:0},commit:'qa',checkedAt:new Date().toISOString()})})
   if(path==='/api/receptions')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({receptions:[]})})
   if(path==='/api/rollforward-reconciliation')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(rollforward)})
+  if(path==='/api/rollforward-resolutions')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,status:'ready',resolutions})})
+  if(path==='/api/rollforward-resolution')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,writesLive:false})})
   if(path==='/api/production-support-import')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,blocks:89,rows:332,flagged:23})})
-  if(path==='/api/pescamar-intelligence')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,sources:{count:0,files:[]},production:{rows:0,guideKg:0,receivedKg:0,receptionPct:null,rowMassBalanceRows:0,rollforwardRows:110},suppliers:[],packing:[],packingSummary:{boxes:0,kg:0,lots:0,flagged:0},stock:[],finance:null,dataQuality:{totalRows:0,totalFlagged:0,flaggedPct:null,rowMassBalanceRows:0,rollforwardRows:110,massInconsistentRows:0},exceptions:[]})})
+  if(path==='/api/pescamar-intelligence')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,sources:{count:0,files:[]},production:{rows:0,guideKg:0,receivedKg:0,receptionPct:null,rowMassBalanceRows:0,rollforwardRows:110},suppliers:[],packing:[],packingSummary:{boxes:0,kg:0,lots:0,flagged:0},stock:[],finance:null,dataQuality:{totalRows:0,totalFlagged:0,flaggedPct:null,rowMassBalanceRows:110,massInconsistentRows:0},exceptions:[]})})
   if(path==='/api/canonical-category-mix')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,method:{version:'canonical-category-mix-v1.2-rollforward-semantics',rule:'test'},summary:{rows:0,rowMassBalanceRows:0,rollforwardRows:110,eligibleRows:0,massReviewRows:0,missingOutputRows:0,reconciledCategoryKg:0},categories:[],suppliers:[],sites:[]})})
   return route.fulfill({status:200,contentType:'application/json',body:'{}'})
  })
@@ -51,6 +55,19 @@ test('roll-forward workspace links support evidence and leaves contradictions fo
  await expect(page.getByText(/58,1% rendimiento/)).toHaveCount(0)
  expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
  await page.screenshot({path:testInfo.outputPath('rollforward-support-evidence.png'),fullPage:true})
+})
+
+test('quality sees effective coverage after an audited human resolution',async({page})=>{
+ await mockApp(page,'quality',[{sheet_name:'Isla Guafo',source_block:7,selected_main_source_row:7,resolution_status:'linked',resolution_basis:'guide',review_note:'Guía física verificada por Calidad',reviewed_at:'2026-08-27T22:00:00Z',reviewed_by:'QA quality'}])
+ await page.goto('/')
+ const queue=page.getByRole('region',{name:'Revisión humana de conflictos roll-forward'})
+ await expect(queue).toBeVisible()
+ await expect(queue.getByText('0 pendientes',{exact:true})).toBeVisible()
+ await expect(queue.getByText('100%',{exact:true})).toBeVisible()
+ await expect(queue.getByText('3/3 bloques enlazados tras revisión',{exact:true})).toBeVisible()
+ await expect(queue.getByText('3/110 filas roll-forward cubiertas',{exact:true})).toBeVisible()
+ await expect(queue.getByText('1 vinculados · 0 sin vínculo · 0 pospuestos',{exact:true})).toBeVisible()
+ await expect(queue.getByText('Guía física verificada por Calidad',{exact:true})).toBeVisible()
 })
 
 test('admin can republish exact canonical workbook into support staging',async({page})=>{
