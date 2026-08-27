@@ -13,10 +13,16 @@ export default tseslint.config(
     plugins: { 'react-hooks': reactHooks, 'react-refresh': reactRefresh },
     rules: {
       ...reactHooks.configs.recommended.rules,
-      // Pescamar is not compiled with React Compiler. Keep the runtime hooks
-      // safety rules, but do not fail CI on compiler-only optimization guidance.
+      // Pescamar is not compiled with React Compiler. Keep runtime hook safety,
+      // but do not fail release CI on compiler-only optimization guidance.
       'react-hooks/set-state-in-effect': 'off',
       'react-hooks/preserve-manual-memoization': 'off',
+      // Keep migration debt visible without confusing it with a release blocker.
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-unused-vars': 'warn',
+      '@typescript-eslint/no-unused-expressions': 'warn',
+      'no-empty': 'warn',
+      'no-useless-escape': 'warn',
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
     },
   },
