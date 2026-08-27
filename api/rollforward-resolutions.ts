@@ -16,10 +16,10 @@ export default async function handler(request:Request,response:Response){
      o.full_name reviewed_by
     from canonical_production_support_resolutions r
     join operators o on o.id=r.reviewed_by_operator_id
-    where r.parser_version='production-support-v1'
+    where r.parser_version='production-support-v2'
       and r.source_file_hash in(select file_hash from canonical_source_files where canonical and (source_kind='production' or file_name ilike '%produccion%'))
     order by r.reviewed_at desc`
-   return response.status(200).json({ok:true,status:'ready',resolutions:Array.isArray(rows)?rows:[]})
-  }catch(error){const message=error instanceof Error?error.message:'';if(message.includes('canonical_production_support_resolutions')||message.includes('42P01'))return response.status(200).json({ok:true,status:'migration_required',resolutions:[]});throw error}
+   return response.status(200).json({ok:true,status:'ready',parserVersion:'production-support-v2',resolutions:Array.isArray(rows)?rows:[]})
+  }catch(error){const message=error instanceof Error?error.message:'';if(message.includes('canonical_production_support_resolutions')||message.includes('42P01'))return response.status(200).json({ok:true,status:'migration_required',parserVersion:'production-support-v2',resolutions:[]});throw error}
  }catch(error){const message=error instanceof Error?error.message:'';return response.status(message.includes('DATABASE_URL')?503:500).json({ok:false,error:message.includes('DATABASE_URL')?'Base de datos no conectada':'No fue posible leer las resoluciones roll-forward'})}
 }

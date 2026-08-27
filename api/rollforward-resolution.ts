@@ -25,8 +25,8 @@ export default async function handler(request:Request,response:Response){
   if(reviewNote.length>1000)return response.status(400).json({ok:false,error:'La nota supera 1.000 caracteres'})
   const sql=getSql()
   const supportRaw=await sql`select source_file_hash,parser_version,family_key,supplier_name,guide_number,lot_reference
-   from canonical_production_support_rows
-   where parser_version='production-support-v1' and sheet_name=${sheetName} and source_block=${sourceBlock}
+   from canonical_production_support_blocks
+   where parser_version='production-support-v2' and sheet_name=${sheetName} and source_block=${sourceBlock}
     and source_file_hash in(select file_hash from canonical_source_files where canonical and (source_kind='production' or file_name ilike '%produccion%'))
    order by imported_at desc limit 1`
   const support=Array.isArray(supportRaw)?supportRaw[0] as Record<string,unknown>|undefined:undefined
@@ -53,11 +53,11 @@ export default async function handler(request:Request,response:Response){
    resolutionBasis=candidate.guideMatch&&candidate.lotMatch?'both':candidate.guideMatch?'guide':'lot'
    selectedSnapshot=snapshotCandidate(candidate.row,candidate.guideMatch,candidate.lotMatch)
   }
-  const snapshot={version:'rollforward-resolution-snapshot-v2',support:{sheetName,sourceBlock,familyKey,supplier,guide:supportGuide||null,lotReference:supportLot||null},guideCandidates:guideCandidates.map(row=>snapshotCandidate(row,true,lotCandidates.some(item=>Number(item.source_row)===Number(row.source_row)))),lotCandidates:lotCandidates.map(row=>snapshotCandidate(row,guideCandidates.some(item=>Number(item.source_row)===Number(row.source_row)),true)),selected:selectedSnapshot}
+  const snapshot={version:'rollforward-resolution-snapshot-v3',support:{sheetName,sourceBlock,familyKey,supplier,guide:supportGuide||null,lotReference:supportLot||null},guideCandidates:guideCandidates.map(row=>snapshotCandidate(row,true,lotCandidates.some(item=>Number(item.source_row)===Number(row.source_row)))),lotCandidates:lotCandidates.map(row=>snapshotCandidate(row,guideCandidates.some(item=>Number(item.source_row)===Number(row.source_row)),true)),selected:selectedSnapshot}
   const rows=await sql`insert into canonical_production_support_resolutions(source_file_hash,parser_version,sheet_name,source_block,selected_main_source_row,resolution_status,resolution_basis,review_note,candidate_snapshot,reviewed_by_operator_id,reviewed_at)
    values (${sourceFileHash},${parserVersion},${sheetName},${sourceBlock},${selectedMainSourceRow},${resolutionStatus},${resolutionBasis},${reviewNote||null},${JSON.stringify(snapshot)}::jsonb,${operator.id}::uuid,now())
    on conflict(source_file_hash,parser_version,sheet_name,source_block) do update set selected_main_source_row=excluded.selected_main_source_row,resolution_status=excluded.resolution_status,resolution_basis=excluded.resolution_basis,review_note=excluded.review_note,candidate_snapshot=excluded.candidate_snapshot,reviewed_by_operator_id=excluded.reviewed_by_operator_id,reviewed_at=now()
    returning selected_main_source_row,resolution_status,resolution_basis,review_note,candidate_snapshot,reviewed_at`
   return response.status(200).json({ok:true,sheetName,sourceBlock,resolution:Array.isArray(rows)?rows[0]:null,reviewedBy:{id:operator.id,fullName:operator.fullName},writesLive:false})
- }catch(error){console.error('rollforward_resolution_failed',error);const message=error instanceof Error?error.message:'';if(message.includes('canonical_production_support_resolutions')||message.includes('canonical_production_support_rows')||message.includes('42P01'))return response.status(503).json({ok:false,error:'Falta aplicar las migraciones 030/031 de conciliación roll-forward'});return response.status(message.includes('DATABASE_URL')?503:500).json({ok:false,error:message.includes('DATABASE_URL')?'Base de datos no conectada':'No fue posible guardar la resolución roll-forward'})}
+ }catch(error){console.error('rollforward_resolution_failed',error);const message=error instanceof Error?error.message:'';if(message.includes('canonical_production_support_resolutions')||message.includes('canonical_production_support_blocks')||message.includes('42P01'))return response.status(503).json({ok:false,error:'Falta aplicar las migraciones 031/032 de conciliación roll-forward'});return response.status(message.includes('DATABASE_URL')?503:500).json({ok:false,error:message.includes('DATABASE_URL')?'Base de datos no conectada':'No fue posible guardar la resolución roll-forward'})}
 }
