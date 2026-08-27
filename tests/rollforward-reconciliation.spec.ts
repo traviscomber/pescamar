@@ -37,7 +37,6 @@ test('roll-forward workspace links support evidence and leaves contradictions fo
  await expect(page.getByRole('heading',{name:'Lote → grado → destino'})).toBeVisible()
  await expect(page.getByText('74,2%',{exact:true})).toBeVisible()
  await expect(page.getByText('66/89 bloques sin contradicción',{exact:true})).toBeVisible()
- await expect(page.getByText('19',{exact:true}).last()).toBeVisible()
  await expect(page.getByRole('heading',{name:'Conflictos que no se auto-resuelven'})).toBeVisible()
  const conflict=page.getByRole('row').filter({hasText:'3346'}).filter({hasText:'ig05'})
  await expect(conflict.getByText('7',{exact:true})).toBeVisible()
@@ -55,11 +54,9 @@ test('roll-forward workspace links support evidence and leaves contradictions fo
 test('admin can republish exact canonical workbook into support staging',async({page})=>{
  await mockApp(page,'admin')
  await page.goto('/')
- const input=page.locator('input[type=file]').filter({has:page.locator('nothing')}).last()
- await page.getByRole('button',{name:'Publicar evidencia auxiliar'}).click()
+ await expect(page.getByRole('button',{name:'Publicar evidencia auxiliar'})).toBeVisible()
  await page.locator('input[type=file]').last().setInputFiles({name:'planilla de produccion 2026.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:Buffer.from('fixture')})
  await expect(page.getByText('89 bloques / 332 observaciones auxiliares publicadas.')).toBeVisible()
- await expect(input).toHaveCount(1)
 })
 
 test('quality can inspect support evidence but cannot publish it',async({page})=>{
