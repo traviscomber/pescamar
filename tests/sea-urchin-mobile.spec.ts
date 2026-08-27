@@ -3,10 +3,10 @@ import {expect,test} from '@playwright/test'
 
 const runId='11111111-1111-4111-8111-111111111111'
 const receptionId='22222222-2222-4222-8222-222222222222'
-const orangePng=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAALUlEQVR4nGO806PLQEvARFPTRy0YtWDUglELRi0YtWDUglELRi0YtWDUAioCAL1xAdXUvMl1AAAAAElFTkSuQmCC','base64')
-const orangeSha256=createHash('sha256').update(orangePng).digest('hex')
+const samplePng=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAxUlEQVR4nO3ZMQ6CQBBGYTBewt5zWnhOe4+xFjSW8yPu2w3v68nMcwkhsrbWlpld6AV+ZQDNAJoBNANoBtAMoF33XfZ+3I/dY3N7vtJL1vR1+k+rf4sysluow/bplCCgz/bprGpAz+2jidM/hUoB/X/++txznMDIDKAZQDOAZgDNAJoBNANoBtAMoBlAM4BWCtjxr/chKnPPcQILcQjFicEJ9Gyoz8puoT4N0ZT4E9Nm4m9koznNU2hYBtAMoBlAM4BmAO0DB2Ytc5YLS+UAAAAASUVORK5CYII=','base64')
+const sampleSha256=createHash('sha256').update(samplePng).digest('hex')
 
-test('erizo mobile station exposes camera and analyzes an uploaded photo',async({page},testInfo)=>{
+test('erizo mobile station segments roe and preserves uploaded source hash',async({page},testInfo)=>{
   let submittedSourceHash=''
   await page.route('**/api/**',async route=>{
     const url=new URL(route.request().url()),path=url.pathname
@@ -32,7 +32,9 @@ test('erizo mobile station exposes camera and analyzes an uploaded photo',async(
   await expect(page.getByText('REC-321 · Proveedor QA')).toBeVisible()
 
   const input=page.locator('input[type=file]')
-  await input.setInputFiles({name:'muestra-erizo.png',mimeType:'image/png',buffer:orangePng})
+  await input.setInputFiles({name:'muestra-erizo.png',mimeType:'image/png',buffer:samplePng})
+  await expect(page.getByText(/Segmentación automática/)).toBeVisible()
+  await expect(page.getByText(/roe aislado/)).toBeVisible()
   await expect(page.getByText('Luminosidad')).toBeVisible()
   await expect(page.getByText('verde ↔ rojo')).toBeVisible()
   await expect(page.getByText('azul ↔ amarillo')).toBeVisible()
@@ -40,7 +42,7 @@ test('erizo mobile station exposes camera and analyzes an uploaded photo',async(
   const save=page.getByRole('button',{name:'Guardar medición y evidencia'})
   await expect(save).toBeVisible()
   await save.click()
-  await expect.poll(()=>submittedSourceHash).toBe(orangeSha256)
+  await expect.poll(()=>submittedSourceHash).toBe(sampleSha256)
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
   await page.screenshot({path:testInfo.outputPath('erizo-camera-or-photo.png'),fullPage:true})
 })
