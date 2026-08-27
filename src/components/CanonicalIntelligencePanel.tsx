@@ -1,0 +1,44 @@
+import {AlertTriangle,ArrowRight,Boxes,Database,Landmark,Scale,ShieldCheck,Truck} from 'lucide-react'
+import {useCallback,useEffect,useMemo,useState} from 'react'
+import {Link} from 'react-router-dom'
+
+type Supplier={supplier:string;rows:number;guideKg:number;receivedKg:number;receptionPct:number|null;reportedOutputKg:number;reportedOutputPct:number|null;massInconsistentRows:number;flagged:number;priceCoveragePct:number|null}
+type Packing={format:string;boxes:number;kg:number;lots:number;flagged:number;avgBoxKg:number;minBoxKg:number;maxBoxKg:number;boxStddevKg:number|null;firstDate:string|null;lastDate:string|null}
+type Stock={productFamily:string;rows:number;observedNetKg:number;firstDate:string|null;lastDate:string|null;flagged:number}
+type Exception={severity:'warning'|'info';kind:string;title:string;detail:string}
+type Payload={
+ ok?:boolean;generatedAt?:string;sources?:{count:number;files:Array<{fileName:string;kind:string;recordCount:number;periodStart:string|null;periodEnd:string|null;importedAt:string|null}>};
+ production?:{rows:number;guideKg:number;receivedKg:number;differenceKg:number;receptionPct:number|null;flagged:number;pricedRows:number;priceCoveragePct:number|null;pricedValueClp:number;firstDate:string|null;lastDate:string|null;reportedOutputKg:number;reportedOutputPct:number|null;massInconsistentRows:number;missingOutputRows:number;reportedOutputUsable:boolean};
+ suppliers?:Supplier[];packing?:Packing[];packingSummary?:{boxes:number;kg:number;lots:number;flagged:number};stock?:Stock[];
+ finance?:null|{transfers:{rows:number;amountClp:number;flagged:number;firstDate:string|null;lastDate:string|null};ledger:{rows:number;inflowClp:number;outflowClp:number;balanceClp:number;flagged:number;firstDate:string|null;lastDate:string|null}};
+ dataQuality?:{totalRows:number;totalFlagged:number;flaggedPct:number|null;massInconsistentRows:number};exceptions?:Exception[];error?:string
+}
+const nf=new Intl.NumberFormat('es-CL',{maximumFractionDigits:1})
+const kg=(value:number)=>`${nf.format(value)} kg`
+const clp=(value:number)=>new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(value)
+const pct=(value:number|null|undefined)=>value==null?'—':`${nf.format(value)}%`
+
+export function CanonicalIntelligencePanel(){
+ const [data,setData]=useState<Payload|null>(null),[error,setError]=useState(''),[loading,setLoading]=useState(true)
+ const load=useCallback(async(silent=false)=>{if(!silent)setLoading(true);try{const response=await fetch('/api/pescamar-intelligence',{cache:'no-store'}),payload=await response.json() as Payload;if(!response.ok)throw new Error(payload.error??'No fue posible construir la inteligencia canónica');setData(payload);setError('')}catch(cause){setError(cause instanceof Error?cause.message:'No fue posible construir la inteligencia canónica')}finally{if(!silent)setLoading(false)}},[])
+ useEffect(()=>{void load();const refresh=()=>void load(true),onVisibility=()=>{if(document.visibilityState==='visible')refresh()},timer=window.setInterval(()=>{if(document.visibilityState==='visible')refresh()},60_000);window.addEventListener('pescamar:data-updated',refresh);window.addEventListener('focus',refresh);document.addEventListener('visibilitychange',onVisibility);return()=>{window.clearInterval(timer);window.removeEventListener('pescamar:data-updated',refresh);window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',onVisibility)}},[load])
+ const suppliers=useMemo(()=>data?.suppliers?.slice(0,6)??[],[data?.suppliers]),production=data?.production,packing=data?.packingSummary,quality=data?.dataQuality,stock=data?.stock??[],finance=data?.finance
+ const erizo=stock.find(item=>item.productFamily.toLowerCase()==='erizo'),pulpo=stock.find(item=>item.productFamily.toLowerCase()==='pulpo')
+ if(loading&&!data)return <section className="panel"><div className="empty-inline"><Database size={20}/><div><b>Calculando inteligencia canónica</b><small>Cruzando producción, packing, stock y evidencia financiera.</small></div></div></section>
+ if(error&&!data)return <section className="panel"><div className="notice error">{error}</div></section>
+ if(!data)return null
+ return <section className="panel" aria-label="Inteligencia canónica Pescamar" aria-live="polite">
+  <div className="section-heading"><div><span className="overline">Base de Datos Pescamar · fuentes canónicas</span><h2>Resultado de la data subida</h2><p className="source-note">Indicadores calculados desde evidencia importada. Un dato con cobertura incompleta o inconsistencia física se muestra como tal y no se convierte silenciosamente en rendimiento o margen.</p></div><span>{data.sources?.count??0} fuentes</span></div>
+  <div className="signal-grid">
+   <article className="signal-card"><span><Scale size={16}/>Recepción canónica</span><b>{kg(production?.receivedKg??0)}</b><small>{pct(production?.receptionPct)} de kilos guía · {production?.rows??0} registros</small></article>
+   <article className="signal-card"><span><Boxes size={16}/>Packing pulpo</span><b>{kg(packing?.kg??0)}</b><small>{packing?.boxes??0} cajas · {packing?.lots??0} referencias de lote identificadas</small></article>
+   <article className="signal-card"><span><Truck size={16}/>Stock / movimientos</span><b>{erizo?kg(erizo.observedNetKg):'—'}</b><small>Erizo neto observado · Pulpo {pulpo?kg(pulpo.observedNetKg):'—'} registrado</small></article>
+   <article className={`signal-card ${(quality?.totalFlagged??0)>0?'attention':''}`}><span><ShieldCheck size={16}/>Calidad de datos</span><b>{quality?.totalFlagged??0}</b><small>{pct(quality?.flaggedPct)} filas con observación · {quality?.massInconsistentRows??0} inconsistencias de masa</small></article>
+  </div>
+  {finance?<div className="signal-grid"><article className="signal-card"><span><Landmark size={16}/>Entradas cuenta</span><b>{clp(finance.ledger.inflowClp)}</b><small>{finance.ledger.rows} movimientos reconstruidos desde CUENTA2</small></article><article className="signal-card"><span><Landmark size={16}/>Salidas cuenta</span><b>{clp(finance.ledger.outflowClp)}</b><small>Saldo reconstruido del archivo: {clp(finance.ledger.balanceClp)}</small></article><article className="signal-card"><span><Landmark size={16}/>Transferencias recibidas</span><b>{clp(finance.transfers.amountClp)}</b><small>{finance.transfers.rows} registros canónicos</small></article></div>:null}
+  <div className="section-heading"><div><span className="overline">Proveedores</span><h3>Volumen y cumplimiento de recepción</h3></div><Link className="source-link compact" to="/proveedores-clientes">Abrir Supplier Score <ArrowRight size={14}/></Link></div>
+  {suppliers.length?<div className="table-scroll"><table className="data-table"><thead><tr><th>Proveedor</th><th className="numeric">Lotes</th><th className="numeric">Recibido</th><th className="numeric">Vs. guía</th><th className="numeric">Cobertura precio</th><th className="numeric">Revisión masa</th></tr></thead><tbody>{suppliers.map(item=><tr key={item.supplier}><td><b>{item.supplier}</b></td><td className="numeric">{item.rows}</td><td className="numeric">{kg(item.receivedKg)}</td><td className={`numeric ${item.receptionPct!=null&&item.receptionPct<95?'negative':''}`}>{pct(item.receptionPct)}</td><td className="numeric">{pct(item.priceCoveragePct)}</td><td className={`numeric ${item.massInconsistentRows?'negative':''}`}>{item.massInconsistentRows}</td></tr>)}</tbody></table></div>:<div className="empty-inline"><Database size={20}/><div><b>Sin producción canónica</b><small>No hay filas elegibles para resumir por proveedor.</small></div></div>}
+  {(data.exceptions?.length??0)>0?<div className="alert-list">{data.exceptions?.slice(0,6).map((item,index)=><div className="alert-row static" key={`${item.kind}-${index}`}><span className={`alert-icon ${item.severity}`}><AlertTriangle size={16}/></span><div><b>{item.title}</b><small>{item.detail}</small></div><span/></div>)}</div>:<div className="empty-inline"><ShieldCheck size={20}/><div><b>Sin excepciones canónicas abiertas</b><small>La evidencia disponible no activa reglas de revisión.</small></div></div>}
+  {error?<div className="notice error">{error}</div>:null}
+ </section>
+}
