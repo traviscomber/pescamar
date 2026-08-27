@@ -18,6 +18,7 @@ export default async function handler(request:Request,response:Response){
     with raw as (
       select coalesce(nullif(btrim(h.supplier_name),''),nullif(btrim(h.supplier_original),''),'Sin proveedor') supplier,
         coalesce(nullif(btrim(h.process_site_original),''),nullif(btrim(h.plant_id),''),'Sin planta') process_site,
+        coalesce(nullif(btrim(h.lot_code),''),'') lot_code,
         coalesce(h.received_kg,0) received_kg,
         coalesce((h.grade_breakdown->'A1'->>'kg')::numeric,0) a1_kg,
         coalesce((h.grade_breakdown->'A2'->>'kg')::numeric,0) a2_kg,
@@ -34,43 +35,60 @@ export default async function handler(request:Request,response:Response){
       )
     ), measured as (
       select *,a1_kg+a2_kg+vj100_kg+vj50_kg+c1_kg+c2_kg+d_kg+pt_kg+r_kg category_kg from raw
+    ), semantic as (
+      select *,case
+        when lower(process_site) in ('curanue','santa rosa','candelaria')
+          or lower(lot_code) like 'ig%'
+          or lower(lot_code) like 'mdq%'
+          or lower(lot_code) like 'mi%'
+        then 'cross_lot_rollforward'
+        else 'row_mass_balance'
+      end capture_mode from measured
     ), classified as (
-      select *,received_kg>0 and category_kg>received_kg mass_review from measured
+      select *,capture_mode='row_mass_balance' and received_kg>0 and category_kg>received_kg mass_review from semantic
     )`
   const [summaryRaw,supplierRaw,siteRaw]=await Promise.all([
    sql.query(`${baseSql}
-    select count(*)::int rows,count(*) filter(where not mass_review and category_kg>0)::int eligible_rows,
-      count(*) filter(where mass_review)::int excluded_rows,count(*) filter(where category_kg=0)::int missing_output_rows,
-      coalesce(sum(category_kg) filter(where not mass_review),0)::numeric reconciled_category_kg,
-      coalesce(sum(a1_kg) filter(where not mass_review),0)::numeric a1_kg,
-      coalesce(sum(a2_kg) filter(where not mass_review),0)::numeric a2_kg,
-      coalesce(sum(vj100_kg) filter(where not mass_review),0)::numeric vj100_kg,
-      coalesce(sum(vj50_kg) filter(where not mass_review),0)::numeric vj50_kg,
-      coalesce(sum(c1_kg) filter(where not mass_review),0)::numeric c1_kg,
-      coalesce(sum(c2_kg) filter(where not mass_review),0)::numeric c2_kg,
-      coalesce(sum(d_kg) filter(where not mass_review),0)::numeric d_kg,
-      coalesce(sum(pt_kg) filter(where not mass_review),0)::numeric pt_kg,
-      coalesce(sum(r_kg) filter(where not mass_review),0)::numeric r_kg
+    select count(*)::int rows,
+      count(*) filter(where capture_mode='row_mass_balance')::int row_mass_balance_rows,
+      count(*) filter(where capture_mode='cross_lot_rollforward')::int rollforward_rows,
+      count(*) filter(where capture_mode='row_mass_balance' and not mass_review and category_kg>0)::int eligible_rows,
+      count(*) filter(where mass_review)::int mass_review_rows,
+      count(*) filter(where capture_mode='row_mass_balance' and category_kg=0)::int missing_output_rows,
+      coalesce(sum(category_kg) filter(where capture_mode='row_mass_balance' and not mass_review),0)::numeric reconciled_category_kg,
+      coalesce(sum(a1_kg) filter(where capture_mode='row_mass_balance' and not mass_review),0)::numeric a1_kg,
+      coalesce(sum(a2_kg) filter(where capture_mode='row_mass_balance' and not mass_review),0)::numeric a2_kg,
+      coalesce(sum(vj100_kg) filter(where capture_mode='row_mass_balance' and not mass_review),0)::numeric vj100_kg,
+      coalesce(sum(vj50_kg) filter(where capture_mode='row_mass_balance' and not mass_review),0)::numeric vj50_kg,
+      coalesce(sum(c1_kg) filter(where capture_mode='row_mass_balance' and not mass_review),0)::numeric c1_kg,
+      coalesce(sum(c2_kg) filter(where capture_mode='row_mass_balance' and not mass_review),0)::numeric c2_kg,
+      coalesce(sum(d_kg) filter(where capture_mode='row_mass_balance' and not mass_review),0)::numeric d_kg,
+      coalesce(sum(pt_kg) filter(where capture_mode='row_mass_balance' and not mass_review),0)::numeric pt_kg,
+      coalesce(sum(r_kg) filter(where capture_mode='row_mass_balance' and not mass_review),0)::numeric r_kg
     from classified`,[]),
    sql.query(`${baseSql}
     select supplier,count(*)::int rows,coalesce(sum(received_kg),0)::numeric received_kg,
+      count(*) filter(where capture_mode='row_mass_balance')::int row_mass_balance_rows,
+      count(*) filter(where capture_mode='cross_lot_rollforward')::int rollforward_rows,
       count(*) filter(where mass_review)::int mass_review_rows,
-      count(*) filter(where not mass_review and category_kg>0)::int eligible_rows,
-      coalesce(sum(category_kg) filter(where not mass_review),0)::numeric reconciled_category_kg
+      count(*) filter(where capture_mode='row_mass_balance' and not mass_review and category_kg>0)::int eligible_rows,
+      coalesce(sum(category_kg) filter(where capture_mode='row_mass_balance' and not mass_review),0)::numeric reconciled_category_kg
     from classified group by supplier order by received_kg desc`,[]),
    sql.query(`${baseSql}
     select process_site,count(*)::int rows,coalesce(sum(received_kg),0)::numeric received_kg,
+      count(*) filter(where capture_mode='row_mass_balance')::int row_mass_balance_rows,
+      count(*) filter(where capture_mode='cross_lot_rollforward')::int rollforward_rows,
       count(*) filter(where mass_review)::int mass_review_rows,
-      count(*) filter(where not mass_review and category_kg>0)::int eligible_rows,
-      coalesce(sum(category_kg) filter(where not mass_review),0)::numeric reconciled_category_kg
+      count(*) filter(where capture_mode='row_mass_balance' and not mass_review and category_kg>0)::int eligible_rows,
+      coalesce(sum(category_kg) filter(where capture_mode='row_mass_balance' and not mass_review),0)::numeric reconciled_category_kg
     from classified group by process_site order by rows desc`,[])
   ])
   const raw=(Array.isArray(summaryRaw)?summaryRaw[0]:null) as Record<string,unknown>|null
   const totalKg=n(raw?.reconciled_category_kg)
   const categories=CATEGORIES.map(([label,key])=>{const value=n(raw?.[key]);return {label,kg:value,sharePct:pct(value,totalKg)}}).filter(item=>item.kg>0)
-  const shape=(item:unknown,labelKey:'supplier'|'process_site')=>{const row=item as Record<string,unknown>,rows=n(row.rows),massReviewRows=n(row.mass_review_rows);return {name:String(row[labelKey]??(labelKey==='supplier'?'Sin proveedor':'Sin planta')),rows,receivedKg:n(row.received_kg),massReviewRows,eligibleRows:n(row.eligible_rows),massReconciledPct:rows?Number(((rows-massReviewRows)/rows*100).toFixed(1)):null,reconciledCategoryKg:n(row.reconciled_category_kg)}}
-  const suppliers=(Array.isArray(supplierRaw)?supplierRaw:[]).map(item=>{const row=shape(item,'supplier');return {supplier:row.name,rows:row.rows,receivedKg:row.receivedKg,massReviewRows:row.massReviewRows,eligibleRows:row.eligibleRows,massReconciledPct:row.massReconciledPct,reconciledCategoryKg:row.reconciledCategoryKg}})
-  const sites=(Array.isArray(siteRaw)?siteRaw:[]).map(item=>{const row=shape(item,'process_site');return {site:row.name,rows:row.rows,receivedKg:row.receivedKg,massReviewRows:row.massReviewRows,eligibleRows:row.eligibleRows,massReconciledPct:row.massReconciledPct,reconciledCategoryKg:row.reconciledCategoryKg}})
-  return response.status(200).json({ok:true,method:{version:'canonical-category-mix-v1.1-capture-pattern',rule:'Sólo suma categorías A1, A2, Vj100, Vj50, C1, C2, D, PT y R en filas donde esa suma no supera los kg recibidos. Las filas no reconciliadas se excluyen del mix y no se transforman en rendimiento ni Supplier Score. La distribución por planta se muestra para detectar diferencias de captura antes de atribuirlas al proveedor.'},summary:{rows:n(raw?.rows),eligibleRows:n(raw?.eligible_rows),excludedRows:n(raw?.excluded_rows),missingOutputRows:n(raw?.missing_output_rows),reconciledCategoryKg:totalKg},categories,suppliers,sites})
+  const shape=(item:unknown,labelKey:'supplier'|'process_site')=>{const row=item as Record<string,unknown>,rows=n(row.rows),rowMassBalanceRows=n(row.row_mass_balance_rows),rollforwardRows=n(row.rollforward_rows),massReviewRows=n(row.mass_review_rows);return {name:String(row[labelKey]??(labelKey==='supplier'?'Sin proveedor':'Sin planta')),rows,receivedKg:n(row.received_kg),rowMassBalanceRows,rollforwardRows,massReviewRows,eligibleRows:n(row.eligible_rows),massValidatedPct:rowMassBalanceRows?Number(((rowMassBalanceRows-massReviewRows)/rowMassBalanceRows*100).toFixed(1)):null,reconciledCategoryKg:n(row.reconciled_category_kg),captureMode:rollforwardRows===rows?'cross_lot_rollforward':rowMassBalanceRows===rows?'row_mass_balance':'mixed'}}
+  const suppliers=(Array.isArray(supplierRaw)?supplierRaw:[]).map(item=>{const row=shape(item,'supplier');return {supplier:row.name,...row,name:undefined}}).map(({name:_,...row})=>row)
+  const sites=(Array.isArray(siteRaw)?siteRaw:[]).map(item=>{const row=shape(item,'process_site');return {site:row.name,...row,name:undefined}}).map(({name:_,...row})=>row)
+  return response.status(200).json({ok:true,method:{version:'canonical-category-mix-v1.2-rollforward-semantics',rule:'La fuente 2026 usa dos semánticas distintas. Filas Pescamar de captura directa pueden compararse fila a fila. Curanue/Isla Guafo (lotes IG), Santa Rosa (MDQ) y candelaria/Cesar (MI) usan hojas de seguimiento por grado/destino con arrastre entre lotes; sus columnas no se suman contra una sola recepción. Esas filas se conservan como evidencia roll-forward y no se marcan como inconsistencia del proveedor.'},summary:{rows:n(raw?.rows),rowMassBalanceRows:n(raw?.row_mass_balance_rows),rollforwardRows:n(raw?.rollforward_rows),eligibleRows:n(raw?.eligible_rows),massReviewRows:n(raw?.mass_review_rows),missingOutputRows:n(raw?.missing_output_rows),reconciledCategoryKg:totalKg},categories,suppliers,sites})
  }catch(error){const message=error instanceof Error?error.message:'';return response.status(message.includes('DATABASE_URL')?503:500).json({ok:false,error:message.includes('DATABASE_URL')?'Base de datos no conectada':'No fue posible calcular el mix canónico reconciliado'})}
 }
