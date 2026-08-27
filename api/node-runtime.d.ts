@@ -15,7 +15,7 @@ declare module "node:crypto" {
 }
 
 declare const Buffer: {
-  from(value: string, encoding: "hex" | "base64"): any;
+  from(value: string, encoding: "hex" | "base64"): Uint8Array;
 };
 
 declare const console: {
