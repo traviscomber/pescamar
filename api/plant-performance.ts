@@ -11,7 +11,7 @@ export default async function handler(req:Request,res:Response){
     if(!operator)return res.status(401).json({ok:false,error:'Sesión requerida'})
     if(req.method!=='GET'){res.setHeader('Allow','GET');return res.status(405).json({ok:false,error:'Método no permitido'})}
     const admin=operator.role==='admin',plantIds=operator.plantIds,sql=getSql()
-    const [rows,historicalRows,yieldRankingRows]=await Promise.all([
+    const [rows,historicalRows]=await Promise.all([
       sql`
         with reception_base as (
           select r.id,r.plant_id,
@@ -39,37 +39,41 @@ export default async function handler(req:Request,res:Response){
         group by plant_id
         order by plant_id`,
       admin?sql`
-        with hist_base as (
-          select
-            lower(coalesce(nullif(trim(plant_id),''),nullif(trim(process_site_original),''),'sin planta')) historical_key,
-            coalesce(nullif(trim(plant_id),''),nullif(trim(process_site_original),''),'Sin planta') display_name,
-            coalesce(nullif(trim(supplier_name),''),'Sin proveedor') supplier,
-            coalesce(received_kg,guide_kg,0) received_kg,
-            coalesce(guide_kg,0) guide_kg,
-            coalesce(difference_kg,0) difference_kg,
-            guide_price_clp,
-            case when yields ? 'total' and (yields->>'total')::numeric > 0 and (yields->>'total')::numeric <= 1 then (yields->>'total')::numeric else null end yield_total,
-            cardinality(data_quality_flags)>0 flagged,
-            event_date
-          from historical_production_records
-          where record_status='operational'
+        with eligible as (
+          select e.*,
+            lower(coalesce(nullif(trim(e.plant_id),''),nullif(trim(e.process_site_original),''),'sin planta')) historical_key,
+            coalesce(nullif(trim(e.plant_id),''),nullif(trim(e.process_site_original),''),'Sin planta') display_name
+          from historical_record_eligibility e
         ),
         site_summary as (
-          select historical_key,min(display_name) display_name,count(*)::int lots,
-            sum(received_kg) received_kg,sum(guide_kg) guide_kg,sum(difference_kg) difference_kg,
-            count(*) filter(where yield_total is not null)::int yield_rows,
-            avg(yield_total) filter(where yield_total is not null) yield_avg,
-            count(*) filter(where flagged)::int flagged_rows,
-            min(event_date) first_date,max(event_date) last_date
-          from hist_base group by historical_key
+          select historical_key,min(display_name) display_name,
+            count(*)::int source_rows,
+            count(*) filter(where usable_for_reception)::int reception_rows,
+            sum(received_kg) filter(where usable_for_reception) received_kg,
+            sum(guide_kg) filter(where usable_for_reception) guide_kg,
+            sum(difference_kg) filter(where usable_for_reception) difference_kg,
+            count(*) filter(where usable_for_timing)::int timing_rows,
+            avg(process_date-reception_date) filter(where usable_for_timing) avg_reception_to_process_days,
+            avg(production_date-process_date) filter(where usable_for_timing) avg_process_to_production_days,
+            avg(production_date-reception_date) filter(where usable_for_timing) avg_total_days,
+            count(*) filter(where usable_for_quality)::int quality_rows,
+            count(*) filter(where requires_review)::int review_rows,
+            count(*) filter(where relationship_status='lote_consolidado')::int consolidated_rows,
+            min(reception_date) first_date,max(reception_date) last_date
+          from eligible
+          group by historical_key
         ),
         supplier_summary as (
-          select historical_key,supplier,count(*)::int lots,sum(received_kg) received_kg,sum(difference_kg) difference_kg,
-            avg(guide_price_clp) filter(where guide_price_clp is not null) avg_price_clp
-          from hist_base group by historical_key,supplier
+          select historical_key,coalesce(nullif(trim(supplier_name),''),'Sin proveedor') supplier,
+            count(*) filter(where usable_for_reception)::int lots,
+            sum(received_kg) filter(where usable_for_reception) received_kg,
+            sum(difference_kg) filter(where usable_for_reception) difference_kg,
+            avg(guide_price_clp) filter(where usable_for_supplier_cost) avg_price_clp
+          from eligible
+          group by historical_key,coalesce(nullif(trim(supplier_name),''),'Sin proveedor')
         ),
         supplier_ranked as (
-          select *,row_number() over(partition by historical_key order by abs(difference_kg) desc,received_kg desc) rn
+          select *,row_number() over(partition by historical_key order by abs(coalesce(difference_kg,0)) desc,coalesce(received_kg,0) desc) rn
           from supplier_summary
         ),
         supplier_json as (
@@ -78,40 +82,23 @@ export default async function handler(req:Request,res:Response){
         )
         select s.*,
           case when s.guide_kg>0 then 100*s.difference_kg/s.guide_kg else null end reception_variance_pct,
-          case when s.lots>0 then 100.0*s.yield_rows/s.lots else 0 end yield_coverage_pct,
+          case when s.source_rows>0 then 100.0*s.reception_rows/s.source_rows else 0 end reception_coverage_pct,
+          case when s.source_rows>0 then 100.0*s.timing_rows/s.source_rows else 0 end timing_coverage_pct,
+          case when s.source_rows>0 then 100.0*s.quality_rows/s.source_rows else 0 end quality_coverage_pct,
+          null::numeric yield_avg,0::numeric yield_coverage_pct,0::int yield_rows,
+          s.review_rows flagged_rows,
           coalesce(j.supplier_drivers,'[]'::jsonb) supplier_drivers
         from site_summary s left join supplier_json j using(historical_key)
-        order by s.received_kg desc nulls last`:Promise.resolve([]),
-      admin?sql`
-        with cohort as (
-          select
-            lower(coalesce(nullif(trim(plant_id),''),nullif(trim(process_site_original),''),'sin planta')) plant_key,
-            coalesce(nullif(trim(plant_id),''),nullif(trim(process_site_original),''),'Sin planta') plant_name,
-            coalesce(received_kg,guide_kg,0) received_kg,
-            case when yields ? 'total' and nullif(yields->>'total','') is not null and (yields->>'total')::numeric>0 and (yields->>'total')::numeric<=1 then (yields->>'total')::numeric else null end yield_total
-          from historical_production_records
-          where record_status='operational' and source_file='planilla de produccion 2025.xlsx'
-        ),
-        benchmark as (
-          select avg(yield_total) filter(where yield_total is not null) network_yield from cohort
-        ),
-        plant_summary as (
-          select plant_key,min(plant_name) plant_name,count(*)::int total_lots,
-            count(*) filter(where yield_total is not null)::int yield_lots,
-            sum(received_kg) filter(where yield_total is not null) observed_received_kg,
-            avg(yield_total) filter(where yield_total is not null) avg_yield
-          from cohort group by plant_key
-        )
-        select p.*,
-          b.network_yield,
-          case when p.avg_yield is not null then 100*(p.avg_yield-b.network_yield) else null end yield_gap_pp,
-          case when p.total_lots>0 then 100.0*p.yield_lots/p.total_lots else 0 end coverage_pct,
-          case when p.avg_yield<b.network_yield then (b.network_yield-p.avg_yield)*coalesce(p.observed_received_kg,0) else 0 end estimated_recoverable_kg,
-          case when p.yield_lots>=30 and (100.0*p.yield_lots/nullif(p.total_lots,0))>=20 then 'alta' when p.yield_lots>=10 then 'media' when p.yield_lots>0 then 'baja' else 'sin_dato' end confidence
-        from plant_summary p cross join benchmark b
-        where p.yield_lots>0 and p.plant_key<>'sin planta'
-        order by p.avg_yield desc nulls last`:Promise.resolve([])
+        where s.historical_key<>'sin planta'
+        order by s.received_kg desc nulls last`:Promise.resolve([])
     ])
-    return res.status(200).json({ok:true,plants:Array.isArray(rows)?rows:[],historicalPlants:Array.isArray(historicalRows)?historicalRows:[],yieldRanking:Array.isArray(yieldRankingRows)?yieldRankingRows:[],yieldBenchmark:{cohort:'Proceso histórico 2025',classification:'La fuente no incluye una especie/producto normalizado; no se mezclan datos vivos con este benchmark.'}})
+    return res.status(200).json({
+      ok:true,
+      plants:Array.isArray(rows)?rows:[],
+      historicalPlants:Array.isArray(historicalRows)?historicalRows:[],
+      yieldRanking:[],
+      yieldBenchmark:{cohort:'Desactivado',classification:'El ranking histórico de yield fue retirado hasta contar con cohortes de proceso comparables y semántica validada.'},
+      intelligencePolicy:{reception:'Sólo filas con kg recibidos y sin duplicado ambiguo.',timing:'Excluye secuencias de fecha inconsistentes.',quality:'Sólo filas con clasificación y kg recibidos.',ranking:'No se publica un ranking global de yield por ahora.'}
+    })
   }catch{return res.status(500).json({ok:false,error:'No fue posible calcular desempeño por planta'})}
 }
