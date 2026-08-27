@@ -1,5 +1,6 @@
 import {Building2,Handshake,Plus,Save,UsersRound,X} from 'lucide-react'
 import {useEffect,useMemo,useState,type FormEvent} from 'react'
+import {CanonicalSupplierIdentity} from '../components/CanonicalSupplierIdentity'
 import {PageHeader} from '../components/PageHeader'
 import {SupplierIntelligence} from '../components/SupplierIntelligence'
 
@@ -19,7 +20,7 @@ export function Partners(){
   {error?<div className="system-banner error">{error}</div>:null}{loading?<div className="system-banner">Sincronizando red comercial…</div>:null}
   <div className="event-kind-tabs"><button className={kind==='supplier'?'active':''} onClick={()=>setKind('supplier')}>Proveedores</button><button className={kind==='customer'?'active':''} onClick={()=>setKind('customer')}>Clientes</button></div>
   <section className="signal-grid"><article className="signal-card"><span><Handshake size={16}/>{kind==='supplier'?'Proveedores':'Clientes'}</span><b>{parties.length}</b><small>Entidades activas</small></article><article className="signal-card"><span><Building2 size={16}/>Documentos</span><b>{kind==='supplier'?data?.purchases?.length??0:data?.invoices?.length??0}</b><small>{kind==='supplier'?'Órdenes de compra':'Facturas de exportación'}</small></article><article className="signal-card"><span><UsersRound size={16}/>Con actividad</span><b>{(kind==='supplier'?data?.suppliers:data?.customers)?.filter(m=>Number(m.revenue_clp??0)>0||Number(m.received_kg??0)>0).length??0}</b><small>Con trazabilidad económica</small></article></section>
-  {kind==='supplier'?<SupplierIntelligence/>:null}
+  {kind==='supplier'?<><SupplierIntelligence/><CanonicalSupplierIdentity/></>:null}
   <section className="panel"><div className="section-heading"><div><span className="overline">Directorio</span><h2>{kind==='supplier'?'Proveedores':'Clientes'}</h2></div><span>{parties.length} fichas</span></div><div className="compact-ledger">{parties.map(p=>{const metric=(kind==='supplier'?data?.suppliers:data?.customers)?.find(m=>(m.supplier_id??m.customer_id)===p.id);return <button key={p.id} onClick={()=>setEditing(p)}><span><Building2 size={14}/></span><div><b>{p.legal_name}</b><small>{[p.city,p.country,p.contact_name,p.email].filter(Boolean).join(' · ')||'Ficha básica'}</small></div><strong>{kind==='supplier'?`${kg(Number(metric?.received_kg??0))} · ${clp(Number(metric?.contribution_clp??0))}`:clp(Number(metric?.revenue_clp??0))}</strong></button>})}</div></section>
   {editing?<PartyEditor party={editing} onClose={()=>setEditing(null)} onSaved={async()=>{setEditing(null);await load()}}/>:null}
  </>
