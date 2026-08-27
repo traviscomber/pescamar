@@ -111,8 +111,8 @@ export default async function handler(req:Request,res:Response){
             max(critical) filter(where rn=1) latest_critical,
             max(today) filter(where rn=1) latest_today,
             max(follow_up) filter(where rn=1) latest_follow_up,
-            max(items) filter(where rn=1) latest_items,
-            max(items) filter(where rn=2) previous_items,
+            (max(items::text) filter(where rn=1))::jsonb latest_items,
+            (max(items::text) filter(where rn=2))::jsonb previous_items,
             count(*) closes_count
           from ranked group by plant_id
         )
