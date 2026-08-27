@@ -1,0 +1,21 @@
+import {AlertTriangle,Link2,ShieldCheck,UsersRound} from 'lucide-react'
+import {useEffect,useMemo,useState} from 'react'
+
+type Supplier={supplier_name:string;source_rows:number|string;original_labels:number|string;original_values:string[]|null;received_kg:number|string;flagged:number|string;party_matches:number|string;party_id:string|null;party_name:string|null;identity_status:'exact'|'missing_party'|'ambiguous_party'}
+type TransferMatch={source_row:number|string;event_date:string|null;sender:string|null;amount_clp:number|string;supplier_name:string;party_matches:number|string;party_id:string|null}
+type Payload={suppliers?:Supplier[];transferMatches?:TransferMatch[];summary?:{suppliers:number;exactParties:number;missingParties:number;ambiguousParties:number;exactSenderMatches:number};governance?:{rule?:string};error?:string}
+const kg=(value:unknown)=>`${Number(value??0).toLocaleString('es-CL',{maximumFractionDigits:1})} kg`
+
+export function CanonicalSupplierIdentity(){
+ const [data,setData]=useState<Payload|null>(null),[error,setError]=useState('')
+ useEffect(()=>{let active=true;void fetch('/api/canonical-party-evidence',{cache:'no-store'}).then(async response=>{const payload=await response.json() as Payload;if(!response.ok)throw new Error(payload.error??'No fue posible conciliar proveedores');if(active){setData(payload);setError('')}}).catch(cause=>{if(active)setError(cause instanceof Error?cause.message:'No fue posible conciliar proveedores')});return()=>{active=false}},[])
+ const suppliers=useMemo(()=>data?.suppliers??[],[data?.suppliers]),gaps=suppliers.filter(row=>row.identity_status!=='exact')
+ if(error)return <section className="panel"><div className="notice error"><AlertTriangle size={16}/>{error}</div></section>
+ if(!data)return <section className="panel"><div className="empty-inline"><UsersRound size={20}/><div><b>Conciliando identidades canónicas</b><small>Proveedor histórico contra maestro comercial, sin crear fichas automáticamente.</small></div></div></section>
+ return <section className="panel" aria-label="Conciliación canónica de proveedores">
+  <div className="section-heading"><div><span className="overline">Identidad canónica · solo lectura</span><h2>Proveedor histórico ↔ maestro comercial</h2></div><span>{data.summary?.exactParties??0}/{data.summary?.suppliers??0} vinculados</span></div>
+  <div className="signal-grid"><article className="signal-card"><span><ShieldCheck size={16}/>Match exacto</span><b>{data.summary?.exactParties??0}</b><small>Mismo nombre normalizado y una única ficha</small></article><article className="signal-card"><span><AlertTriangle size={16}/>Falta ficha</span><b>{data.summary?.missingParties??0}</b><small>Proveedor canónico aún sin maestro</small></article><article className="signal-card"><span><AlertTriangle size={16}/>Ambiguos</span><b>{data.summary?.ambiguousParties??0}</b><small>Más de una ficha compatible</small></article><article className="signal-card"><span><Link2 size={16}/>Transferencias</span><b>{data.summary?.exactSenderMatches??0}</b><small>Remitente coincide exactamente con proveedor canónico</small></article></div>
+  {gaps.length?<div className="table-scroll"><table className="data-table"><thead><tr><th>Proveedor canónico</th><th className="numeric">Kg históricos</th><th>Etiquetas fuente</th><th>Observaciones</th><th>Estado maestro</th></tr></thead><tbody>{gaps.map(row=><tr key={row.supplier_name}><td><b>{row.supplier_name}</b></td><td className="numeric">{kg(row.received_kg)}</td><td>{Number(row.original_labels)}{row.original_values?.length?` · ${row.original_values.slice(0,3).join(' / ')}`:''}</td><td>{Number(row.flagged)}</td><td><span className={`status ${row.identity_status==='missing_party'?'warning':'danger'}`}>{row.identity_status==='missing_party'?'Crear/revisar ficha':'Resolver duplicidad'}</span></td></tr>)}</tbody></table></div>:<div className="empty-inline"><ShieldCheck size={18}/><div><b>Identidades conciliadas</b><small>Todos los proveedores canónicos tienen una única ficha maestra exacta.</small></div></div>}
+  <p className="source-note">{data.governance?.rule}</p>
+ </section>
+}
