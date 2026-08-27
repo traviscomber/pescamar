@@ -4,6 +4,8 @@ import {getSql} from './_db.js'
 type Request={method?:string;headers?:Record<string,string|string[]|undefined>}
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void}
 const rows=(value:unknown)=>Array.isArray(value)?value:[]
+const n=(value:unknown)=>{const parsed=Number(value);return Number.isFinite(parsed)?parsed:0}
+const pct=(part:number,total:number)=>total>0?Number((part/total*100).toFixed(1)):null
 
 export default async function handler(request:Request,response:Response){
   response.setHeader('Cache-Control','no-store')
@@ -13,25 +15,88 @@ export default async function handler(request:Request,response:Response){
     if(!operator)return response.status(401).json({ok:false,error:'Sesión requerida'})
     const financial=['admin','finance','operations'].includes(operator.role)
     const sql=getSql()
-    const [productionRaw,suppliersRaw,packingRaw,stockRaw,transfersRaw,ledgerRaw]=await Promise.all([
-      sql`select count(*)::int rows,coalesce(sum(guide_kg),0)::numeric guide_kg,coalesce(sum(received_kg),0)::numeric received_kg,coalesce(sum(guide_kg)-sum(received_kg),0)::numeric difference_kg,count(*) filter(where cardinality(data_quality_flags)>0)::int flagged,min(event_date) first_date,max(event_date) last_date from historical_production_records where source_file_hash='ce92c3ff3da518b181eb826257a23187257b05173e0026c16a5e09230b6ea9b0'`,
-      sql`select coalesce(supplier_name,supplier_original,'Sin proveedor') supplier,count(*)::int rows,coalesce(sum(guide_kg),0)::numeric guide_kg,coalesce(sum(received_kg),0)::numeric received_kg,round(case when sum(coalesce(guide_kg,0))>0 then sum(coalesce(received_kg,0))/sum(coalesce(guide_kg,0))*100 else null end,1) reception_pct from historical_production_records where source_file_hash='ce92c3ff3da518b181eb826257a23187257b05173e0026c16a5e09230b6ea9b0' group by 1 order by received_kg desc`,
-      sql`select pack_format,count(*)::int boxes,coalesce(sum(total_kg),0)::numeric kg,count(distinct lot_code) filter(where lot_code is not null)::int lots,count(*) filter(where cardinality(data_quality_flags)>0)::int flagged,min(production_date) first_date,max(production_date) last_date from canonical_packing_boxes where source_file_hash='b6248bd7b9d8f20079eef1e8a3a3e8c5006661e3850802ab1431c2e1ce317972' group by pack_format order by pack_format`,
-      sql`select product_family,count(*)::int rows,coalesce(sum(total_kg),0)::numeric accumulated_kg,max(event_date) last_date,count(*) filter(where cardinality(data_quality_flags)>0)::int flagged from canonical_stock_records where source_file_hash='5483c63d9605e8fab93e669ac94db3f871a116f725dd74203660b3c76af515fb' group by product_family order by product_family`,
-      financial?sql`select count(*)::int rows,coalesce(sum(amount_clp),0)::numeric amount_clp,min(event_date) first_date,max(event_date) last_date,count(*) filter(where cardinality(data_quality_flags)>0)::int flagged from canonical_transfers_received where source_file_hash='5483c63d9605e8fab93e669ac94db3f871a116f725dd74203660b3c76af515fb'`:Promise.resolve([]),
-      financial?sql`select count(*)::int rows,coalesce(sum(inflow_clp),0)::numeric inflow_clp,coalesce(sum(outflow_clp),0)::numeric outflow_clp,(array_agg(balance_clp order by source_row desc))[1] final_balance_clp,count(*) filter(where cardinality(data_quality_flags)>0)::int flagged,min(event_date) first_date,max(event_date) last_date from canonical_account_entries where source_file_hash='5483c63d9605e8fab93e669ac94db3f871a116f725dd74203660b3c76af515fb'`:Promise.resolve([])
+    const [sourcesRaw,productionRaw,suppliersRaw,packingRaw,stockRaw,transfersRaw,ledgerRaw]=await Promise.all([
+      sql`select file_name,source_kind,record_count,period_start,period_end,imported_at from canonical_source_files where canonical order by imported_at desc,file_name`,
+      sql`with base as (
+        select h.*,
+          coalesce((h.grade_breakdown->'A1'->>'kg')::numeric,0)+coalesce((h.grade_breakdown->'A2'->>'kg')::numeric,0)+
+          coalesce((h.grade_breakdown->'Vj100'->>'kg')::numeric,0)+coalesce((h.grade_breakdown->'Vj50'->>'kg')::numeric,0)+
+          coalesce((h.grade_breakdown->'C1'->>'kg')::numeric,0)+coalesce((h.grade_breakdown->'C2'->>'kg')::numeric,0)+
+          coalesce((h.grade_breakdown->'D'->>'kg')::numeric,0)+coalesce((h.grade_breakdown->'PT'->>'kg')::numeric,0)+
+          coalesce((h.grade_breakdown->'R'->>'kg')::numeric,0) reported_output_kg
+        from historical_production_records h
+        where h.record_status='operational' and h.source_file_hash in(
+          select file_hash from canonical_source_files where canonical and (source_kind='production' or file_name ilike '%produccion 2026%')
+        )
+      ) select count(*)::int rows,coalesce(sum(guide_kg),0)::numeric guide_kg,coalesce(sum(received_kg),0)::numeric received_kg,
+        coalesce(sum(guide_kg)-sum(received_kg),0)::numeric difference_kg,count(*) filter(where cardinality(data_quality_flags)>0)::int flagged,
+        count(*) filter(where guide_price_clp is not null)::int priced_rows,coalesce(sum(received_kg*guide_price_clp) filter(where guide_price_clp is not null),0)::numeric priced_value_clp,
+        coalesce(sum(reported_output_kg),0)::numeric reported_output_kg,count(*) filter(where received_kg>0 and reported_output_kg>received_kg)::int mass_inconsistent_rows,
+        count(*) filter(where reported_output_kg=0)::int missing_output_rows,min(event_date) first_date,max(event_date) last_date from base`,
+      sql`with base as (
+        select coalesce(nullif(btrim(h.supplier_name),''),nullif(btrim(h.supplier_original),''),'Sin proveedor') supplier,h.guide_kg,h.received_kg,h.guide_price_clp,h.data_quality_flags,
+          coalesce((h.grade_breakdown->'A1'->>'kg')::numeric,0)+coalesce((h.grade_breakdown->'A2'->>'kg')::numeric,0)+
+          coalesce((h.grade_breakdown->'Vj100'->>'kg')::numeric,0)+coalesce((h.grade_breakdown->'Vj50'->>'kg')::numeric,0)+
+          coalesce((h.grade_breakdown->'C1'->>'kg')::numeric,0)+coalesce((h.grade_breakdown->'C2'->>'kg')::numeric,0)+
+          coalesce((h.grade_breakdown->'D'->>'kg')::numeric,0)+coalesce((h.grade_breakdown->'PT'->>'kg')::numeric,0)+
+          coalesce((h.grade_breakdown->'R'->>'kg')::numeric,0) reported_output_kg
+        from historical_production_records h
+        where h.record_status='operational' and h.source_file_hash in(
+          select file_hash from canonical_source_files where canonical and (source_kind='production' or file_name ilike '%produccion 2026%')
+        )
+      ) select supplier,count(*)::int rows,coalesce(sum(guide_kg),0)::numeric guide_kg,coalesce(sum(received_kg),0)::numeric received_kg,
+        count(*) filter(where cardinality(data_quality_flags)>0)::int flagged,count(*) filter(where guide_price_clp is not null)::int priced_rows,
+        coalesce(sum(reported_output_kg),0)::numeric reported_output_kg,count(*) filter(where received_kg>0 and reported_output_kg>received_kg)::int mass_inconsistent_rows
+        from base group by supplier order by received_kg desc`,
+      sql`select b.pack_format,count(*)::int boxes,coalesce(sum(b.total_kg),0)::numeric kg,count(distinct b.lot_code) filter(where b.lot_code is not null)::int lots,
+        count(*) filter(where cardinality(b.data_quality_flags)>0)::int flagged,avg(b.total_kg)::numeric avg_box_kg,min(b.total_kg)::numeric min_box_kg,max(b.total_kg)::numeric max_box_kg,
+        stddev_samp(b.total_kg)::numeric box_stddev_kg,min(b.production_date) first_date,max(b.production_date) last_date
+        from canonical_packing_boxes b join canonical_source_files s on s.file_hash=b.source_file_hash and s.canonical
+        group by b.pack_format order by b.pack_format`,
+      sql`select r.product_family,count(*)::int rows,coalesce(sum(r.total_kg),0)::numeric observed_net_kg,max(r.event_date) last_date,
+        min(r.event_date) first_date,count(*) filter(where cardinality(r.data_quality_flags)>0)::int flagged
+        from canonical_stock_records r join canonical_source_files s on s.file_hash=r.source_file_hash and s.canonical
+        group by r.product_family order by r.product_family`,
+      financial?sql`select count(*)::int rows,coalesce(sum(t.amount_clp),0)::numeric amount_clp,min(t.event_date) first_date,max(t.event_date) last_date,
+        count(*) filter(where cardinality(t.data_quality_flags)>0)::int flagged
+        from canonical_transfers_received t join canonical_source_files s on s.file_hash=t.source_file_hash and s.canonical`:Promise.resolve([]),
+      financial?sql`select count(*)::int rows,coalesce(sum(a.inflow_clp),0)::numeric inflow_clp,coalesce(sum(a.outflow_clp),0)::numeric outflow_clp,
+        (array_agg(a.balance_clp order by a.source_row desc))[1] final_balance_clp,count(*) filter(where cardinality(a.data_quality_flags)>0)::int flagged,
+        min(a.event_date) first_date,max(a.event_date) last_date
+        from canonical_account_entries a join canonical_source_files s on s.file_hash=a.source_file_hash and s.canonical`:Promise.resolve([])
     ])
-    const production=rows(productionRaw)[0] as Record<string,unknown>|undefined
-    const guideKg=Number(production?.guide_kg??0),receivedKg=Number(production?.received_kg??0)
-    const suppliers=rows(suppliersRaw).map(item=>{const row=item as Record<string,unknown>;return {supplier:String(row.supplier??'Sin proveedor'),rows:Number(row.rows??0),guideKg:Number(row.guide_kg??0),receivedKg:Number(row.received_kg??0),receptionPct:row.reception_pct==null?null:Number(row.reception_pct)}})
-    const packing=rows(packingRaw).map(item=>{const row=item as Record<string,unknown>;return {format:String(row.pack_format??''),boxes:Number(row.boxes??0),kg:Number(row.kg??0),lots:Number(row.lots??0),flagged:Number(row.flagged??0),firstDate:row.first_date??null,lastDate:row.last_date??null}})
-    const stock=rows(stockRaw).map(item=>{const row=item as Record<string,unknown>;return {productFamily:String(row.product_family??''),rows:Number(row.rows??0),accumulatedKg:Number(row.accumulated_kg??0),lastDate:row.last_date??null,flagged:Number(row.flagged??0)}})
+
+    const sourceFiles=rows(sourcesRaw).map(item=>{const row=item as Record<string,unknown>;return {fileName:String(row.file_name??''),kind:String(row.source_kind??''),recordCount:n(row.record_count),periodStart:row.period_start??null,periodEnd:row.period_end??null,importedAt:row.imported_at??null}})
+    const production=(rows(productionRaw)[0]??{}) as Record<string,unknown>
+    const productionRows=n(production.rows),guideKg=n(production.guide_kg),receivedKg=n(production.received_kg),reportedOutputKg=n(production.reported_output_kg)
+    const massInconsistentRows=n(production.mass_inconsistent_rows),pricedRows=n(production.priced_rows),productionFlagged=n(production.flagged)
+    const suppliers=rows(suppliersRaw).map(item=>{const row=item as Record<string,unknown>,supplierGuide=n(row.guide_kg),supplierReceived=n(row.received_kg),supplierOutput=n(row.reported_output_kg),supplierRows=n(row.rows),supplierPriced=n(row.priced_rows);return {
+      supplier:String(row.supplier??'Sin proveedor'),rows:supplierRows,guideKg:supplierGuide,receivedKg:supplierReceived,receptionPct:pct(supplierReceived,supplierGuide),
+      reportedOutputKg:supplierOutput,reportedOutputPct:pct(supplierOutput,supplierReceived),massInconsistentRows:n(row.mass_inconsistent_rows),flagged:n(row.flagged),
+      priceCoveragePct:pct(supplierPriced,supplierRows)
+    }})
+    const packing=rows(packingRaw).map(item=>{const row=item as Record<string,unknown>;return {format:String(row.pack_format??''),boxes:n(row.boxes),kg:n(row.kg),lots:n(row.lots),flagged:n(row.flagged),avgBoxKg:n(row.avg_box_kg),minBoxKg:n(row.min_box_kg),maxBoxKg:n(row.max_box_kg),boxStddevKg:row.box_stddev_kg==null?null:n(row.box_stddev_kg),firstDate:row.first_date??null,lastDate:row.last_date??null}})
+    const stock=rows(stockRaw).map(item=>{const row=item as Record<string,unknown>;return {productFamily:String(row.product_family??''),rows:n(row.rows),observedNetKg:n(row.observed_net_kg),firstDate:row.first_date??null,lastDate:row.last_date??null,flagged:n(row.flagged)}})
     const transfers=financial?(rows(transfersRaw)[0] as Record<string,unknown>|undefined):undefined
     const ledger=financial?(rows(ledgerRaw)[0] as Record<string,unknown>|undefined):undefined
+    const packingBoxes=packing.reduce((sum,item)=>sum+item.boxes,0),packingKg=packing.reduce((sum,item)=>sum+item.kg,0),packingFlagged=packing.reduce((sum,item)=>sum+item.flagged,0)
+    const stockRows=stock.reduce((sum,item)=>sum+item.rows,0),stockFlagged=stock.reduce((sum,item)=>sum+item.flagged,0)
+    const transferRows=n(transfers?.rows),transferFlagged=n(transfers?.flagged),ledgerRows=n(ledger?.rows),ledgerFlagged=n(ledger?.flagged)
+    const totalRows=productionRows+packingBoxes+stockRows+transferRows+ledgerRows
+    const totalFlagged=productionFlagged+packingFlagged+stockFlagged+transferFlagged+ledgerFlagged
     const exceptions=[] as Array<{severity:'warning'|'info';kind:string;title:string;detail:string}>
     for(const supplier of suppliers){if(supplier.guideKg>=1000&&supplier.receptionPct!==null&&supplier.receptionPct<95)exceptions.push({severity:'warning',kind:'proveedor',title:`${supplier.supplier}: recepción ${supplier.receptionPct.toFixed(1)}%`,detail:`${supplier.receivedKg.toLocaleString('es-CL',{maximumFractionDigits:1})} kg recibidos de ${supplier.guideKg.toLocaleString('es-CL',{maximumFractionDigits:1})} kg guía.`})}
-    const iqf=packing.find(item=>item.format==='IQF');if(iqf?.flagged)exceptions.push({severity:'info',kind:'packing',title:`${iqf.flagged} cajas IQF sin lote verificable`,detail:'Se mantienen en la Base de Datos Pescamar y requieren reconciliación antes de asociarlas a un lote.'})
-    const flagged=Number(production?.flagged??0)+packing.reduce((sum,item)=>sum+item.flagged,0)+stock.reduce((sum,item)=>sum+item.flagged,0)+Number(transfers?.flagged??0)+Number(ledger?.flagged??0)
-    return response.status(200).json({ok:true,generatedAt:new Date().toISOString(),production:{rows:Number(production?.rows??0),guideKg,receivedKg,differenceKg:Number(production?.difference_kg??0),receptionPct:guideKg>0?Number(((receivedKg/guideKg)*100).toFixed(1)):null,flagged:Number(production?.flagged??0),firstDate:production?.first_date??null,lastDate:production?.last_date??null},suppliers,packing,stock,finance:financial?{transfers:{rows:Number(transfers?.rows??0),amountClp:Number(transfers?.amount_clp??0),firstDate:transfers?.first_date??null,lastDate:transfers?.last_date??null},ledger:{rows:Number(ledger?.rows??0),inflowClp:Number(ledger?.inflow_clp??0),outflowClp:Number(ledger?.outflow_clp??0),balanceClp:Number(ledger?.final_balance_clp??0),flagged:Number(ledger?.flagged??0)}}:null,exceptions,totalFlagged:flagged})
+    if(massInconsistentRows>0)exceptions.push({severity:'warning',kind:'consistencia-masa',title:`${massInconsistentRows} filas requieren reconciliar salidas reportadas`,detail:'La suma de categorías de producto supera los kilos recibidos en esas filas. Se conserva como evidencia, pero no se usa como rendimiento oficial.'})
+    if(productionRows&&pricedRows<productionRows)exceptions.push({severity:'info',kind:'cobertura-precio',title:`Precio guía disponible en ${pct(pricedRows,productionRows)??0}% de producción`,detail:`${pricedRows} de ${productionRows} registros tienen precio. Los valores económicos derivados se mantienen como referencia parcial, no como margen.`})
+    for(const item of packing){if(item.flagged)exceptions.push({severity:'info',kind:'packing',title:`${item.flagged} cajas ${item.format} requieren trazabilidad adicional`,detail:item.lots?`${item.lots} lotes identificados en la fuente.`:'La fuente no aporta referencia de lote utilizable para estas cajas.'})}
+    if(ledgerFlagged)exceptions.push({severity:'info',kind:'finanzas',title:`${ledgerFlagged} movimientos de cuenta con observaciones de calidad`,detail:'Fechas, fórmulas o secuencia de origen deben mantenerse visibles antes de interpretar el saldo reconstruido.'})
+    const finance=financial?{transfers:{rows:transferRows,amountClp:n(transfers?.amount_clp),flagged:transferFlagged,firstDate:transfers?.first_date??null,lastDate:transfers?.last_date??null},ledger:{rows:ledgerRows,inflowClp:n(ledger?.inflow_clp),outflowClp:n(ledger?.outflow_clp),balanceClp:n(ledger?.final_balance_clp),flagged:ledgerFlagged,firstDate:ledger?.first_date??null,lastDate:ledger?.last_date??null}}:null
+    return response.status(200).json({
+      ok:true,generatedAt:new Date().toISOString(),
+      sources:{count:sourceFiles.length,files:sourceFiles},
+      production:{rows:productionRows,guideKg,receivedKg,differenceKg:n(production.difference_kg),receptionPct:pct(receivedKg,guideKg),flagged:productionFlagged,pricedRows,priceCoveragePct:pct(pricedRows,productionRows),pricedValueClp:n(production.priced_value_clp),firstDate:production.first_date??null,lastDate:production.last_date??null,reportedOutputKg,reportedOutputPct:pct(reportedOutputKg,receivedKg),massInconsistentRows,missingOutputRows:n(production.missing_output_rows),reportedOutputUsable:massInconsistentRows===0},
+      suppliers,packing,packingSummary:{boxes:packingBoxes,kg:packingKg,lots:packing.reduce((sum,item)=>sum+item.lots,0),flagged:packingFlagged},stock,finance,
+      dataQuality:{totalRows,totalFlagged,flaggedPct:pct(totalFlagged,totalRows),massInconsistentRows},exceptions
+    })
   }catch(error){const message=error instanceof Error?error.message:'';return response.status(message.includes('DATABASE_URL')?503:500).json({ok:false,error:message.includes('DATABASE_URL')?'Base de datos no conectada':'No fue posible construir la inteligencia Pescamar'})}
 }
