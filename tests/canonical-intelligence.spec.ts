@@ -13,6 +13,24 @@ const intelligence={
  stock:[{productFamily:'erizo',rows:31,observedNetKg:12449.2,firstDate:'2026-07-10',lastDate:'2026-08-21',flagged:0},{productFamily:'pulpo',rows:20,observedNetKg:6415.7,firstDate:'2025-07-31',lastDate:'2025-10-11',flagged:0}],
  finance:{transfers:{rows:25,amountClp:80211983,flagged:0,firstDate:'2025-05-20',lastDate:'2025-06-20'},ledger:{rows:1018,inflowClp:1485879502,outflowClp:1515939219,balanceClp:-30059717,flagged:8,firstDate:'2012-10-29',lastDate:'2026-11-10'}},
  dataQuality:{totalRows:1881,totalFlagged:126,flaggedPct:6.7,massInconsistentRows:100},
+ decisionBrief:{
+  headline:'Recepción y packing ya generan señal operativa; rendimiento y costo de compra siguen bloqueados por cobertura o reconciliación.',
+  capabilities:[
+   {key:'reception',label:'Recepción vs guía',status:'ready',detail:'96,5% de kilos guía están explicados por kilos recibidos en 224 registros canónicos.'},
+   {key:'packing',label:'Packing pulpo',status:'review',detail:'562 cajas y 11.292 kg; 116 cajas requieren completar trazabilidad.'},
+   {key:'supplier',label:'Decisión por proveedor',status:'review',detail:'1 proveedores con volumen/cumplimiento canónico.'},
+   {key:'yield',label:'Rendimiento',status:'blocked',detail:'100 filas superan físicamente los kg recibidos; rendimiento permanece bloqueado hasta reconciliar.'},
+   {key:'purchase-cost',label:'Costo de compra',status:'blocked',detail:'Precio guía disponible en 18,3% de las filas; no publicar costo total ni margen como cifra completa.'},
+   {key:'ledger',label:'Cuenta reconstruida',status:'review',detail:'1018 movimientos reconstruidos desde CUENTA2; 8 presentan observaciones de calidad.'}
+  ],
+  actions:[
+   {priority:1,kind:'mass-reconciliation',title:'Reconciliar 100 filas de producción',detail:'Resolver si las columnas de categorías son alternativas, acumulativas o incluyen reproceso antes de liberar rendimiento.'},
+   {priority:1,kind:'price-coverage',title:'Completar precio en 183 registros',detail:'La cobertura actual es 18,3%.'},
+   {priority:2,kind:'packing-traceability',title:'Completar trazabilidad de 116 cajas',detail:'Asignar referencia de lote.'},
+   {priority:2,kind:'ledger-quality',title:'Revisar 8 movimientos de CUENTA2',detail:'Corregir outliers antes de usar el saldo.'}
+  ],
+  supplierConcentration:{supplier:'Patricio Diaz',receivedKg:16401.4,sharePct:33.3}
+ },
  exceptions:[{severity:'warning',kind:'consistencia-masa',title:'100 filas requieren reconciliar salidas reportadas',detail:'La suma de categorías de producto supera los kilos recibidos en esas filas. Se conserva como evidencia, pero no se usa como rendimiento oficial.'}]
 }
 
@@ -35,6 +53,12 @@ test('canonical intelligence renders uploaded-source KPIs without inventing yiel
  await expect(page.getByText('49.183,6 kg')).toBeVisible()
  await expect(page.getByText('11.292 kg')).toBeVisible()
  await expect(page.getByText('12.449,2 kg')).toBeVisible()
+ await expect(page.getByRole('heading',{name:'Qué podemos decidir hoy'})).toBeVisible()
+ await expect(page.getByText('Rendimiento · Bloqueado')).toBeVisible()
+ await expect(page.getByText('Costo de compra · Bloqueado')).toBeVisible()
+ await expect(page.getByText('Reconciliar 100 filas de producción')).toBeVisible()
+ await expect(page.getByText('Completar precio en 183 registros')).toBeVisible()
+ await expect(page.getByText(/Patricio Diaz/).last()).toBeVisible()
  await expect(page.getByRole('heading',{name:'Formato y estabilidad de caja'})).toBeVisible()
  await expect(page.getByRole('cell',{name:'BLOQUE'})).toBeVisible()
  await expect(page.getByRole('cell',{name:'IQF'})).toBeVisible()
