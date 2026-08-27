@@ -13,7 +13,11 @@ const rollforward={
   {key:'Diaz termiando-10',sheetName:'Diaz termiando',sourceBlock:10,familyKey:'MDQ',eventDate:'2026-05-01',supplier:'Patricio Diaz',site:'Santa Rosa',guide:'4200',lotReference:null,notes:'debe 24 potes mas 5 kilos',matchStatus:'guide_only',matchedSourceRow:88,guideCandidateRows:[88],lotCandidateRows:[],grades:[{sourceRow:6,grade:'GA',guideKg:110,acceptedKg:100,destinedKg:20,flags:['missing_lot_reference']}]}
  ],
  chains:[
-  {key:'IG-Eugenio Mardones-Curanue',familyKey:'IG',familyLabel:'Isla Guafo / Curanue',supplier:'Eugenio Mardones',site:'Curanue',rows:49,lots:34,guides:31,receivedKg:12016,destinationCoveragePct:71.4,guideCoveragePct:100,gradeCoveragePct:98,destinations:['Pescamar'],grades:['A1','Vj100','C1','R'],gradeObservationCount:108,status:'needs_destination',observations:[{sourceRow:42,eventDate:'2026-04-15',guide:'12345',supplier:'Eugenio Mardones',extractionZone:'Guafo',site:'Curanue',lot:'IG-01',guideKg:420,receivedKg:420,grades:[{grade:'A1',kg:120,boxes:6},{grade:'Vj100',kg:180,boxes:9}],destination:'Pescamar',notes:null,familyKey:'IG',familyLabel:'Isla Guafo / Curanue'}]},
+  {key:'IG-Eugenio Mardones-Curanue',familyKey:'IG',familyLabel:'Isla Guafo / Curanue',supplier:'Eugenio Mardones',site:'Curanue',rows:49,lots:34,guides:31,receivedKg:12016,destinationCoveragePct:71.4,guideCoveragePct:100,gradeCoveragePct:98,destinations:['Pescamar'],grades:['A1','Vj100','C1','R'],gradeObservationCount:108,status:'needs_destination',observations:[
+   {sourceRow:7,eventDate:'2026-04-08',guide:'3346',supplier:'Eugenio Mardones',extractionZone:'Guafo',site:'Curanue',lot:'IG-04',guideKg:400,receivedKg:390,grades:[{grade:'A1',kg:110,boxes:5}],destination:null,notes:null,familyKey:'IG',familyLabel:'Isla Guafo / Curanue'},
+   {sourceRow:8,eventDate:'2026-04-09',guide:'3347',supplier:'Eugenio Mardones',extractionZone:'Guafo',site:'Curanue',lot:'IG-05',guideKg:410,receivedKg:405.2,grades:[{grade:'Vj100',kg:130,boxes:6}],destination:null,notes:null,familyKey:'IG',familyLabel:'Isla Guafo / Curanue'},
+   {sourceRow:42,eventDate:'2026-04-15',guide:'12345',supplier:'Eugenio Mardones',extractionZone:'Guafo',site:'Curanue',lot:'IG-01',guideKg:420,receivedKg:420,grades:[{grade:'A1',kg:120,boxes:6},{grade:'Vj100',kg:180,boxes:9}],destination:'Pescamar',notes:null,familyKey:'IG',familyLabel:'Isla Guafo / Curanue'}
+  ]},
   {key:'MDQ-Patricio Diaz-Santa Rosa',familyKey:'MDQ',familyLabel:'Santa Rosa / MDQ',supplier:'Patricio Diaz',site:'Santa Rosa',rows:44,lots:29,guides:27,receivedKg:3692.2,destinationCoveragePct:61.4,guideCoveragePct:97.7,gradeCoveragePct:95.5,destinations:['Pescamar'],grades:['A1','Vj100','C1'],gradeObservationCount:95,status:'needs_evidence',observations:[]},
   {key:'MI-Cesar-candelaria',familyKey:'MI',familyLabel:'Cesar / candelaria',supplier:'Cesar',site:'candelaria',rows:17,lots:11,guides:10,receivedKg:2053.6,destinationCoveragePct:58.8,guideCoveragePct:94.1,gradeCoveragePct:94.1,destinations:['Pescamar'],grades:['A1','Vj100','R'],gradeObservationCount:38,status:'needs_evidence',observations:[]}
  ]
@@ -23,7 +27,7 @@ async function mockApp(page:Page,role:'admin'|'quality'='admin',resolutions:Reso
  await page.route('**/api/**',async route=>{
   const path=new URL(route.request().url()).pathname
   if(path==='/api/auth')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,operator:{id:`qa-${role}`,fullName:`QA ${role}`,email:`${role}@example.test`,role,plantIds:['ancud']}})})
-  if(path==='/api/status')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,platform:'vercel-functions',environment:'test',persistence:{database:true,files:true},metrics:{pendingDecisions:0,pendingCredits:0,activeOperators:1,receptions:0},commit:'qa',checkedAt:new Date().toISOString()})})
+  if(path==='/api/status')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,operator:{id:`qa-${role}`,fullName:`QA ${role}`,email:`${role}@example.test`,role,plantIds:['ancud']},platform:'vercel-functions',environment:'test',persistence:{database:true,files:true},metrics:{pendingDecisions:0,pendingCredits:0,activeOperators:1,receptions:0},commit:'qa',checkedAt:new Date().toISOString()})})
   if(path==='/api/receptions')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({receptions:[]})})
   if(path==='/api/rollforward-reconciliation')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(rollforward)})
   if(path==='/api/rollforward-resolutions')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,status:'ready',resolutions})})
@@ -46,6 +50,13 @@ test('roll-forward workspace links support evidence and leaves contradictions fo
  await expect(cells.nth(5)).toHaveText('7')
  await expect(cells.nth(6)).toHaveText('8')
  await expect(cells.nth(7)).toContainText('Conflicto')
+ const queue=page.getByRole('region',{name:'Revisión humana de conflictos roll-forward'}),review=queue.locator('details').filter({hasText:'Isla Guafo · bloque 7'}).first()
+ await expect(review).toBeAttached()
+ await review.evaluate(element=>element.setAttribute('open',''))
+ await expect(review.getByText('Guía 3346 · lote IG-04',{exact:true})).toBeVisible()
+ await expect(review.getByText('Curanue · 390 kg recibidos',{exact:true})).toBeVisible()
+ await expect(review.getByText('Guía 3347 · lote IG-05',{exact:true})).toBeVisible()
+ await expect(review.getByText('Curanue · 405,2 kg recibidos',{exact:true})).toBeVisible()
  const evidence=page.locator('details').filter({hasText:'Isla Guafo · 3343'}).first()
  await expect(evidence).toBeAttached()
  await evidence.evaluate(element=>element.setAttribute('open',''))
