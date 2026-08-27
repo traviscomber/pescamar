@@ -2,6 +2,7 @@ import {createHash} from 'node:crypto'
 import {requireOperator,type SessionOperator} from './_auth.js'
 import {hasPlantAccess} from './_plants.js'
 import {getSql} from './_db.js'
+import {findSeaUrchinSeedSample} from './_sea-urchin-seed-set.js'
 
 type Request={method?:string;body?:unknown;headers?:Record<string,string|string[]|undefined>;query?:Record<string,string|string[]|undefined>}
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void}
@@ -43,6 +44,11 @@ function distance(metrics:{lMean:number;aMean:number;labBMean:number},reference:
  return Math.sqrt((metrics.lMean-Number(reference.l_mean))**2+(metrics.aMean-Number(reference.a_mean))**2+(metrics.labBMean-Number(reference.b_mean))**2)
 }
 
+function seedSummary(hash:unknown){
+ const sample=findSeaUrchinSeedSample(String(hash??''))
+ return sample?{photo:sample.photo,cluster:sample.cluster,recommendedUse:sample.recommendedUse,intakeStatus:sample.intakeStatus,officialGrade:sample.officialGrade,sourceLab:sample.lab,sourceDispersion:sample.dispersion,notes:sample.notes}:null
+}
+
 async function referencesForPlant(plantId:string){
  const sql=getSql()
  const rows=await sql`select id,plant_id,grade,label,l_mean,a_mean,b_mean,created_by,created_at from sea_urchin_color_references where plant_id=${plantId} and is_active order by grade,created_at desc`
@@ -76,7 +82,8 @@ async function list(req:Request,res:Response,operator:SessionOperator){
   sql`select c.id,c.run_id,c.evidence_file_id,c.capture_source,c.device_label,c.image_sha256,c.pixel_count,c.r_mean,c.g_mean,c.b_rgb_mean,c.l_mean,c.a_mean,c.b_mean,c.l_std,c.a_std,c.b_std,c.chroma,c.hue_deg,c.suggested_grade,c.nearest_reference_id,c.delta_e,c.operator_grade,c.decision,c.confirmed_by,c.confirmed_at,c.created_by,c.created_at from sea_urchin_color_captures c where c.run_id=${runId}::uuid order by c.created_at desc limit 30`,
   run.plant_id?referencesForPlant(run.plant_id):Promise.resolve([])
  ])
- return res.status(200).json({ok:true,run:{id:run.id,plantId:run.plant_id,grade:run.grade},captures:Array.isArray(capturesRaw)?capturesRaw:[],references,permissions:{canWrite:canWrite(operator),canManageReferences:canManageReferences(operator)}})
+ const captures=Array.isArray(capturesRaw)?capturesRaw.map(item=>({...item,seedMatch:seedSummary((item as {image_sha256?:unknown}).image_sha256)})):[]
+ return res.status(200).json({ok:true,run:{id:run.id,plantId:run.plant_id,grade:run.grade},captures,references,permissions:{canWrite:canWrite(operator),canManageReferences:canManageReferences(operator)}})
 }
 
 async function mutate(req:Request,res:Response,operator:SessionOperator){
@@ -100,6 +107,7 @@ async function capture(input:Input,res:Response,operator:SessionOperator){
  if(bytes.length<100||bytes.length>3*1024*1024)return res.status(400).json({ok:false,error:'La imagen debe pesar entre 100 bytes y 3 MB'})
  const hash=createHash('sha256').update(bytes).digest('hex')
  if(!sha256.test(hash))return res.status(400).json({ok:false,error:'No fue posible validar la imagen'})
+ const seedMatch=seedSummary(hash)
  const sql=getSql()
  const duplicate=await sql`select id from sea_urchin_color_captures where run_id=${runId}::uuid and image_sha256=${hash} limit 1`
  if(Array.isArray(duplicate)&&duplicate[0])return res.status(409).json({ok:false,error:'Esta captura ya fue registrada en el lote'})
@@ -111,7 +119,7 @@ async function capture(input:Input,res:Response,operator:SessionOperator){
  if(!file?.id)return res.status(500).json({ok:false,error:'No fue posible guardar evidencia'})
  const saved=await sql`insert into sea_urchin_color_captures(run_id,evidence_file_id,capture_source,device_label,image_sha256,pixel_count,r_mean,g_mean,b_rgb_mean,l_mean,a_mean,b_mean,l_std,a_std,b_std,chroma,hue_deg,suggested_grade,nearest_reference_id,delta_e,created_by,created_by_operator_id) values(${runId}::uuid,${file.id}::uuid,${source},${deviceLabel},${hash},${metrics.pixelCount},${metrics.rMean},${metrics.gMean},${metrics.bMean},${metrics.lMean},${metrics.aMean},${metrics.labBMean},${metrics.lStd},${metrics.aStd},${metrics.bStd},${metrics.chroma},${metrics.hueDeg},${nearest?.grade??null},${nearest?.id??null}::uuid,${delta},${operator.fullName},${operator.id}::uuid) returning id,evidence_file_id,l_mean,a_mean,b_mean,l_std,a_std,b_std,chroma,hue_deg,suggested_grade,delta_e,decision,created_at`
  const row=Array.isArray(saved)?saved[0]:null
- return res.status(201).json({ok:true,capture:row,evidenceUrl:`/api/reception-evidence-file?id=${encodeURIComponent(file.id)}`,referenceCount:references.length})
+ return res.status(201).json({ok:true,capture:row,evidenceUrl:`/api/reception-evidence-file?id=${encodeURIComponent(file.id)}`,referenceCount:references.length,seedMatch})
 }
 
 async function createReference(input:Input,res:Response,operator:SessionOperator){
