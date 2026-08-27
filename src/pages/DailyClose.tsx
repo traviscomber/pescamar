@@ -1,6 +1,6 @@
 import {AlertTriangle,ArrowRight,CalendarCheck2,DollarSign,Factory,PackageCheck,RefreshCw,ShieldCheck,Truck} from 'lucide-react'
 import {useEffect,useMemo,useState} from 'react'
-import {Link} from 'react-router-dom'
+import {Link,useSearchParams} from 'react-router-dom'
 import {useAuth} from '../auth'
 import {PageHeader} from '../components/PageHeader'
 import {plants as configuredPlants} from '../plants'
@@ -26,17 +26,20 @@ const riskText=(risk:RiskSummary|undefined)=>{if(!risk||!risk.total)return 'sin 
 
 export function DailyClose(){
  const {operator}=useAuth()
+ const [params]=useSearchParams()
  const accessiblePlants=useMemo(()=>operator?.role==='admin'?configuredPlants:configuredPlants.filter(plant=>operator?.plantIds.includes(plant.id)),[operator])
- const defaultPlant=operator?.role!=='admin'&&accessiblePlants.length===1?accessiblePlants[0].id:''
+ const requestedPlant=params.get('plantId')??''
+ const requestedAllowed=accessiblePlants.some(plant=>plant.id===requestedPlant)?requestedPlant:''
+ const defaultPlant=requestedAllowed||(operator?.role!=='admin'&&accessiblePlants.length===1?accessiblePlants[0].id:'')
  const [date,setDate]=useState(today),[plantId,setPlantId]=useState(defaultPlant),[data,setData]=useState<Payload|null>(null),[plantPerformance,setPlantPerformance]=useState<PlantPerformance[]>([]),[historicalPlants,setHistoricalPlants]=useState<HistoricalPlant[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[notes,setNotes]=useState(''),[busy,setBusy]=useState(false)
  async function load(nextDate=date,nextPlant=plantId){setLoading(true);try{const q=new URLSearchParams({date:nextDate});if(nextPlant)q.set('plantId',nextPlant);const [daily,performance]=await Promise.all([fetch(`/api/daily-close?${q}`,{cache:'no-store'}).then(async r=>{const p=await r.json() as Payload;if(!r.ok)throw new Error(p.error??'No fue posible construir el estado del día');return p}),operator?.role==='admin'?fetch('/api/plant-performance',{cache:'no-store'}).then(async r=>r.ok?await r.json() as PlantPerformancePayload:{plants:[],historicalPlants:[]}):Promise.resolve({plants:[],historicalPlants:[]} as PlantPerformancePayload)]);setData(daily);setPlantPerformance(performance.plants??[]);setHistoricalPlants(performance.historicalPlants??[]);setNotes(daily.saved?.notes??'');setError('')}catch(e){setError(e instanceof Error?e.message:'No fue posible construir el estado del día')}finally{setLoading(false)}}
- useEffect(()=>{void load(date,defaultPlant)},[])
+ useEffect(()=>{setPlantId(defaultPlant);void load(date,defaultPlant)},[defaultPlant])
  async function closeDay(){if(!data?.snapshot)return;setBusy(true);setError('');try{const r=await fetch('/api/daily-close',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date,plantId:plantId||null,notes})}),p=await r.json() as Payload;if(!r.ok)throw new Error(p.error??'No fue posible cerrar el día');await load()}catch(e){setError(e instanceof Error?e.message:'No fue posible cerrar el día')}finally{setBusy(false)}}
  const s=data?.snapshot,role=operator?.role??'viewer'
  const narrative=role==='admin'?{eyebrow:'Red Pescamar · Hoy',title:'Estado de la operación',description:'Lo importante del día, las excepciones que requieren decisión y el estado de cada planta.'}:role==='operations'?{eyebrow:'Operaciones · Hoy',title:'Qué requiere acción',description:'Producción, inventario, cumplimiento y excepciones de tus plantas, ordenados para decidir qué resolver primero.'}:role==='quality'?{eyebrow:'Calidad · Hoy',title:'Liberación y excepciones',description:'Desviaciones, alertas abiertas y continuidad operacional antes de que el producto avance.'}:role==='finance'?{eyebrow:'Finanzas · Hoy',title:'Resultado y pendientes',description:'Ventas, contribución conocida, costos registrados, liquidaciones y compromisos comerciales.'}:{eyebrow:'Hoy',title:'Resumen operativo',description:'Estado diario de la operación dentro de tu alcance.'}
  const attentionCount=s?.risk.total??0
  const hasLiveActivity=Boolean(s&&(s.receptions.count||s.production.events||s.dispatches.count||s.sales.count||s.risk.total))
- const actions=<div className="page-actions"><label className="inline-field">Fecha<input type="date" value={date} onChange={e=>{setDate(e.target.value);void load(e.target.value,plantId)}}/></label><label className="inline-field">Planta<select value={plantId} onChange={e=>{const next=e.target.value;setPlantId(next);void load(date,next)}}>{operator?.role==='admin'||accessiblePlants.length>1?<option value="">Toda la red accesible</option>:null}{accessiblePlants.map(plant=><option key={plant.id} value={plant.id}>{plant.name}</option>)}</select></label><button className="button" onClick={()=>void load()}><RefreshCw size={15}/>Actualizar</button></div>
+ const actions=<div className="page-actions">{plantId?<Link className="button secondary" to={`/plantas/${plantId}`}>Volver a planta</Link>:null}<label className="inline-field">Fecha<input type="date" value={date} onChange={e=>{setDate(e.target.value);void load(e.target.value,plantId)}}/></label><label className="inline-field">Planta<select value={plantId} onChange={e=>{const next=e.target.value;setPlantId(next);void load(date,next)}}>{operator?.role==='admin'||accessiblePlants.length>1?<option value="">Toda la red accesible</option>:null}{accessiblePlants.map(plant=><option key={plant.id} value={plant.id}>{plant.name}</option>)}</select></label><button className="button" onClick={()=>void load()}><RefreshCw size={15}/>Actualizar</button></div>
  return <><PageHeader eyebrow={narrative.eyebrow} title={narrative.title} description={narrative.description} actions={actions}/>{error?<div className="system-banner error">{error}</div>:null}{loading?<div className="system-banner">Construyendo estado del día desde la Base de Datos Pescamar…</div>:null}{s?<>
   {role==='quality'?<QualityLead s={s}/>:role==='finance'?<FinanceLead s={s}/>:<OperationsLead s={s} attentionCount={attentionCount}/>} 
   <DecisionQueue s={s}/>
