@@ -5,6 +5,7 @@ import { plants } from "../plants";
 import type { Lot, ReceptionEvidence, Species } from "../types";
 import {useLot360} from "./Lot360Context";
 import {ReceptionVisionUpload} from "./ReceptionVisionUpload";
+import {SupplierReceptionDecision} from "./SupplierReceptionDecision";
 import "./reception-evidence.css";
 
 const speciesOptions:Species[]=["Erizo","Loco","Jaiba","Centolla","Pulpo","Pescado","Algas"];
@@ -69,6 +70,7 @@ export function ReceptionModal({open,onClose,onSave}:{open:boolean;onClose:()=>v
       <label>Peso después de escurrido (kg)<input type="number" inputMode="decimal" min="0" step=".1" value={drained} onChange={(event)=>setDrained(event.target.value)} placeholder="0,0" required/></label>
       <label>Temperatura (°C)<input type="number" inputMode="decimal" min="-5" max="30" step=".1" value={temperature} onChange={(event)=>setTemperature(event.target.value)} placeholder="0,0" required/></label>
     </div>
+    <SupplierReceptionDecision supplier={supplier} zone={zone} species={species} onUseSupplier={setSupplier}/>
     <section className="reception-evidence-panel"><header><div><span className="overline teal">Respaldo documental</span><h3>Evidencia de recepción</h3></div><span>{evidence.length}/6</span></header>
       <ReceptionVisionUpload disabled={saving||evidence.length>=6} onEvidence={(item)=>setEvidence((current)=>current.length>=6?current:[...current,item])} onExtract={applyVision}/>
       <details className="manual-evidence"><summary>Agregar enlace manual</summary><div className="evidence-input-grid">

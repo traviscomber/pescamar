@@ -29,15 +29,15 @@ async function listPending(response:Response,operator:SessionOperator){
   const rows=(await getSql()`
     select 'credit_request' as entity_type, cr.id as entity_id, 'ANT-'||cr.request_number as reference,
       'Anticipo solicitado' as title, p.legal_name||' · $'||to_char(cr.amount_clp,'FM999G999G999') as detail,
-      'Créditos' as module, cr.requested_by as owner, cr.requested_at as created_at, null::text as plant_id
+      'Créditos' as module, cr.requested_by as owner, cr.requested_at as created_at, null::text as plant_id, null::uuid as reception_id
     from credit_requests cr join credit_accounts ca on ca.id=cr.account_id join parties p on p.id=ca.party_id
     where cr.status='pending' and ${finance} and (case when cr.requested_by_operator_id is not null then cr.requested_by_operator_id<>${actorId}::uuid else lower(trim(cr.requested_by))<>lower(trim(${actor})) end)
     union all
-    select 'reception',r.id,'REC-'||r.reception_number,'Recepción pendiente',p.legal_name||' · guía '||r.guide_kg||' kg · aceptado '||r.accepted_kg||' kg','Recepción',r.source,r.created_at,r.plant_id
+    select 'reception',r.id,'REC-'||r.reception_number,'Recepción pendiente',p.legal_name||' · guía '||r.guide_kg||' kg · aceptado '||r.accepted_kg||' kg','Recepción',r.source,r.created_at,r.plant_id,r.id
     from receptions r join parties p on p.id=r.supplier_id
     where r.status='pending' and ${receptionRole} and (${admin} or r.plant_id=any(${plantIds}::text[]))
     union all
-    select 'settlement',s.id,'LIQ-'||r.reception_number,'Liquidación pendiente',p.legal_name||' · $'||to_char(s.gross_amount_clp,'FM999G999G999'),'Liquidaciones',s.created_by,s.created_at,r.plant_id
+    select 'settlement',s.id,'LIQ-'||r.reception_number,'Liquidación pendiente',p.legal_name||' · $'||to_char(s.gross_amount_clp,'FM999G999G999'),'Liquidaciones',s.created_by,s.created_at,r.plant_id,r.id
     from settlements s join receptions r on r.id=s.reception_id join parties p on p.id=s.supplier_id
     where s.status='pending' and ${finance} and (case when s.created_by_operator_id is not null then s.created_by_operator_id<>${actorId}::uuid else lower(trim(s.created_by))<>lower(trim(${actor})) end) and (${admin} or r.plant_id=any(${plantIds}::text[]))
     order by created_at asc limit 200`) as Array<Record<string,unknown>>

@@ -11,6 +11,8 @@ type CanonicalSource={file_hash:string;file_name:string;source_kind:string;perio
 type CanonicalRow={rows:number|string;flagged:number|string;guide_kg?:number|string;received_kg?:number|string;inflow_clp?:number|string;outflow_clp?:number|string;final_balance_clp?:number|string;amount_clp?:number|string;kg?:number|string;product_family?:string;pack_format?:string}
 type CanonicalStatus={sources?:CanonicalSource[];datasets?:{production?:CanonicalRow[];ledger?:CanonicalRow[];stock?:CanonicalRow[];transfers?:CanonicalRow[];packing?:CanonicalRow[]};error?:string}
 type CanonicalUploadResult={ok?:boolean;fileName?:string;fileHash?:string;result?:Record<string,number>;error?:string}
+type CanonicalConnection={target:string;mode:string;total?:number|string;reception_ready?:number|string;timing_ready?:number|string;quality_ready?:number|string;review_required?:number|string;suppliers?:number|string;exact?:number|string;missing?:number|string;ambiguous?:number|string;unmatched?:number|string;lots?:number|string;exact_lots?:number|string;unmatched_lots?:number|string;boxes?:number|string;kg?:number|string;transfers?:number|string;rows?:number|string;flagged?:number|string}
+type CanonicalConnections={connections?:{production?:CanonicalConnection;parties?:CanonicalConnection;packing?:CanonicalConnection;finance?:CanonicalConnection;stock?:CanonicalConnection};governance?:{promotion?:string;writesLive?:boolean;rule?:string};error?:string}
 const nf=new Intl.NumberFormat('es-CL',{maximumFractionDigits:1})
 const clp=new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0})
 const approvedNames=new Set(['planilla de produccion 2026.xlsx','CUENTA2.xlsx','packing pulpo pescamar 2026-2.xlsx'])
@@ -19,6 +21,7 @@ export function Imports(){
   const [plants,setPlants]=useState<PlantState[]>(configuredPlants)
   const [history,setHistory]=useState<ImportBatch[]>([])
   const [canonical,setCanonical]=useState<CanonicalStatus|null>(null)
+  const [connections,setConnections]=useState<CanonicalConnections|null>(null)
   const [open,setOpen]=useState(false)
   const [loading,setLoading]=useState(true)
   const [error,setError]=useState('')
@@ -31,10 +34,16 @@ export function Imports(){
   const load=async()=>{
     setLoading(true)
     try{
-      const [state,canonicalResponse]=await Promise.all([fetchSharedPlantState(),fetch('/api/canonical-status',{cache:'no-store'})])
+      const [state,canonicalResponse,connectionsResponse]=await Promise.all([
+        fetchSharedPlantState(),
+        fetch('/api/canonical-status',{cache:'no-store'}),
+        fetch('/api/canonical-connections',{cache:'no-store'})
+      ])
       setPlants(state.plants?.length?state.plants:configuredPlants)
       setHistory(state.history??[])
       if(canonicalResponse.ok)setCanonical(await canonicalResponse.json() as CanonicalStatus)
+      if(connectionsResponse.ok)setConnections(await connectionsResponse.json() as CanonicalConnections)
+      else setConnections({error:(await connectionsResponse.json().catch(()=>({} as CanonicalConnections)) as CanonicalConnections).error??'Conexiones canónicas no disponibles'})
       setError('')
     }catch(cause){
       setError(cause instanceof Error?cause.message:'No fue posible cargar las importaciones')
@@ -72,6 +81,17 @@ export function Imports(){
   const flaggedRows=useMemo(()=>Object.values(canonical?.datasets??{}).flat().reduce((sum,row)=>sum+Number(row.flagged??0),0),[canonical])
   const production=canonical?.datasets?.production?.[0],ledger=canonical?.datasets?.ledger?.[0],transfers=canonical?.datasets?.transfers?.[0]
   const packingKg=(canonical?.datasets?.packing??[]).reduce((sum,row)=>sum+Number(row.kg??0),0)
+  const connectionRows=useMemo(()=>{
+    const value=connections?.connections
+    if(!value)return []
+    return [
+      {key:'production',title:'Producción → operación',detail:`${nf.format(Number(value.production?.reception_ready??0))} filas elegibles para recepción · ${nf.format(Number(value.production?.quality_ready??0))} con calidad · ${nf.format(Number(value.production?.review_required??0))} requieren revisión`,target:value.production?.target,status:Number(value.production?.review_required??0)>0?'REVISAR':'EXACTO'},
+      {key:'parties',title:'Proveedores → maestro',detail:`${nf.format(Number(value.parties?.exact??0))} identidades exactas · ${nf.format(Number(value.parties?.missing??0))} faltantes · ${nf.format(Number(value.parties?.ambiguous??0))} ambiguas`,target:value.parties?.target,status:Number(value.parties?.missing??0)+Number(value.parties?.ambiguous??0)>0?'REVISAR':'EXACTO'},
+      {key:'packing',title:'Packing → lotes',detail:`${nf.format(Number(value.packing?.exact_lots??0))} lotes exactos · ${nf.format(Number(value.packing?.unmatched_lots??0))} sin vínculo · ${nf.format(Number(value.packing?.boxes??0))} cajas`,target:value.packing?.target,status:Number(value.packing?.unmatched_lots??0)>0?'REVISAR':'EXACTO'},
+      {key:'finance',title:'CUENTA2 → finanzas',detail:`${nf.format(Number(value.finance?.exact??0))} coincidencias únicas fecha+monto · ${nf.format(Number(value.finance?.unmatched??0))} sin match · ${nf.format(Number(value.finance?.ambiguous??0))} ambiguas`,target:value.finance?.target,status:Number(value.finance?.unmatched??0)+Number(value.finance?.ambiguous??0)>0?'REVISAR':'EXACTO'},
+      {key:'stock',title:'Stock → inventario',detail:`${nf.format(Number(value.stock?.rows??0))} filas staging · ${nf.format(Number(value.stock?.kg??0))} kg · ${nf.format(Number(value.stock?.flagged??0))} con flags`,target:value.stock?.target,status:'STAGING'}
+    ]
+  },[connections])
   const revert=async(batchId:string)=>{
     setReverting(batchId)
     try{
@@ -107,6 +127,14 @@ export function Imports(){
       <article className="signal-card"><span><Database size={16}/>Packing</span><b>{nf.format(packingKg)} kg</b><small>{nf.format((canonical?.datasets?.packing??[]).reduce((s,r)=>s+Number(r.rows??0),0))} cajas publicadas</small></article>
       <article className="signal-card"><span><CheckCircle2 size={16}/>Transferencias</span><b>{clp.format(Number(transfers?.amount_clp??0))}</b><small>{nf.format(Number(transfers?.rows??0))} movimientos recibidos</small></article>
       <article className="signal-card"><span><AlertTriangle size={16}/>Revisión</span><b>{nf.format(flaggedRows)}</b><small>filas con flags de linaje, fórmula o calidad</small></article>
+    </section>
+
+    <section className="panel import-history">
+      <header className="panel-header"><div><span className="overline teal">Conexiones canónicas</span><h2>Qué alimenta cada módulo</h2></div><span>{connections?.governance?.writesLive===false?'Lectura segura':'Verificando'}</span></header>
+      {connections?.error?<div className="system-banner error"><AlertTriangle size={16}/>{connections.error}</div>:connectionRows.length?<div className="detail-alerts">{connectionRows.map(row=><div key={row.key}>
+        <Database size={17}/><span><b>{row.title}</b><small>{row.detail} · destino: {row.target??'—'}</small></span><em>{row.status}</em>
+      </div>)}</div>:<div className="empty-inline"><div><b>Calculando conexiones</b><small>Se están contrastando identidades, lotes y coincidencias canónicas.</small></div></div>}
+      <div className="governance-note"><ShieldCheck size={19}/><div><b>Sin promoción implícita</b><p>{connections?.governance?.rule??'Las conexiones exactas se muestran como evidencia. Las filas ambiguas o con flags permanecen en staging hasta revisión.'}</p></div></div>
     </section>
 
     <section className="panel import-history">

@@ -13,14 +13,38 @@ async function mockAuthenticatedApp(page:Page,role:Role,plantIds:string[]=['ancu
   })
 }
 
+async function openNavigation(page:Page,projectName:string){
+  if(projectName!=='mobile-chromium')return
+  const trigger=page.getByRole('button',{name:'Abrir menú'})
+  await expect(trigger).toBeVisible()
+  await trigger.click()
+  await expect(page.locator('.sidebar')).toHaveClass(/is-open/)
+}
+
+async function expandCommercialGroup(page:Page){
+  const group=page.locator('details.nav-more').filter({hasText:'Comercial y finanzas'}).first()
+  if(!await group.count())return
+  if(await group.getAttribute('open')===null)await group.locator('summary').click()
+}
+
+async function expectAuthenticatedNavigation(page:Page,projectName:string){
+  await expect(page.getByRole('heading',{name:'Acceso'})).toHaveCount(0)
+  await openNavigation(page,projectName)
+  await expect(page.getByRole('link',{name:/Recepciones/})).toBeVisible()
+}
+
 test('login surface is accessible and stable',async({page},testInfo)=>{
   const consoleErrors:string[]=[]
   page.on('console',message=>{if(message.type()==='error')consoleErrors.push(message.text())})
   await page.goto('/')
   await expect(page.getByRole('heading',{name:'Acceso'})).toBeVisible()
-  await expect(page.getByLabel('Correo')).toBeVisible()
-  await expect(page.getByLabel('Contraseña')).toBeVisible()
-  await expect(page.getByRole('button',{name:'Entrar'})).toBeDisabled()
+  const email=page.getByLabel('Correo'),password=page.getByLabel('Contraseña'),submit=page.getByRole('button',{name:'Entrar'})
+  await expect(email).toBeVisible()
+  await expect(password).toBeVisible()
+  await expect(submit).toBeEnabled()
+  expect(await email.evaluate((input:HTMLInputElement)=>input.validity.valueMissing)).toBe(true)
+  expect(await password.evaluate((input:HTMLInputElement)=>input.validity.valueMissing)).toBe(true)
+  expect(await page.locator('form').evaluate((form:HTMLFormElement)=>form.checkValidity())).toBe(false)
   expect(await page.locator('html').getAttribute('lang')).toBe('es')
   expect(consoleErrors).toEqual([])
   await page.screenshot({path:testInfo.outputPath('login.png'),fullPage:true})
@@ -54,16 +78,18 @@ for(const scenario of [
   test(`${scenario.role} navigation honors role contract`,async({page},testInfo)=>{
     await mockAuthenticatedApp(page,scenario.role)
     await page.goto('/')
-    await expect(page.getByText(`QA ${scenario.role}`,{exact:true})).toBeVisible()
-    await expect(page.getByRole('link',{name:/Recepciones/})).toBeVisible()
-    const receptionCta=page.getByRole('button',{name:/Nueva recepción/})
-    if(scenario.newReception)await expect(receptionCta).toBeVisible();else await expect(receptionCta).toHaveCount(0)
+    await expectAuthenticatedNavigation(page,testInfo.project.name)
     const configuration=page.getByRole('link',{name:'Configuración'})
     if(scenario.configuration)await expect(configuration).toBeVisible();else await expect(configuration).toHaveCount(0)
+    await expandCommercialGroup(page)
     const credits=page.getByRole('link',{name:/Créditos y anticipos/})
     if(scenario.finance)await expect(credits).toBeVisible();else await expect(credits).toHaveCount(0)
+    await page.goto('/recepciones')
+    await expect(page.getByRole('heading',{name:'Recepciones',exact:true})).toBeVisible()
+    const receptionCta=page.getByRole('button',{name:/Nueva recepción/})
+    if(scenario.newReception)await expect(receptionCta.first()).toBeVisible();else await expect(receptionCta).toHaveCount(0)
     expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
-    await page.screenshot({path:testInfo.outputPath(`${scenario.role}-home.png`),fullPage:true})
+    await page.screenshot({path:testInfo.outputPath(`${scenario.role}-receptions.png`),fullPage:true})
   })
 }
 
@@ -75,17 +101,18 @@ for(const denied of [
   {role:'viewer' as const,path:'/aprobaciones'},
   {role:'viewer' as const,path:'/importaciones'},
 ]){
-  test(`${denied.role} is redirected away from ${denied.path}`,async({page})=>{
+  test(`${denied.role} is redirected away from ${denied.path}`,async({page},testInfo)=>{
     await mockAuthenticatedApp(page,denied.role)
     await page.goto(denied.path)
     await expect(page).toHaveURL(/\/$/)
-    await expect(page.getByText(`QA ${denied.role}`,{exact:true})).toBeVisible()
+    await expectAuthenticatedNavigation(page,testInfo.project.name)
   })
 }
 
-test('plant-scoped operator sees its assigned coverage',async({page})=>{
+test('plant-scoped operator sees its assigned coverage',async({page},testInfo)=>{
   await mockAuthenticatedApp(page,'operations',['ancud','quellon'])
   await page.goto('/')
+  await openNavigation(page,testInfo.project.name)
   await expect(page.getByText('2 plantas bajo tu alcance')).toBeVisible()
 })
 
@@ -93,10 +120,13 @@ test('mobile drawer traps focus, closes with Escape and restores trigger focus',
   test.skip(testInfo.project.name!=='mobile-chromium','Mobile-only interaction contract')
   await mockAuthenticatedApp(page,'operations',['ancud'])
   await page.goto('/')
-  const trigger=page.getByRole('button',{name:'Abrir menú'})
+  const trigger=page.getByRole('button',{name:'Abrir menú'}),sidebar=page.locator('.sidebar'),backdrop=page.locator('.mobile-nav-backdrop')
   await trigger.click()
+  await expect(sidebar).toHaveClass(/is-open/)
+  await expect(backdrop).toBeVisible()
   await expect(page.getByRole('button',{name:'Cerrar menú'})).toBeVisible()
   await page.keyboard.press('Escape')
-  await expect(page.getByRole('button',{name:'Cerrar menú'})).toBeHidden()
+  await expect(sidebar).not.toHaveClass(/is-open/)
+  await expect(backdrop).toHaveCount(0)
   await expect(trigger).toBeFocused()
 })

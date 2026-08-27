@@ -1,352 +1,49 @@
-import {
-  AlertTriangle,
-  ArrowLeft,
-  ArrowRight,
-  Boxes,
-  CheckCircle2,
-  Clock3,
-  FileSpreadsheet,
-  Link2Off,
-  PackageCheck,
-  TrendingUp,
-} from "lucide-react";
-import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { PlantImportModal } from "../components/PlantImportModal";
-import { PageHeader } from "../components/PageHeader";
-import {
-  fetchSharedPlantState,
-  publishSharedPlantState,
-} from "../plantApi";
-import {
-  createImportBatch,
-  isOperationalPlant,
-  type PlantState,
-  type ValidatedImport,
-} from "../plantImport";
-import {
-  plants as configuredPlants,
-  type Plant,
-} from "../plants";
+import {AlertTriangle,ArrowLeft,ArrowRight,Boxes,CheckCircle2,FileSpreadsheet,PackageCheck,Pencil,Plus,TrendingDown,TrendingUp} from "lucide-react";
+import {useEffect,useMemo,useState} from "react";
+import {Link,useNavigate,useParams} from "react-router-dom";
+import {useAuth} from "../auth";
+import {PlantEditor} from "../components/PlantEditor";
+import {PlantImportModal} from "../components/PlantImportModal";
+import {PageHeader} from "../components/PageHeader";
+import {fetchSharedPlantState,publishSharedPlantState,savePlantProfile} from "../plantApi";
+import {createImportBatch,isOperationalPlant,type PlantState,type ValidatedImport} from "../plantImport";
+import {plants as configuredPlants,type Plant} from "../plants";
 
-const kg = (value: number) => `${value.toLocaleString("es-CL")} kg`;
-export function PlantControl() {
-  const { plantId } = useParams();
-  const navigate = useNavigate();
-  const [plants, setPlants] = useState<PlantState[]>(configuredPlants);
-  const [importOpen, setImportOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  useEffect(() => {
-    let active = true;
-    fetchSharedPlantState()
-      .then((state) => {
-        if (!active) return;
-        const sharedPlants = Array.isArray(state.plants) && state.plants.length ? state.plants : configuredPlants;
-        setPlants(sharedPlants);
-        setError("");
-      })
-      .catch((cause: unknown) => {
-        if (!active) return;
-        setPlants(configuredPlants);
-        setError(
-          cause instanceof Error
-            ? cause.message
-            : "No fue posible sincronizar plantas",
-        );
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-  const publish = async (rows: ValidatedImport[]) => {
-    const operator = import.meta.env.VITE_OPERATOR_NAME?.trim();
-    if (!operator)
-      throw new Error("Falta configurar la identidad del operador");
-    const batch = createImportBatch(plants, rows, operator);
-    await publishSharedPlantState(batch);
-    setPlants(batch.resultingPlants);
-    setError("");
-  };
-  const selected = plants.find((plant) => plant.id === plantId);
-  if (selected)
-    return (
-      <>
-        <nav className="plant-detail-toolbar" aria-label="Navegación de plantas">
-          <Link to="/plantas" className="back-link">
-            <ArrowLeft size={15} />
-            Todas las plantas
-          </Link>
-          <PlantScopeSelector
-            plants={plants}
-            value={selected.id}
-            onChange={(id) => {
-              localStorage.setItem("pescamar-active-plant", id);
-              navigate(`/plantas/${id}`);
-            }}
-          />
-        </nav>
-        <PlantDetail plant={selected} />
-        <PlantImportModal
-          open={importOpen}
-          plants={configuredPlants}
-          onClose={() => setImportOpen(false)}
-          onPublish={publish}
-        />
-      </>
-    );
-  const linkedCount=plants.filter(isOperationalPlant).length;
-  return (
-    <>
-      {loading ? (
-        <div className="system-banner">Sincronizando plantas…</div>
-      ) : null}
-      {error ? (
-        <div className="system-banner error" role="alert">
-          {error}
-        </div>
-      ) : null}
-      <PageHeader
-        eyebrow="Red operacional"
-        title="Plantas"
-        description="Selecciona un centro para revisar su operación. La información consolidada permanece separada del trabajo por planta."
-        actions={<Link className="button secondary" to="/importaciones"><FileSpreadsheet size={16}/>Gestionar fuentes</Link>}
-      />
-      <section className="plant-directory-summary" aria-label="Resumen de la red">
-        <div><small>Centros configurados</small><b>{plants.length}</b></div>
-        <div><small>Con fuente operacional</small><b>{linkedCount}</b></div>
-        <div><small>Pendientes de vincular</small><b>{plants.length-linkedCount}</b></div>
-        <p>Los indicadores aparecen únicamente después de publicar una fuente validada.</p>
-      </section>
-      <section className="plant-grid corporate-plant-grid">
-        {plants.map((plant) => <PlantCard plant={plant} key={plant.id} />)}
-      </section>
-      <PlantImportModal
-        open={importOpen}
-        plants={configuredPlants}
-        onClose={() => setImportOpen(false)}
-        onPublish={publish}
-      />
-    </>
-  );
+type Performance={plant_id:string;lots:number|string;received_kg:number|string;produced_kg:number|string;available_kg:number|string;revenue_clp:number|string;purchase_cost_clp:number|string;transformation_cost_clp:number|string;contribution_clp:number|string;contribution_pct:number|string|null}
+type SupplierDriver={supplier:string;lots:number|string;received_kg:number|string;difference_kg:number|string;avg_price_clp:number|string|null}
+type HistoricalPerformance={historical_key:string;display_name:string;source_rows:number|string;reception_rows:number|string;received_kg:number|string|null;guide_kg:number|string|null;difference_kg:number|string|null;reception_variance_pct:number|string|null;reception_coverage_pct:number|string;timing_rows:number|string;timing_coverage_pct:number|string;avg_reception_to_process_days:number|string|null;avg_process_to_production_days:number|string|null;avg_total_days:number|string|null;quality_rows:number|string;quality_coverage_pct:number|string;review_rows:number|string;consolidated_rows:number|string;flagged_rows:number|string;first_date:string|null;last_date:string|null;supplier_drivers:SupplierDriver[]}
+type CloseMemory={plant_id:string;latest_close_date:string|null;latest_critical:number|string;latest_today:number|string;latest_follow_up:number|string;closes_count:number|string;persistent_count:number|string|null;new_count:number|string|null;resolved_count:number|string|null}
+type PerformancePayload={plants?:Performance[];historicalPlants?:HistoricalPerformance[];closeMemory?:CloseMemory[];error?:string}
+const kg=(v:number|string|null|undefined)=>v==null?'—':`${Number(v).toLocaleString('es-CL',{maximumFractionDigits:0})} kg`;
+const clp=(v:number|string)=>new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(Number(v));
+const pct=(v:number|string|null|undefined)=>v==null?'—':`${Number(v).toFixed(1)}%`;
+const historicalRoute=(key:string)=>`/plantas/historico-${encodeURIComponent(key)}`;
+
+export function PlantControl(){
+ const{plantId}=useParams();const navigate=useNavigate();const{operator}=useAuth();const canManage=operator?.role==='admin';
+ const[plants,setPlants]=useState<PlantState[]>(configuredPlants),[performance,setPerformance]=useState<Performance[]>([]),[historicalPerformance,setHistoricalPerformance]=useState<HistoricalPerformance[]>([]),[closeMemory,setCloseMemory]=useState<CloseMemory[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[editing,setEditing]=useState<PlantState|null>(null),[creating,setCreating]=useState(false),[importOpen,setImportOpen]=useState(false);
+ async function load(){setLoading(true);try{const[state,perf]=await Promise.all([fetchSharedPlantState(),fetch('/api/plant-performance',{cache:'no-store'}).then(async r=>{const p=await r.json() as PerformancePayload;if(!r.ok)throw new Error(p.error??'No fue posible cargar desempeño');return p})]);setPlants(Array.isArray(state.plants)&&state.plants.length?state.plants:configuredPlants);setPerformance(perf.plants??[]);setHistoricalPerformance(perf.historicalPlants??[]);setCloseMemory(perf.closeMemory??[]);setError('')}catch(cause){setPlants(configuredPlants);setError(cause instanceof Error?cause.message:'No fue posible sincronizar plantas')}finally{setLoading(false)}}useEffect(()=>{void load()},[]);
+ const publish=async(rows:ValidatedImport[])=>{const name=operator?.fullName?.trim();if(!name)throw new Error('Sesión de operador requerida');const batch=createImportBatch(plants,rows,name);await publishSharedPlantState(batch);setPlants(batch.resultingPlants)};
+ async function savePlant(plant:Plant){const payload=await savePlantProfile(plant,plants);if(payload.plants?.length)setPlants(payload.plants);else await load();if(creating)navigate(`/plantas/${plant.id}`)}
+ const perfMap=useMemo(()=>new Map(performance.map(row=>[row.plant_id,row])),[performance]);const closeMap=useMemo(()=>new Map(closeMemory.map(row=>[row.plant_id,row])),[closeMemory]);
+ const selected=plants.find(p=>p.id===plantId),selectedPerformance=selected?perfMap.get(selected.id):undefined,selectedClose=selected?closeMap.get(selected.id):undefined;
+ const historicalKey=plantId?.startsWith('historico-')?decodeURIComponent(plantId.slice('historico-'.length)):null;const selectedHistorical=historicalKey?historicalPerformance.find(row=>row.historical_key===historicalKey):undefined;
+ if(selected)return <><nav className="plant-detail-toolbar"><Link to="/plantas" className="back-link"><ArrowLeft size={15}/>Todas las plantas</Link><label className="plant-scope-selector"><span>Cambiar planta</span><select value={selected.id} onChange={e=>navigate(`/plantas/${e.target.value}`)}>{plants.filter(p=>p.active!==false).map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label></nav><PageHeader eyebrow={`${selected.mode} · ${selected.location}`} title={selected.name} description={selected.description||'Operación, rentabilidad e inventario de la planta.'} actions={<>{canManage?<button className="button primary" onClick={()=>setEditing(selected)}><Pencil size={15}/>Editar planta</button>:null}<Link className="button secondary" to="/rentabilidad"><TrendingUp size={15}/>Rentabilidad</Link></>}/>{selected.photoUrl?<div className="plant-detail-photo"><img src={selected.photoUrl} alt={selected.name}/></div>:null}<PlantDecisionStrip plant={selected} performance={selectedPerformance} memory={selectedClose}/><PlantMetrics plant={selected} performance={selectedPerformance}/>{selectedClose?<OperationalMemory memory={selectedClose}/>:null}<section className="plant-detail-grid" id="plant-context"><Alerts plant={selected}/><ProductCatalog plant={selected}/></section><PlantImportModal open={importOpen} plants={plants} onClose={()=>setImportOpen(false)} onPublish={publish}/>{editing&&canManage?<PlantEditor plant={editing as Plant} onClose={()=>setEditing(null)} onSave={savePlant}/>:null}</>;
+ if(selectedHistorical)return <HistoricalPlantDetail performance={selectedHistorical}/>;
+ return <>{loading?<div className="system-banner">Calculando desempeño de plantas…</div>:null}{error?<div className="system-banner error">{error}</div>:null}<PageHeader eyebrow="Desempeño por planta" title="Plantas" description="Compara la red y abre sólo donde exista una señal que requiera atención." actions={<>{canManage?<button className="button primary" onClick={()=>setCreating(true)}><Plus size={16}/>Nueva planta</button>:null}<Link className="button secondary" to="/importaciones"><FileSpreadsheet size={16}/>Fuentes</Link></>}/><section className="plant-grid corporate-plant-grid">{plants.filter(p=>p.active!==false).map(p=><PlantCard key={p.id} plant={p} performance={perfMap.get(p.id)} memory={closeMap.get(p.id)}/>)}</section>{historicalPerformance.length?<section className="panel"><div className="section-heading"><div><span className="overline">Base de Datos Pescamar</span><h2>Contexto histórico</h2><p className="source-note">Recepción, velocidad y revisiones. Cada indicador usa sólo la evidencia válida para ese cálculo.</p></div><span>{historicalPerformance.length}</span></div><div className="plant-grid corporate-plant-grid">{historicalPerformance.filter(p=>p.historical_key!=='sin planta').map(p=><HistoricalPlantCard key={p.historical_key} performance={p}/>)}</div></section>:null}{creating&&canManage?<PlantEditor onClose={()=>setCreating(false)} onSave={async plant=>{await savePlant(plant);setCreating(false)}}/>:null}</>;
 }
 
-function PlantCard({ plant }: { plant: PlantState }) {
-  const operational = isOperationalPlant(plant);
-  const progress = operational && plant.targetKg
-    ? Math.min(100, Math.round((plant.productionKg / plant.targetKg) * 100))
-    : null;
-  return <Link className={`panel plant-card corporate-plant-card status-${operational ? plant.status : "offline"}`} to={`/plantas/${plant.id}`}>
-    <header>
-      <div><span className="overline">{plant.mode}</span><h2>{plant.name}</h2><small>{plant.location}</small></div>
-      <span className="plant-card-actions">
-        {!operational ? <Link2Off className="plant-pending-icon" size={16} aria-label="Fuente pendiente de vincular" /> : null}
-        <ArrowRight size={18} />
-      </span>
-    </header>
-    {operational ? <div className={`plant-card-state ${plant.status}`}><i/><span><b>{plant.statusLabel}</b><small>{plant.statusReason}</small></span></div> : null}
-    {operational ? <div className="plant-kpis"><div><small>Producción</small><b>{kg(plant.productionKg)}</b></div><div><small>Cumplimiento</small><b>{progress}%</b></div><div><small>Alertas</small><b>{plant.alerts.length}</b></div></div> : null}
-    <div className="plant-products"><small>Productos</small><p>{plant.products.slice(0,3).join(" · ")}{plant.products.length>3?` · +${plant.products.length-3}`:""}</p></div>
-    <footer><span>{operational ? <><Clock3 size={13}/>{plant.updatedAt}</> : <><Link2Off size={13}/>No vinculada</>}</span><span>Abrir planta <ArrowRight size={13}/></span></footer>
-  </Link>
-}
+function PlantDecisionStrip({plant,performance,memory}:{plant:PlantState;performance?:Performance;memory?:CloseMemory}){const operational=isOperationalPlant(plant),alerts=operational?plant.alerts.length:0,critical=Number(memory?.latest_critical??0),persistent=memory?.persistent_count==null?0:Number(memory.persistent_count),available=performance?Number(performance.available_kg):operational?plant.inventoryKg:0;const level=critical?'critical':alerts||persistent?'attention':'healthy',title=critical?`${critical} crítico${critical===1?'':'s'} al último cierre`:alerts?`${alerts} alerta${alerts===1?'':'s'} activa${alerts===1?'':'s'}`:persistent?`${persistent} excepción${persistent===1?'':'es'} persiste${persistent===1?'':'n'}`:'Operación sin bloqueos visibles',detail=critical?'Revisa primero las excepciones que quedaron abiertas al cierre.':alerts?'Hay señales operacionales que requieren revisión antes de seguir escalando actividad.':persistent?'Hay temas que siguen abiertos entre jornadas.':'No hay señales críticas registradas para esta planta en la capa disponible.';const scope=encodeURIComponent(plant.id);return <section className={`panel close-bar ${level!=='healthy'?'attention':''}`}><div><span className="overline">Estado y siguiente acción</span><h2>{title}</h2><p>{detail} {available>0?`${kg(available)} disponibles.`:''}</p></div><div className="page-actions"><Link className="button primary" to={`/?plantId=${scope}`}>Ver operación de hoy</Link><Link className="button secondary" to={`/inventario?plantId=${scope}`}>Revisar inventario</Link><a className="button secondary" href="#plant-context">Ver contexto</a></div></section>}
 
-function PlantScopeSelector({plants,value,onChange}:{plants:PlantState[];value:string;onChange:(id:string)=>void}) {
-  return <label className="plant-scope-selector"><span>Cambiar planta</span><select aria-label="Cambiar planta" value={value} onChange={(event)=>onChange(event.target.value)}><option value="" disabled>Seleccionar planta</option>{plants.map((plant)=><option value={plant.id} key={plant.id}>{plant.name} · {plant.location}</option>)}</select></label>
-}
+function PlantCard({plant,performance,memory}:{plant:PlantState;performance?:Performance;memory?:CloseMemory}){const operational=isOperationalPlant(plant),progress=operational&&plant.targetKg?Math.min(100,Math.round(plant.productionKg/plant.targetKg*100)):null,alerts=operational?plant.alerts.length:0,critical=Number(memory?.latest_critical??0),persistent=memory?.persistent_count==null?null:Number(memory.persistent_count),resolved=memory?.resolved_count==null?null:Number(memory.resolved_count),status=critical?'critical':alerts||persistent&&persistent>0?'attention':operational?'healthy':'offline';return <Link className={`panel plant-card corporate-plant-card status-${status}`} to={`/plantas/${plant.id}`}>{plant.photoUrl?<div className="plant-card-photo"><img src={plant.photoUrl} alt=""/></div>:null}<header><div><span className="overline">{plant.location}</span><h2>{plant.name}</h2><small>{memory&&memory.latest_close_date?`Cierre ${new Date(`${memory.latest_close_date}T12:00:00`).toLocaleDateString('es-CL')}`:plant.mode}</small></div><ArrowRight size={18}/></header><div className="plant-kpis executive"><div><small>Producción</small><b>{operational?kg(plant.productionKg):performance?kg(performance.produced_kg):'—'}</b></div><div><small>Cumplimiento</small><b>{progress==null?'—':`${progress}%`}</b></div><div><small>Disponible</small><b>{performance?kg(performance.available_kg):operational?kg(plant.inventoryKg):'—'}</b></div><div><small>Riesgo cierre</small><b>{memory?critical:'—'}</b></div></div><footer><span>{memory?persistent==null?'1 cierre en serie':`${persistent} persisten · ${resolved??0} resueltas`:performance?`${Number(performance.lots)} lotes · sin serie de cierres`:'Sin actividad'}</span><span>Ver detalle <ArrowRight size={13}/></span></footer></Link>}
 
-function PlantDetail({ plant }: { plant: PlantState }) {
-  if (!isOperationalPlant(plant))
-    return (
-      <>
-        <PageHeader
-          eyebrow={`${plant.mode} · ${plant.location}`}
-          title={plant.name}
-          description="Centro configurado, pendiente de conexión con una fuente operacional validada."
-        />
-        <section className="plant-activation-dashboard">
-          <article className="panel plant-activation-hero">
-            <span className="plant-offline-icon"><Link2Off size={24} /></span>
-            <div>
-              <span className="overline">Estado de datos</span>
-              <h2>Planta sin fuente operacional</h2>
-              <p>Asigna y publica una fuente validada para comenzar a mostrar indicadores reales de esta planta.</p>
-            </div>
-            <Link className="button primary" to="/importaciones">
-              <FileSpreadsheet size={16} />
-              Asignar fuente
-            </Link>
-            <div className="plant-activation-facts" aria-label="Resumen de activación">
-              <div><small>Conectividad</small><b>No vinculada</b></div>
-              <div><small>Productos configurados</small><b>{plant.products.length}</b></div>
-              <div><small>Indicadores publicados</small><b>0</b></div>
-            </div>
-          </article>
-          <article className="panel plant-activation-progress">
-            <header className="panel-header">
-              <div><span className="overline">Puesta en marcha</span><h2>Preparación operacional</h2></div>
-              <span>1 de 4</span>
-            </header>
-            <ol>
-              <li className="complete"><span><CheckCircle2 size={15}/></span><div><b>Centro configurado</b><small>Planta y catálogo disponibles</small></div></li>
-              <li className="current"><span>02</span><div><b>Asignar fuente</b><small>Selecciona la planilla operacional</small></div></li>
-              <li><span>03</span><div><b>Validar estructura</b><small>Revisión previa a publicación</small></div></li>
-              <li><span>04</span><div><b>Publicar indicadores</b><small>Dashboard habilitado con datos reales</small></div></li>
-            </ol>
-          </article>
-          <article className="panel plant-activation-products">
-            <header className="panel-header">
-              <div><span className="overline">Alcance productivo</span><h2>Productos configurados</h2></div>
-              <span>{plant.products.length} categorías</span>
-            </header>
-            <div className="plant-product-dashboard">
-              {plant.products.map((product, index) => <div key={product}><span>{String(index + 1).padStart(2, "0")}</span><b>{product}</b><small>Configuración por validar</small></div>)}
-            </div>
-          </article>
-        </section>
-      </>
-    );
-  const progress = Math.round((plant.productionKg / plant.targetKg) * 100);
-  return (
-    <>
-      <PageHeader
-        eyebrow={`${plant.mode} · ${plant.location}`}
-        title={plant.name}
-        description={plant.statusReason}
-        actions={
-          <Link className="button secondary" to="/importaciones">
-            <FileSpreadsheet size={16} />
-            Ver importaciones
-          </Link>
-        }
-      />
-      <section className={`plant-detail-banner ${plant.status}`}>
-        <div className={`plant-signal ${plant.status}`}>
-          <span />
-        </div>
-        <div>
-          <small>Estado actual</small>
-          <b>{plant.statusLabel}</b>
-          <p>{plant.statusReason}</p>
-        </div>
-        <div>
-          <small>Última actualización</small>
-          <b>{plant.updatedAt}</b>
-          <span>{plant.source}</span>
-        </div>
-      </section>
-      <section className="metric-grid">
-        <DetailMetric
-          icon={<TrendingUp />}
-          label="Producción"
-          value={kg(plant.productionKg)}
-          note={`Meta ${kg(plant.targetKg)}`}
-        />
-        <DetailMetric
-          icon={<CheckCircle2 />}
-          label="Cumplimiento"
-          value={`${progress}%`}
-          note={progress >= 95 ? "Dentro de rango" : "Bajo objetivo"}
-        />
-        <DetailMetric
-          icon={<Boxes />}
-          label="Inventario total"
-          value={kg(plant.inventoryKg)}
-          note="Último archivo publicado"
-        />
-        <DetailMetric
-          icon={<PackageCheck />}
-          label="Producto terminado"
-          value={kg(plant.inventoryFinishedKg)}
-          note={
-            plant.inventoryKg
-              ? `${Math.round((plant.inventoryFinishedKg / plant.inventoryKg) * 100)}% del inventario`
-              : "Sin inventario"
-          }
-        />
-      </section>
-      <section className="plant-detail-grid">
-        <ProductCatalog plant={plant} />
-        <article className="panel">
-          <header className="panel-header">
-            <h2>Alertas y observaciones</h2>
-            <span>{plant.alerts.length} registradas</span>
-          </header>
-          {plant.alerts.length ? (
-            <div className="detail-alerts">
-              {plant.alerts.map((alert) => (
-                <div
-                  key={alert.id}
-                  className={alert.severity === "Crítica" ? "critical" : ""}
-                >
-                  <AlertTriangle size={17} />
-                  <span>
-                    <b>{alert.title}</b>
-                    <small>{alert.detail}</small>
-                  </span>
-                  <em>{alert.severity}</em>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="plant-empty">
-              <CheckCircle2 size={27} />
-              <b>Sin alertas abiertas</b>
-              <span>
-                La operación informada se encuentra dentro de los rangos
-                definidos.
-              </span>
-            </div>
-          )}
-        </article>
-      </section>
-    </>
-  );
-}
+function OperationalMemory({memory}:{memory:CloseMemory}){const persistent=memory.persistent_count==null?null:Number(memory.persistent_count),fresh=memory.new_count==null?null:Number(memory.new_count),resolved=memory.resolved_count==null?null:Number(memory.resolved_count);return <section className="panel"><div className="section-heading"><div><span className="overline">Disciplina operacional</span><h2>Memoria de cierre</h2><p className="source-note">{memory.latest_close_date?new Date(`${memory.latest_close_date}T12:00:00`).toLocaleDateString('es-CL'):'—'} · {Number(memory.closes_count)} cierre(s) registrados.</p></div></div><div className="balance-summary"><div><small>Críticos</small><b>{Number(memory.latest_critical)}</b></div><div><small>Persisten</small><b>{persistent==null?'—':persistent}</b></div><div><small>Nuevas</small><b>{fresh==null?'—':fresh}</b></div><div><small>Resueltas</small><b>{resolved==null?'—':resolved}</b></div></div></section>}
 
-function ProductCatalog({ plant }: { plant: Plant }) {
-  return (
-    <article className="panel">
-      <header className="panel-header">
-        <h2>Catálogo de productos</h2>
-        <span>{plant.products.length} categorías</span>
-      </header>
-      <div className="product-list">
-        {plant.products.map((product, index) => (
-          <div key={product}>
-            <span>{String(index + 1).padStart(2, "0")}</span>
-            <b>{product}</b>
-            <em>
-              {isOperationalPlant(plant)
-                ? "Incluido en última planilla"
-                : "Configuración por validar"}
-            </em>
-          </div>
-        ))}
-      </div>
-    </article>
-  );
-}
-function DetailMetric({
-  icon,
-  label,
-  value,
-  note,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  note: string;
-}) {
-  return (
-    <article className="metric">
-      <div className="metric-icon">{icon}</div>
-      <span>{label}</span>
-      <strong>{value}</strong>
-      <small>{note}</small>
-    </article>
-  );
-}
+function HistoricalPlantCard({performance}:{performance:HistoricalPerformance}){const variance=performance.reception_variance_pct==null?null:Number(performance.reception_variance_pct),review=Number(performance.review_rows??0),timing=Number(performance.timing_coverage_pct??0);return <Link className={`panel plant-card corporate-plant-card status-${Math.abs(variance??0)>2||review?'attention':'healthy'}`} to={historicalRoute(performance.historical_key)}><header><div><span className="overline">Histórico</span><h2>{performance.display_name}</h2><small>{performance.first_date&&performance.last_date?`${new Date(performance.first_date).toLocaleDateString('es-CL')} — ${new Date(performance.last_date).toLocaleDateString('es-CL')}`:'Período disponible'}</small></div><ArrowRight size={18}/></header><div className="plant-kpis executive"><div><small>Kg recibidos</small><b>{kg(performance.received_kg)}</b></div><div><small>Diferencia guía</small><b>{pct(variance)}</b></div><div><small>Ciclo</small><b>{performance.avg_total_days==null?'—':`${Number(performance.avg_total_days).toFixed(1)} d`}</b><small>{timing.toFixed(0)}% cobertura</small></div><div><small>Revisión</small><b>{review}</b></div></div><footer><span>{Number(performance.reception_rows)} recepciones · cobertura {pct(performance.reception_coverage_pct)}</span><span>Ver detalle <ArrowRight size={13}/></span></footer></Link>}
+
+function HistoricalPlantDetail({performance}:{performance:HistoricalPerformance}){const received=Number(performance.received_kg??0),guide=Number(performance.guide_kg??0),difference=Number(performance.difference_kg??0),variance=performance.reception_variance_pct==null?null:Number(performance.reception_variance_pct),review=Number(performance.review_rows??0),drivers=performance.supplier_drivers??[];return <><nav className="plant-detail-toolbar"><Link to="/plantas" className="back-link"><ArrowLeft size={15}/>Todas las plantas</Link></nav><PageHeader eyebrow="Base de Datos Pescamar" title={performance.display_name} description="Desempeño histórico observado con cobertura explícita por indicador."/><section className="metric-grid"><Metric icon={<Boxes/>} label="Recepciones válidas" value={Number(performance.reception_rows).toLocaleString('es-CL')} note={`${pct(performance.reception_coverage_pct)} cobertura`}/><Metric icon={<PackageCheck/>} label="Kg recibidos" value={kg(received)} note={`Guía ${kg(guide)}`}/><Metric icon={difference>0?<TrendingUp/>:<TrendingDown/>} label="Diferencia vs guía" value={pct(variance)} note={`${difference>=0?'+':''}${kg(difference)} acumulados`}/><Metric icon={<TrendingUp/>} label="Ciclo promedio" value={performance.avg_total_days==null?'—':`${Number(performance.avg_total_days).toFixed(1)} días`} note={`${pct(performance.timing_coverage_pct)} cobertura temporal`}/><Metric icon={<CheckCircle2/>} label="Clasificación disponible" value={pct(performance.quality_coverage_pct)} note={`${Number(performance.quality_rows)} registros utilizables`}/><Metric icon={<AlertTriangle/>} label="Requiere revisión" value={String(review)} note={`${Number(performance.consolidated_rows)} registros en lotes consolidados`}/></section><section className="plant-detail-grid"><article className="panel"><div className="section-heading"><div><span className="overline">Lectura ejecutiva</span><h2>Qué sabemos con confianza</h2></div></div><div className="compact-ledger"><div className="alert-row static"><span>01</span><div><b>{Math.abs(variance??0)<=1?'Peso de recepción estable':'Desviación de recepción relevante'}</b><small>{variance==null?'No existe base suficiente para comparar.':`La diferencia acumulada guía–recepción equivale a ${Math.abs(variance).toFixed(1)}% del peso informado en guía.`}</small></div></div><div className="alert-row static"><span>02</span><div><b>Velocidad operacional</b><small>{performance.avg_total_days==null?'No hay secuencias temporales suficientes.':`Recepción a producción: ${Number(performance.avg_total_days).toFixed(1)} días promedio, con ${Number(performance.timing_coverage_pct).toFixed(0)}% de cobertura.`}</small></div></div><div className="alert-row static"><span>03</span><div><b>{review?'Hay registros que requieren revisión':'Sin revisiones abiertas en esta capa'}</b><small>{review?`${review} registros quedan fuera de los KPI sensibles cuando corresponde.`:'La elegibilidad no detecta excepciones que invaliden los indicadores mostrados.'}</small></div></div></div></article><article className="panel"><div className="section-heading"><div><span className="overline">Causas</span><h2>Proveedores que más explican la variación</h2></div></div>{drivers.length?<div className="compact-ledger">{drivers.map((driver,index)=><div className="alert-row static" key={`${driver.supplier}-${index}`}><span>{String(index+1).padStart(2,'0')}</span><div><b>{driver.supplier}</b><small>{Number(driver.lots)} lotes · {kg(driver.received_kg)} · diferencia {Number(driver.difference_kg)>=0?'+':''}{kg(driver.difference_kg)}</small></div></div>)}</div>:<p className="source-note">No hay proveedor atribuible en estos registros.</p>}</article></section></>}
+
+function PlantMetrics({plant,performance}:{plant:PlantState;performance?:Performance}){const operational=isOperationalPlant(plant),progress=operational&&plant.targetKg?Math.round(plant.productionKg/plant.targetKg*100):null;return <section className="metric-grid"><Metric icon={<TrendingUp/>} label="Producción" value={operational?kg(plant.productionKg):performance?kg(performance.produced_kg):'—'} note={operational?`Meta ${kg(plant.targetKg)}`:'Sin meta publicada'}/><Metric icon={<CheckCircle2/>} label="Cumplimiento" value={progress==null?'—':`${progress}%`} note={progress==null?'Sin meta':progress>=95?'Dentro de rango':'Bajo objetivo'}/><Metric icon={<Boxes/>} label="Inventario disponible" value={performance?kg(performance.available_kg):operational?kg(plant.inventoryKg):'—'} note="Después de despachos"/><Metric icon={<PackageCheck/>} label="Contribución conocida" value={performance&&Number(performance.revenue_clp)>0?clp(performance.contribution_clp):'—'} note={performance?.contribution_pct==null?'Faltan costos o ventas':`${Number(performance.contribution_pct).toFixed(1)}%`}/></section>}
+function ProductCatalog({plant}:{plant:Plant}){return <article className="panel"><header className="panel-header"><h2>Productos</h2><span>{plant.products.length}</span></header><div className="product-list">{plant.products.map((product,index)=><div key={product}><span>{String(index+1).padStart(2,'0')}</span><b>{product}</b></div>)}</div></article>}
+function Alerts({plant}:{plant:PlantState}){const operational=isOperationalPlant(plant);return <article className="panel"><header className="panel-header"><h2>Alertas</h2><span>{operational?plant.alerts.length:0}</span></header>{operational&&plant.alerts.length?<div className="detail-alerts">{plant.alerts.map(a=><div key={a.id}><AlertTriangle size={17}/><span><b>{a.title}</b><small>{a.detail}</small></span></div>)}</div>:<div className="plant-empty"><CheckCircle2 size={27}/><b>Sin alertas abiertas</b></div>}</article>}
+function Metric({icon,label,value,note}:{icon:React.ReactNode;label:string;value:string;note:string}){return <article className="metric"><div className="metric-icon">{icon}</div><span>{label}</span><strong>{value}</strong><small>{note}</small></article>}
