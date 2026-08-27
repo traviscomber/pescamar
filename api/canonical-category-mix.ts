@@ -17,6 +17,7 @@ export default async function handler(request:Request,response:Response){
   const baseSql=`
     with raw as (
       select coalesce(nullif(btrim(h.supplier_name),''),nullif(btrim(h.supplier_original),''),'Sin proveedor') supplier,
+        coalesce(nullif(btrim(h.process_site_original),''),nullif(btrim(h.plant_id),''),'Sin planta') process_site,
         coalesce(h.received_kg,0) received_kg,
         coalesce((h.grade_breakdown->'A1'->>'kg')::numeric,0) a1_kg,
         coalesce((h.grade_breakdown->'A2'->>'kg')::numeric,0) a2_kg,
@@ -36,7 +37,7 @@ export default async function handler(request:Request,response:Response){
     ), classified as (
       select *,received_kg>0 and category_kg>received_kg mass_review from measured
     )`
-  const [summaryRaw,supplierRaw]=await Promise.all([
+  const [summaryRaw,supplierRaw,siteRaw]=await Promise.all([
    sql.query(`${baseSql}
     select count(*)::int rows,count(*) filter(where not mass_review and category_kg>0)::int eligible_rows,
       count(*) filter(where mass_review)::int excluded_rows,count(*) filter(where category_kg=0)::int missing_output_rows,
@@ -56,12 +57,20 @@ export default async function handler(request:Request,response:Response){
       count(*) filter(where mass_review)::int mass_review_rows,
       count(*) filter(where not mass_review and category_kg>0)::int eligible_rows,
       coalesce(sum(category_kg) filter(where not mass_review),0)::numeric reconciled_category_kg
-    from classified group by supplier order by received_kg desc`,[])
+    from classified group by supplier order by received_kg desc`,[]),
+   sql.query(`${baseSql}
+    select process_site,count(*)::int rows,coalesce(sum(received_kg),0)::numeric received_kg,
+      count(*) filter(where mass_review)::int mass_review_rows,
+      count(*) filter(where not mass_review and category_kg>0)::int eligible_rows,
+      coalesce(sum(category_kg) filter(where not mass_review),0)::numeric reconciled_category_kg
+    from classified group by process_site order by rows desc`,[])
   ])
   const raw=(Array.isArray(summaryRaw)?summaryRaw[0]:null) as Record<string,unknown>|null
   const totalKg=n(raw?.reconciled_category_kg)
   const categories=CATEGORIES.map(([label,key])=>{const value=n(raw?.[key]);return {label,kg:value,sharePct:pct(value,totalKg)}}).filter(item=>item.kg>0)
-  const suppliers=(Array.isArray(supplierRaw)?supplierRaw:[]).map(item=>{const row=item as Record<string,unknown>,rows=n(row.rows),massReviewRows=n(row.mass_review_rows);return {supplier:String(row.supplier??'Sin proveedor'),rows,receivedKg:n(row.received_kg),massReviewRows,eligibleRows:n(row.eligible_rows),massReconciledPct:rows?Number(((rows-massReviewRows)/rows*100).toFixed(1)):null,reconciledCategoryKg:n(row.reconciled_category_kg)}})
-  return response.status(200).json({ok:true,method:{version:'canonical-category-mix-v1',rule:'Sólo suma categorías A1, A2, Vj100, Vj50, C1, C2, D, PT y R en filas donde esa suma no supera los kg recibidos. Las filas no reconciliadas se excluyen del mix y no se transforman en rendimiento ni Supplier Score.'},summary:{rows:n(raw?.rows),eligibleRows:n(raw?.eligible_rows),excludedRows:n(raw?.excluded_rows),missingOutputRows:n(raw?.missing_output_rows),reconciledCategoryKg:totalKg},categories,suppliers})
+  const shape=(item:unknown,labelKey:'supplier'|'process_site')=>{const row=item as Record<string,unknown>,rows=n(row.rows),massReviewRows=n(row.mass_review_rows);return {name:String(row[labelKey]??(labelKey==='supplier'?'Sin proveedor':'Sin planta')),rows,receivedKg:n(row.received_kg),massReviewRows,eligibleRows:n(row.eligible_rows),massReconciledPct:rows?Number(((rows-massReviewRows)/rows*100).toFixed(1)):null,reconciledCategoryKg:n(row.reconciled_category_kg)}}
+  const suppliers=(Array.isArray(supplierRaw)?supplierRaw:[]).map(item=>{const row=shape(item,'supplier');return {supplier:row.name,rows:row.rows,receivedKg:row.receivedKg,massReviewRows:row.massReviewRows,eligibleRows:row.eligibleRows,massReconciledPct:row.massReconciledPct,reconciledCategoryKg:row.reconciledCategoryKg}})
+  const sites=(Array.isArray(siteRaw)?siteRaw:[]).map(item=>{const row=shape(item,'process_site');return {site:row.name,rows:row.rows,receivedKg:row.receivedKg,massReviewRows:row.massReviewRows,eligibleRows:row.eligibleRows,massReconciledPct:row.massReconciledPct,reconciledCategoryKg:row.reconciledCategoryKg}})
+  return response.status(200).json({ok:true,method:{version:'canonical-category-mix-v1.1-capture-pattern',rule:'Sólo suma categorías A1, A2, Vj100, Vj50, C1, C2, D, PT y R en filas donde esa suma no supera los kg recibidos. Las filas no reconciliadas se excluyen del mix y no se transforman en rendimiento ni Supplier Score. La distribución por planta se muestra para detectar diferencias de captura antes de atribuirlas al proveedor.'},summary:{rows:n(raw?.rows),eligibleRows:n(raw?.eligible_rows),excludedRows:n(raw?.excluded_rows),missingOutputRows:n(raw?.missing_output_rows),reconciledCategoryKg:totalKg},categories,suppliers,sites})
  }catch(error){const message=error instanceof Error?error.message:'';return response.status(message.includes('DATABASE_URL')?503:500).json({ok:false,error:message.includes('DATABASE_URL')?'Base de datos no conectada':'No fue posible calcular el mix canónico reconciliado'})}
 }
