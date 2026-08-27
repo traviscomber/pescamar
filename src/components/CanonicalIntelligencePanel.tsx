@@ -6,8 +6,9 @@ type Supplier={supplier:string;rows:number;guideKg:number;receivedKg:number;rece
 type Packing={format:string;boxes:number;kg:number;lots:number;flagged:number;avgBoxKg:number;minBoxKg:number;maxBoxKg:number;boxStddevKg:number|null;firstDate:string|null;lastDate:string|null}
 type Stock={productFamily:string;rows:number;observedNetKg:number;firstDate:string|null;lastDate:string|null;flagged:number}
 type Exception={severity:'warning'|'info';kind:string;title:string;detail:string}
+type SourceFile={fileName:string;kind:string;recordCount:number;periodStart:string|null;periodEnd:string|null;importedAt:string|null}
 type Payload={
- ok?:boolean;generatedAt?:string;sources?:{count:number;files:Array<{fileName:string;kind:string;recordCount:number;periodStart:string|null;periodEnd:string|null;importedAt:string|null}>};
+ ok?:boolean;generatedAt?:string;sources?:{count:number;files:SourceFile[]};
  production?:{rows:number;guideKg:number;receivedKg:number;differenceKg:number;receptionPct:number|null;flagged:number;pricedRows:number;priceCoveragePct:number|null;pricedValueClp:number;firstDate:string|null;lastDate:string|null;reportedOutputKg:number;reportedOutputPct:number|null;massInconsistentRows:number;missingOutputRows:number;reportedOutputUsable:boolean};
  suppliers?:Supplier[];packing?:Packing[];packingSummary?:{boxes:number;kg:number;lots:number;flagged:number};stock?:Stock[];
  finance?:null|{transfers:{rows:number;amountClp:number;flagged:number;firstDate:string|null;lastDate:string|null};ledger:{rows:number;inflowClp:number;outflowClp:number;balanceClp:number;flagged:number;firstDate:string|null;lastDate:string|null}};
@@ -17,18 +18,21 @@ const nf=new Intl.NumberFormat('es-CL',{maximumFractionDigits:1})
 const kg=(value:number)=>`${nf.format(value)} kg`
 const clp=(value:number)=>new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(value)
 const pct=(value:number|null|undefined)=>value==null?'—':`${nf.format(value)}%`
+const sourceDate=(value:string|null)=>value?new Intl.DateTimeFormat('es-CL',{day:'2-digit',month:'short',year:'numeric',timeZone:'UTC'}).format(new Date(value)):'sin fecha'
+const sourceWindow=(source:SourceFile)=>source.periodStart||source.periodEnd?`${sourceDate(source.periodStart)} → ${sourceDate(source.periodEnd)}`:'período no informado'
 
 export function CanonicalIntelligencePanel(){
  const [data,setData]=useState<Payload|null>(null),[error,setError]=useState(''),[loading,setLoading]=useState(true)
  const load=useCallback(async(silent=false)=>{if(!silent)setLoading(true);try{const response=await fetch('/api/pescamar-intelligence',{cache:'no-store'}),payload=await response.json() as Payload;if(!response.ok)throw new Error(payload.error??'No fue posible construir la inteligencia canónica');setData(payload);setError('')}catch(cause){setError(cause instanceof Error?cause.message:'No fue posible construir la inteligencia canónica')}finally{if(!silent)setLoading(false)}},[])
  useEffect(()=>{void load();const refresh=()=>void load(true),onVisibility=()=>{if(document.visibilityState==='visible')refresh()},timer=window.setInterval(()=>{if(document.visibilityState==='visible')refresh()},60_000);window.addEventListener('pescamar:data-updated',refresh);window.addEventListener('focus',refresh);document.addEventListener('visibilitychange',onVisibility);return()=>{window.clearInterval(timer);window.removeEventListener('pescamar:data-updated',refresh);window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',onVisibility)}},[load])
- const suppliers=useMemo(()=>data?.suppliers?.slice(0,6)??[],[data?.suppliers]),production=data?.production,packing=data?.packingSummary,quality=data?.dataQuality,stock=data?.stock??[],finance=data?.finance
+ const suppliers=useMemo(()=>data?.suppliers?.slice(0,6)??[],[data?.suppliers]),production=data?.production,packing=data?.packingSummary,quality=data?.dataQuality,stock=data?.stock??[],finance=data?.finance,sources=data?.sources?.files??[]
  const erizo=stock.find(item=>item.productFamily.toLowerCase()==='erizo'),pulpo=stock.find(item=>item.productFamily.toLowerCase()==='pulpo')
  if(loading&&!data)return <section className="panel"><div className="empty-inline"><Database size={20}/><div><b>Calculando inteligencia canónica</b><small>Cruzando producción, packing, stock y evidencia financiera.</small></div></div></section>
  if(error&&!data)return <section className="panel"><div className="notice error">{error}</div></section>
  if(!data)return null
  return <section className="panel" aria-label="Inteligencia canónica Pescamar" aria-live="polite">
   <div className="section-heading"><div><span className="overline">Base de Datos Pescamar · fuentes canónicas</span><h2>Resultado de la data subida</h2><p className="source-note">Indicadores calculados desde evidencia importada. Un dato con cobertura incompleta o inconsistencia física se muestra como tal y no se convierte silenciosamente en rendimiento o margen.</p></div><span>{data.sources?.count??0} fuentes</span></div>
+  {sources.length?<div className="source-note" aria-label="Cobertura temporal de fuentes canónicas"><b>Cobertura por fuente</b>{sources.map(source=><div key={`${source.kind}-${source.fileName}`}>{source.fileName} · {source.recordCount} registros · {sourceWindow(source)}</div>)}</div>:null}
   <div className="signal-grid">
    <article className="signal-card"><span><Scale size={16}/>Recepción canónica</span><b>{kg(production?.receivedKg??0)}</b><small>{pct(production?.receptionPct)} de kilos guía · {production?.rows??0} registros</small></article>
    <article className="signal-card"><span><Boxes size={16}/>Packing pulpo</span><b>{kg(packing?.kg??0)}</b><small>{packing?.boxes??0} cajas · {packing?.lots??0} referencias de lote identificadas</small></article>
