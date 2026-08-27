@@ -1,0 +1,37 @@
+import {AlertTriangle,Layers3,Scale,ShieldCheck} from 'lucide-react'
+import {useCallback,useEffect,useMemo,useState} from 'react'
+
+type Category={label:string;kg:number;sharePct:number|null}
+type CaptureMode='row_mass_balance'|'cross_lot_rollforward'|'mixed'
+type Supplier={supplier:string;rows:number;receivedKg:number;rowMassBalanceRows:number;rollforwardRows:number;massReviewRows:number;eligibleRows:number;massValidatedPct:number|null;reconciledCategoryKg:number;captureMode:CaptureMode}
+type Site={site:string;rows:number;receivedKg:number;rowMassBalanceRows:number;rollforwardRows:number;massReviewRows:number;eligibleRows:number;massValidatedPct:number|null;reconciledCategoryKg:number;captureMode:CaptureMode}
+type Payload={ok?:boolean;method?:{version:string;rule:string};summary?:{rows:number;rowMassBalanceRows:number;rollforwardRows:number;eligibleRows:number;massReviewRows:number;missingOutputRows:number;reconciledCategoryKg:number};categories?:Category[];suppliers?:Supplier[];sites?:Site[];error?:string}
+const nf=new Intl.NumberFormat('es-CL',{maximumFractionDigits:1})
+const kg=(value:number)=>`${nf.format(value)} kg`
+const pct=(value:number|null)=>value==null?'—':`${nf.format(value)}%`
+const captureLabel=(mode:CaptureMode)=>mode==='row_mass_balance'?'Directa':mode==='cross_lot_rollforward'?'Roll-forward':'Mixta'
+
+export function CanonicalCategoryMix(){
+ const [data,setData]=useState<Payload|null>(null),[error,setError]=useState(''),[loading,setLoading]=useState(true)
+ const load=useCallback(async(silent=false)=>{if(!silent)setLoading(true);try{const response=await fetch('/api/canonical-category-mix',{cache:'no-store'}),payload=await response.json() as Payload;if(!response.ok)throw new Error(payload.error??'No fue posible calcular el mix canónico');setData(payload);setError('')}catch(cause){setError(cause instanceof Error?cause.message:'No fue posible calcular el mix canónico')}finally{if(!silent)setLoading(false)}},[])
+ useEffect(()=>{void load();const refresh=()=>void load(true),timer=window.setInterval(()=>{if(document.visibilityState==='visible')refresh()},60_000);window.addEventListener('pescamar:data-updated',refresh);return()=>{window.clearInterval(timer);window.removeEventListener('pescamar:data-updated',refresh)}},[load])
+ const categories=useMemo(()=>data?.categories??[],[data?.categories]),suppliers=useMemo(()=>data?.suppliers?.slice(0,8)??[],[data?.suppliers]),sites=useMemo(()=>data?.sites??[],[data?.sites]),summary=data?.summary
+ if(loading&&!data)return <section className="panel"><div className="empty-inline"><Layers3 size={20}/><div><b>Interpretando captura productiva</b><small>Separando filas directas de hojas con arrastre entre lotes.</small></div></div></section>
+ if(error&&!data)return <section className="panel"><div className="notice error">{error}</div></section>
+ if(!data)return null
+ return <section className="panel" aria-label="Mix canónico de categorías reconciliadas" aria-live="polite">
+  <div className="section-heading"><div><span className="overline">Producción canónica · composición</span><h2>Mix de categorías comparables</h2><p className="source-note">La planilla mezcla captura directa con hojas de seguimiento roll-forward. El mix usa sólo filas cuya salida pertenece a la misma recepción; las otras se conservan como evidencia sin convertirlas en error del proveedor.</p></div><span>{data.method?.version??'v1'}</span></div>
+  <div className="signal-grid">
+   <article className="signal-card"><span><ShieldCheck size={16}/>Captura directa</span><b>{summary?.rowMassBalanceRows??0}</b><small>{summary?.eligibleRows??0} filas con categorías utilizables</small></article>
+   <article className="signal-card"><span><Layers3 size={16}/>Roll-forward planta</span><b>{summary?.rollforwardRows??0}</b><small>Seguimiento por grado/destino; no se suma contra una recepción</small></article>
+   <article className="signal-card"><span><Scale size={16}/>Kg comparables</span><b>{kg(summary?.reconciledCategoryKg??0)}</b><small>Sólo captura directa físicamente compatible</small></article>
+   <article className={`signal-card ${(summary?.massReviewRows??0)>0?'attention':''}`}><span><AlertTriangle size={16}/>Revisión de masa real</span><b>{summary?.massReviewRows??0}</b><small>{summary?.missingOutputRows??0} filas directas sin salida reportada</small></article>
+  </div>
+  {categories.length?<div className="table-scroll"><table className="data-table"><thead><tr><th>Categoría original</th><th className="numeric">Kg comparables</th><th className="numeric">Mix</th></tr></thead><tbody>{categories.map(item=><tr key={item.label}><td><b>{item.label}</b></td><td className="numeric">{kg(item.kg)}</td><td className="numeric">{pct(item.sharePct)}</td></tr>)}</tbody></table></div>:<div className="empty-inline"><Layers3 size={20}/><div><b>Sin categorías comparables</b><small>La fuente todavía no aporta captura directa utilizable.</small></div></div>}
+  <div className="section-heading"><div><span className="overline">Evidencia por proveedor</span><h3>Qué parte de la historia sí admite balance fila a fila</h3></div><span>{suppliers.length} visibles</span></div>
+  {suppliers.length?<div className="table-scroll"><table className="data-table"><thead><tr><th>Proveedor</th><th className="numeric">Filas</th><th className="numeric">Directas</th><th className="numeric">Roll-forward</th><th className="numeric">Masa válida</th><th className="numeric">Revisión real</th><th className="numeric">Kg comparables</th></tr></thead><tbody>{suppliers.map(item=><tr key={item.supplier}><td><b>{item.supplier}</b></td><td className="numeric">{item.rows}</td><td className="numeric">{item.rowMassBalanceRows}</td><td className="numeric">{item.rollforwardRows}</td><td className={`numeric ${item.massReviewRows?'negative':''}`}>{pct(item.massValidatedPct)}</td><td className={`numeric ${item.massReviewRows?'negative':''}`}>{item.massReviewRows}</td><td className="numeric">{kg(item.reconciledCategoryKg)}</td></tr>)}</tbody></table></div>:null}
+  {sites.length?<><div className="section-heading"><div><span className="overline">Semántica de captura</span><h3>Cómo registra cada planta</h3><p className="source-note">Curanue/Isla Guafo, Santa Rosa y candelaria/Cesar usan hojas de arrastre por grado o destino. Pescamar registra principalmente salida asociada a la recepción. Un lote IG detectado dentro de Pescamar conserva la semántica de Isla Guafo.</p></div><span>{sites.length} plantas</span></div><div className="table-scroll"><table className="data-table"><thead><tr><th>Planta / sitio</th><th>Modo</th><th className="numeric">Filas</th><th className="numeric">Directas</th><th className="numeric">Roll-forward</th><th className="numeric">Revisión real</th><th className="numeric">Kg comparables</th></tr></thead><tbody>{sites.map(item=><tr key={item.site}><td><b>{item.site}</b></td><td>{captureLabel(item.captureMode)}</td><td className="numeric">{item.rows}</td><td className="numeric">{item.rowMassBalanceRows}</td><td className="numeric">{item.rollforwardRows}</td><td className={`numeric ${item.massReviewRows?'negative':''}`}>{item.massReviewRows}</td><td className="numeric">{kg(item.reconciledCategoryKg)}</td></tr>)}</tbody></table></div></>:null}
+  <p className="source-note">{data.method?.rule}</p>
+  {error?<div className="notice error">{error}</div>:null}
+ </section>
+}
