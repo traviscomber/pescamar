@@ -12,7 +12,7 @@ export default async function handler(request:Request,response:Response){
   if(!operator)return response.status(401).json({ok:false,error:'Sesión requerida'})
   const sql=getSql()
   try{
-   const rows=await sql`select r.sheet_name,r.source_block,r.selected_main_source_row,r.resolution_status,r.resolution_basis,r.review_note,r.reviewed_at,
+   const rows=await sql`select r.sheet_name,r.source_block,r.selected_main_source_row,r.resolution_status,r.resolution_basis,r.review_note,r.candidate_snapshot,r.reviewed_at,
      o.full_name reviewed_by
     from canonical_production_support_resolutions r
     join operators o on o.id=r.reviewed_by_operator_id
