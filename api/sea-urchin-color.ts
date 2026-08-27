@@ -7,7 +7,7 @@ import {findSeaUrchinSeedSample} from './_sea-urchin-seed-set.js'
 type Request={method?:string;body?:unknown;headers?:Record<string,string|string[]|undefined>;query?:Record<string,string|string[]|undefined>}
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void}
 type Metrics={pixelCount:unknown;rMean:unknown;gMean:unknown;bMean:unknown;lMean:unknown;aMean:unknown;labBMean:unknown;lStd:unknown;aStd:unknown;bStd:unknown;chroma:unknown;hueDeg:unknown}
-type Input={action?:unknown;runId?:unknown;captureId?:unknown;fileName?:unknown;mimeType?:unknown;dataBase64?:unknown;captureSource?:unknown;deviceLabel?:unknown;metrics?:unknown;grade?:unknown;decision?:unknown;label?:unknown}
+type Input={action?:unknown;runId?:unknown;captureId?:unknown;fileName?:unknown;mimeType?:unknown;dataBase64?:unknown;captureSource?:unknown;deviceLabel?:unknown;sourceImageSha256?:unknown;metrics?:unknown;grade?:unknown;decision?:unknown;label?:unknown}
 type RunScope={id:string;reception_id:string;plant_id:string|null;species:string;grade:string|null;xray_status:string;status:string}
 type ReferenceRow={id:string;grade:string;l_mean:number|string;a_mean:number|string;b_mean:number|string}
 
@@ -66,7 +66,7 @@ export default async function handler(req:Request,res:Response){
   return res.status(405).json({ok:false,error:'Método no permitido'})
  }catch(error){
   const message=error instanceof Error?error.message:''
-  const missing=message.includes('sea_urchin_color_')||message.includes('created_by_operator_id')
+  const missing=message.includes('sea_urchin_color_')||message.includes('created_by_operator_id')||message.includes('source_image_sha256')
   return res.status(missing?503:500).json({ok:false,error:missing?'Falta aplicar la migración Uni Vision Station':'No fue posible procesar control de color'})
  }
 }
@@ -79,10 +79,10 @@ async function list(req:Request,res:Response,operator:SessionOperator){
  if(!run)return res.status(404).json({ok:false,error:'Proceso no disponible'})
  const sql=getSql()
  const [capturesRaw,references]=await Promise.all([
-  sql`select c.id,c.run_id,c.evidence_file_id,c.capture_source,c.device_label,c.image_sha256,c.pixel_count,c.r_mean,c.g_mean,c.b_rgb_mean,c.l_mean,c.a_mean,c.b_mean,c.l_std,c.a_std,c.b_std,c.chroma,c.hue_deg,c.suggested_grade,c.nearest_reference_id,c.delta_e,c.operator_grade,c.decision,c.confirmed_by,c.confirmed_at,c.created_by,c.created_at from sea_urchin_color_captures c where c.run_id=${runId}::uuid order by c.created_at desc limit 30`,
+  sql`select c.id,c.run_id,c.evidence_file_id,c.capture_source,c.device_label,c.image_sha256,c.source_image_sha256,c.pixel_count,c.r_mean,c.g_mean,c.b_rgb_mean,c.l_mean,c.a_mean,c.b_mean,c.l_std,c.a_std,c.b_std,c.chroma,c.hue_deg,c.suggested_grade,c.nearest_reference_id,c.delta_e,c.operator_grade,c.decision,c.confirmed_by,c.confirmed_at,c.created_by,c.created_at from sea_urchin_color_captures c where c.run_id=${runId}::uuid order by c.created_at desc limit 30`,
   run.plant_id?referencesForPlant(run.plant_id):Promise.resolve([])
  ])
- const captures=Array.isArray(capturesRaw)?capturesRaw.map(item=>({...item,seedMatch:seedSummary((item as {image_sha256?:unknown}).image_sha256)})):[]
+ const captures=Array.isArray(capturesRaw)?capturesRaw.map(item=>({...item,seedMatch:seedSummary((item as {source_image_sha256?:unknown;image_sha256?:unknown}).source_image_sha256??(item as {image_sha256?:unknown}).image_sha256)})):[]
  return res.status(200).json({ok:true,run:{id:run.id,plantId:run.plant_id,grade:run.grade},captures,references,permissions:{canWrite:canWrite(operator),canManageReferences:canManageReferences(operator)}})
 }
 
@@ -101,15 +101,19 @@ async function capture(input:Input,res:Response,operator:SessionOperator){
  if(!run)return res.status(404).json({ok:false,error:'Proceso no disponible'})
  const mimeType=text(input.mimeType,80).toLowerCase(),fileName=text(input.fileName,180)||`erizo-${Date.now()}.jpg`,source=text(input.captureSource,20),deviceLabel=text(input.deviceLabel,180)||null
  const metrics=parseMetrics(input.metrics)
+ const sourceImageHash=text(input.sourceImageSha256,64).toLowerCase()||null
  const base64=String(input.dataBase64??'').replace(/^data:[^;]+;base64,/,'').trim()
- if(!metrics||!allowedMime.has(mimeType)||!['camera','upload'].includes(source)||!base64)return res.status(400).json({ok:false,error:'Captura o métricas inválidas'})
+ if(!metrics||!allowedMime.has(mimeType)||!['camera','upload'].includes(source)||!base64||sourceImageHash&&!sha256.test(sourceImageHash))return res.status(400).json({ok:false,error:'Captura o métricas inválidas'})
  const bytes=Buffer.from(base64,'base64')
  if(bytes.length<100||bytes.length>3*1024*1024)return res.status(400).json({ok:false,error:'La imagen debe pesar entre 100 bytes y 3 MB'})
  const hash=createHash('sha256').update(bytes).digest('hex')
  if(!sha256.test(hash))return res.status(400).json({ok:false,error:'No fue posible validar la imagen'})
- const seedMatch=seedSummary(hash)
+ const canonicalSourceHash=sourceImageHash??hash
+ const seedMatch=seedSummary(canonicalSourceHash)
  const sql=getSql()
- const duplicate=await sql`select id from sea_urchin_color_captures where run_id=${runId}::uuid and image_sha256=${hash} limit 1`
+ const duplicate=sourceImageHash
+  ?await sql`select id from sea_urchin_color_captures where run_id=${runId}::uuid and (image_sha256=${hash} or source_image_sha256=${sourceImageHash}) limit 1`
+  :await sql`select id from sea_urchin_color_captures where run_id=${runId}::uuid and image_sha256=${hash} limit 1`
  if(Array.isArray(duplicate)&&duplicate[0])return res.status(409).json({ok:false,error:'Esta captura ya fue registrada en el lote'})
  const references=run.plant_id?await referencesForPlant(run.plant_id):[]
  let nearest:ReferenceRow|null=null,delta:number|null=null
@@ -117,9 +121,9 @@ async function capture(input:Input,res:Response,operator:SessionOperator){
  const files=await sql`insert into reception_evidence_files(file_name,mime_type,data_base64,byte_size,created_by,created_by_operator_id) values(${fileName},${mimeType},${base64},${bytes.length},${operator.fullName},${operator.id}::uuid) returning id`
  const file=Array.isArray(files)?files[0] as {id?:string}|undefined:undefined
  if(!file?.id)return res.status(500).json({ok:false,error:'No fue posible guardar evidencia'})
- const saved=await sql`insert into sea_urchin_color_captures(run_id,evidence_file_id,capture_source,device_label,image_sha256,pixel_count,r_mean,g_mean,b_rgb_mean,l_mean,a_mean,b_mean,l_std,a_std,b_std,chroma,hue_deg,suggested_grade,nearest_reference_id,delta_e,created_by,created_by_operator_id) values(${runId}::uuid,${file.id}::uuid,${source},${deviceLabel},${hash},${metrics.pixelCount},${metrics.rMean},${metrics.gMean},${metrics.bMean},${metrics.lMean},${metrics.aMean},${metrics.labBMean},${metrics.lStd},${metrics.aStd},${metrics.bStd},${metrics.chroma},${metrics.hueDeg},${nearest?.grade??null},${nearest?.id??null}::uuid,${delta},${operator.fullName},${operator.id}::uuid) returning id,evidence_file_id,l_mean,a_mean,b_mean,l_std,a_std,b_std,chroma,hue_deg,suggested_grade,delta_e,decision,created_at`
+ const saved=await sql`insert into sea_urchin_color_captures(run_id,evidence_file_id,capture_source,device_label,image_sha256,source_image_sha256,pixel_count,r_mean,g_mean,b_rgb_mean,l_mean,a_mean,b_mean,l_std,a_std,b_std,chroma,hue_deg,suggested_grade,nearest_reference_id,delta_e,created_by,created_by_operator_id) values(${runId}::uuid,${file.id}::uuid,${source},${deviceLabel},${hash},${canonicalSourceHash},${metrics.pixelCount},${metrics.rMean},${metrics.gMean},${metrics.bMean},${metrics.lMean},${metrics.aMean},${metrics.labBMean},${metrics.lStd},${metrics.aStd},${metrics.bStd},${metrics.chroma},${metrics.hueDeg},${nearest?.grade??null},${nearest?.id??null}::uuid,${delta},${operator.fullName},${operator.id}::uuid) returning id,evidence_file_id,l_mean,a_mean,b_mean,l_std,a_std,b_std,chroma,hue_deg,suggested_grade,delta_e,decision,created_at`
  const row=Array.isArray(saved)?saved[0]:null
- return res.status(201).json({ok:true,capture:row,evidenceUrl:`/api/reception-evidence-file?id=${encodeURIComponent(file.id)}`,referenceCount:references.length,seedMatch})
+ return res.status(201).json({ok:true,capture:row,evidenceUrl:`/api/reception-evidence-file?id=${encodeURIComponent(file.id)}`,referenceCount:references.length,seedMatch,evidenceSha256:hash,sourceImageSha256:canonicalSourceHash})
 }
 
 async function createReference(input:Input,res:Response,operator:SessionOperator){
