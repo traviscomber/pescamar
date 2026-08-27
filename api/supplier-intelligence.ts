@@ -32,7 +32,6 @@ export default async function handler(req:Request,res:Response){
   if(!operator)return res.status(401).json({ok:false,error:'Sesión requerida'})
   if(req.method!=='GET'){res.setHeader('Allow','GET');return res.status(405).json({ok:false,error:'Método no permitido'})}
   const sql=getSql()
-  const canonicalProduction=sql`select file_hash from canonical_source_files where canonical and (source_kind='production' or file_name ilike '%produccion%')`
   const [historicalRaw,liveRaw,profitRaw,zonesRaw]=await Promise.all([
    sql`with raw as (
     select coalesce(nullif(btrim(supplier_name),''),nullif(btrim(supplier_original),''),'Proveedor no identificado') supplier,
@@ -47,7 +46,7 @@ export default async function handler(req:Request,res:Response){
      coalesce((grade_breakdown->'R'->>'kg')::numeric,0) reported_output_kg,
      cardinality(data_quality_flags)>0 flagged,guide_price_clp is not null priced,guide_kg is not null and guide_kg>0 guide_known,event_date,source_row
     from historical_production_records
-    where record_status='operational' and source_file_hash in (${canonicalProduction})
+    where record_status='operational' and source_file_hash in (select file_hash from canonical_source_files where canonical and (source_kind='production' or file_name ilike '%produccion%'))
    ),base as (
     select *,received_kg>0 and reported_output_kg>received_kg mass_review from raw
    ),quality_ranked as (
@@ -97,7 +96,7 @@ export default async function handler(req:Request,res:Response){
      coalesce((grade_breakdown->'D'->>'kg')::numeric,0)+coalesce((grade_breakdown->'PT'->>'kg')::numeric,0)+
      coalesce((grade_breakdown->'R'->>'kg')::numeric,0) reported_output_kg
     from historical_production_records
-    where record_status='operational' and source_file_hash in (${canonicalProduction})
+    where record_status='operational' and source_file_hash in (select file_hash from canonical_source_files where canonical and (source_kind='production' or file_name ilike '%produccion%'))
    ),base as (select *,received_kg>0 and reported_output_kg>received_kg mass_review from raw)
    select supplier,zone,count(*) lots,sum(received_kg) received_kg,count(grade_a) filter(where not mass_review) quality_samples,
     sum(received_kg*grade_a) filter(where grade_a is not null and not mass_review)/nullif(sum(received_kg) filter(where grade_a is not null and not mass_review),0) grade_a_yield,
