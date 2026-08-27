@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "typecheck:api": "tsc -p api/tsconfig.json",
-    "build": "tsc -b && npm run typecheck:api && vite build",
+    "build": "node scripts/apply-uni-vision-migrations.mjs && tsc -b && npm run typecheck:api && vite build",
     "lint": "eslint .",
     "quality": "npm run lint && npm run build",
     "preview": "vite preview"

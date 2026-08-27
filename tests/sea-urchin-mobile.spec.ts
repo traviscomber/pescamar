@@ -1,10 +1,13 @@
+import {createHash} from 'node:crypto'
 import {expect,test} from '@playwright/test'
 
 const runId='11111111-1111-4111-8111-111111111111'
 const receptionId='22222222-2222-4222-8222-222222222222'
-const orangePng=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAALUlEQVR4nGO806PLQEvARFPTRy0YtWDUglELRi0YtWDUglELRi0YtWDUAioCAL1xAdXUvMl1AAAAAElFTkSuQmCC','base64')
+const samplePng=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAxUlEQVR4nO3ZMQ6CQBBGYTBewt5zWnhOe4+xFjSW8yPu2w3v68nMcwkhsrbWlpld6AV+ZQDNAJoBNANoBtAMoF33XfZ+3I/dY3N7vtJL1vR1+k+rf4sysluow/bplCCgz/bprGpAz+2jidM/hUoB/X/++txznMDIDKAZQDOAZgDNAJoBNANoBtAMoBlAM4BWCtjxr/chKnPPcQILcQjFicEJ9Gyoz8puoT4N0ZT4E9Nm4m9koznNU2hYBtAMoBlAM4BmAO0DB2Ytc5YLS+UAAAAASUVORK5CYII=','base64')
+const sampleSha256=createHash('sha256').update(samplePng).digest('hex')
 
-test('erizo mobile station exposes camera and analyzes an uploaded photo',async({page},testInfo)=>{
+test('erizo mobile station segments roe and preserves uploaded source hash',async({page},testInfo)=>{
+  let submittedSourceHash=''
   await page.route('**/api/**',async route=>{
     const url=new URL(route.request().url()),path=url.pathname
     if(path==='/api/auth')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,operator:{id:'qa-quality',fullName:'QA Quality',email:'quality@example.test',role:'quality',plantIds:['ancud']}})})
@@ -13,6 +16,11 @@ test('erizo mobile station exposes camera and analyzes an uploaded photo',async(
     if(path==='/api/status')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,platform:'vercel-functions',environment:'test',persistence:{database:true,files:true},metrics:{pendingDecisions:0,pendingCredits:0,activeOperators:1,receptions:0},commit:'qa',checkedAt:new Date().toISOString()})})
     if(path==='/api/sea-urchin-mobile')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,run:{runId,receptionId,receptionNumber:321,plantId:'ancud',species:'Erizo',supplier:'Proveedor QA',grade:null,colorStatus:'pending',status:'in_process'},permissions:{canCapture:true}})})
     if(path==='/api/sea-urchin-color'&&route.request().method()==='GET')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,run:{id:runId,plantId:'ancud',grade:null},captures:[],references:[],permissions:{canWrite:true,canManageReferences:true}})})
+    if(path==='/api/sea-urchin-color'&&route.request().method()==='POST'){
+      const body=route.request().postDataJSON() as {action?:string;sourceImageSha256?:string}
+      if(body.action==='capture')submittedSourceHash=body.sourceImageSha256??''
+      return route.fulfill({status:201,contentType:'application/json',body:JSON.stringify({ok:true,capture:{id:'33333333-3333-4333-8333-333333333333',evidence_file_id:'44444444-4444-4444-8444-444444444444',l_mean:55,a_mean:16,b_mean:52,l_std:4,a_std:3,b_std:5,chroma:54,hue_deg:73,suggested_grade:null,delta_e:null,operator_grade:null,decision:'pending',created_at:new Date().toISOString()},evidenceUrl:'/api/reception-evidence-file?id=44444444-4444-4444-8444-444444444444'})})
+    }
     return route.fulfill({status:200,contentType:'application/json',body:'{}'})
   })
 
@@ -24,11 +32,17 @@ test('erizo mobile station exposes camera and analyzes an uploaded photo',async(
   await expect(page.getByText('REC-321 · Proveedor QA')).toBeVisible()
 
   const input=page.locator('input[type=file]')
-  await input.setInputFiles({name:'muestra-erizo.png',mimeType:'image/png',buffer:orangePng})
+  await input.setInputFiles({name:'muestra-erizo.png',mimeType:'image/png',buffer:samplePng})
+  await expect(page.getByText(/Segmentación automática/)).toBeVisible()
+  await expect(page.getByText(/roe aislado/)).toBeVisible()
   await expect(page.getByText('Luminosidad')).toBeVisible()
   await expect(page.getByText('verde ↔ rojo')).toBeVisible()
   await expect(page.getByText('azul ↔ amarillo')).toBeVisible()
-  await expect(page.getByRole('button',{name:'Guardar medición y evidencia'})).toBeVisible()
+  await expect(page.getByText('Huella SHA-256 original preservada antes de reescalar la foto.')).toBeVisible()
+  const save=page.getByRole('button',{name:'Guardar medición y evidencia'})
+  await expect(save).toBeVisible()
+  await save.click()
+  await expect.poll(()=>submittedSourceHash).toBe(sampleSha256)
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
   await page.screenshot({path:testInfo.outputPath('erizo-camera-or-photo.png'),fullPage:true})
 })
