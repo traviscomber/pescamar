@@ -11,7 +11,7 @@ export default async function handler(req:Request,res:Response){
     if(!operator)return res.status(401).json({ok:false,error:'Sesión requerida'})
     if(req.method!=='GET'){res.setHeader('Allow','GET');return res.status(405).json({ok:false,error:'Método no permitido'})}
     const admin=operator.role==='admin',plantIds=operator.plantIds,sql=getSql()
-    const [rows,historicalRows]=await Promise.all([
+    const [rows,historicalRows,closeMemoryRows]=await Promise.all([
       sql`
         with reception_base as (
           select r.id,r.plant_id,
@@ -90,15 +90,56 @@ export default async function handler(req:Request,res:Response){
           coalesce(j.supplier_drivers,'[]'::jsonb) supplier_drivers
         from site_summary s left join supplier_json j using(historical_key)
         where s.historical_key<>'sin planta'
-        order by s.received_kg desc nulls last`:Promise.resolve([])
+        order by s.received_kg desc nulls last`:Promise.resolve([]),
+      sql`
+        with scoped as (
+          select close_date,plant_id,snapshot,generated_at,
+            coalesce((snapshot->'risk'->>'critical')::int,0) critical,
+            coalesce((snapshot->'risk'->>'today')::int,0) today,
+            coalesce((snapshot->'risk'->>'followUp')::int,0) follow_up,
+            coalesce(snapshot->'risk'->'items','[]'::jsonb) items
+          from daily_closes
+          where plant_id is not null and (${admin} or plant_id=any(${plantIds}::text[]))
+        ),
+        ranked as (
+          select *,row_number() over(partition by plant_id order by close_date desc,generated_at desc) rn
+          from scoped
+        ),
+        latest_pair as (
+          select plant_id,
+            max(close_date) filter(where rn=1) latest_close_date,
+            max(critical) filter(where rn=1) latest_critical,
+            max(today) filter(where rn=1) latest_today,
+            max(follow_up) filter(where rn=1) latest_follow_up,
+            max(items) filter(where rn=1) latest_items,
+            max(items) filter(where rn=2) previous_items,
+            count(*) closes_count
+          from ranked group by plant_id
+        )
+        select plant_id,latest_close_date,coalesce(latest_critical,0)::int latest_critical,coalesce(latest_today,0)::int latest_today,coalesce(latest_follow_up,0)::int latest_follow_up,closes_count::int,
+          case when previous_items is null then null else (
+            select count(*)::int from jsonb_array_elements(coalesce(latest_items,'[]'::jsonb)) li
+            where exists(select 1 from jsonb_array_elements(coalesce(previous_items,'[]'::jsonb)) pi where coalesce(li->>'receptionId',li->>'orderId',li->>'reference')=coalesce(pi->>'receptionId',pi->>'orderId',pi->>'reference'))
+          ) end persistent_count,
+          case when previous_items is null then null else (
+            select count(*)::int from jsonb_array_elements(coalesce(latest_items,'[]'::jsonb)) li
+            where not exists(select 1 from jsonb_array_elements(coalesce(previous_items,'[]'::jsonb)) pi where coalesce(li->>'receptionId',li->>'orderId',li->>'reference')=coalesce(pi->>'receptionId',pi->>'orderId',pi->>'reference'))
+          ) end new_count,
+          case when previous_items is null then null else (
+            select count(*)::int from jsonb_array_elements(coalesce(previous_items,'[]'::jsonb)) pi
+            where not exists(select 1 from jsonb_array_elements(coalesce(latest_items,'[]'::jsonb)) li where coalesce(li->>'receptionId',li->>'orderId',li->>'reference')=coalesce(pi->>'receptionId',pi->>'orderId',pi->>'reference'))
+          ) end resolved_count
+        from latest_pair
+        order by plant_id`
     ])
     return res.status(200).json({
       ok:true,
       plants:Array.isArray(rows)?rows:[],
       historicalPlants:Array.isArray(historicalRows)?historicalRows:[],
+      closeMemory:Array.isArray(closeMemoryRows)?closeMemoryRows:[],
       yieldRanking:[],
       yieldBenchmark:{cohort:'Desactivado',classification:'El ranking histórico de yield fue retirado hasta contar con cohortes de proceso comparables y semántica validada.'},
-      intelligencePolicy:{reception:'Sólo filas con kg recibidos y sin duplicado ambiguo.',timing:'Excluye secuencias de fecha inconsistentes.',quality:'Sólo filas con clasificación y kg recibidos.',ranking:'No se publica un ranking global de yield por ahora.'}
+      intelligencePolicy:{reception:'Sólo filas con kg recibidos y sin duplicado ambiguo.',timing:'Excluye secuencias de fecha inconsistentes.',quality:'Sólo filas con clasificación y kg recibidos.',closeMemory:'Se activa sólo con cierres diarios reales y compara el último cierre contra el inmediatamente anterior del mismo sitio.',ranking:'No se publica un ranking global de yield por ahora.'}
     })
   }catch{return res.status(500).json({ok:false,error:'No fue posible calcular desempeño por planta'})}
 }
