@@ -1,6 +1,7 @@
 import {ArrowRight,CheckCircle2,Factory,PackageCheck,ReceiptText,ShieldCheck,ShoppingCart} from 'lucide-react'
 import {useEffect,useMemo,useState} from 'react'
 import {Link} from 'react-router-dom'
+import './live-lot-action-rail.css'
 
 type Reception={id:string;reception_number:string|number;plant_id:string;species:string;quality_status:string;status:string;supplier:string}
 type Settlement={status:string}|null
