@@ -53,9 +53,10 @@ test('operations and quality can inspect expanded control plane',async({page},te
  await mock(page,role)
  await page.goto('/observabilidad')
  await expect(page.getByRole('heading',{name:'Observabilidad y alertas'})).toBeVisible()
- await expect(page.getByText('Proceso erizo',{exact:true})).toBeVisible()
- await expect(page.getByText('1 run abierto lleva más de 24 h sin actualización.',{exact:true})).toBeVisible()
- await expect(page.getByText('scheduledHealthCheck',{exact:true})).toBeVisible()
+ const controlPlane=page.getByLabel('Observabilidad operacional')
+ await expect(controlPlane.getByText('Proceso erizo',{exact:true})).toBeVisible()
+ await expect(controlPlane.getByText('1 run abierto lleva más de 24 h sin actualización.',{exact:true})).toBeVisible()
+ await expect(controlPlane.getByText('scheduledHealthCheck',{exact:true})).toBeVisible()
  expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
 })
 
