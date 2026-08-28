@@ -21,6 +21,15 @@ const supplierPayload={
  }]
 }
 
+const supportPayload={
+ ok:true,status:'ready',method:{version:'supplier-support-v1-physical-blocks',rule:'Las cadenas físicas v2 mejoran trazabilidad y confianza, no castigan por sí solas el desempeño del proveedor.'},
+ summary:{blocks:12,observations:44,autoLinkedBlocks:11,exceptions:1,suppliersWithSupport:1},
+ suppliers:[{
+  supplier:'Proveedor QA',physicalBlocks:12,observations:44,autoLinkedBlocks:11,matchCoveragePct:91.7,exactBoth:8,guideOnly:2,lotOnly:1,conflicts:0,ambiguous:0,unmatched:1,exceptions:1,traceabilityScore:93.3,noGradeObservationBlocks:1,
+  unresolved:[{sheetName:'Diaz termiando',sourceBlock:99,guide:'180',lotReference:'mdq106',status:'unmatched'}]
+ }]
+}
+
 async function mockApp(page:Page){
  await page.route('**/api/**',async route=>{
   const path=new URL(route.request().url()).pathname
@@ -29,24 +38,33 @@ async function mockApp(page:Page){
   if(path==='/api/receptions')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({receptions:[]})})
   if(path==='/api/partners')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({parties:[],suppliers:[],customers:[],purchases:[],invoices:[],permissions:{canWrite:true}})})
   if(path==='/api/supplier-intelligence')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(supplierPayload)})
+  if(path==='/api/supplier-support-intelligence')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(supportPayload)})
   return route.fulfill({status:200,contentType:'application/json',body:'{}'})
  })
 }
 
-test('supplier score keeps roll-forward evidence separate from supplier performance',async({page},testInfo)=>{
+test('supplier score keeps roll-forward evidence separate and turns physical support into a decision',async({page},testInfo)=>{
  await mockApp(page)
  await page.goto('/proveedores-clientes')
  await expect(page.getByRole('heading',{name:'Score objetivo de proveedor'})).toBeVisible()
  await expect(page.getByText('supplier-score-v1.3-capture-semantics',{exact:true})).toBeVisible()
  await expect(page.getByText('Roll-forward planta',{exact:true})).toBeVisible()
  await expect(page.getByText('5',{exact:true}).first()).toBeVisible()
+ await expect(page.getByText('Evidencia física v2 · 11/12 cadenas conciliadas',{exact:true})).toBeVisible()
+ await expect(page.getByText('Decisión actual · Revisar próxima recepción: Proveedor QA',{exact:true})).toBeVisible()
  await expect(page.getByText('Proveedor QA',{exact:true})).toBeVisible()
  await expect(page.getByText('Provisional · confianza baja · cobertura 65%',{exact:true})).toBeVisible()
  await page.getByText('Proveedor QA',{exact:true}).click()
+ await expect(page.getByText('Revisar próxima recepción',{exact:true}).last()).toBeVisible()
  await expect(page.getByText('5 filas roll-forward',{exact:true})).toBeVisible()
+ await expect(page.getByText('12 cadenas físicas v2',{exact:true})).toBeVisible()
+ await expect(page.getByText('11/12 cadenas conciliadas',{exact:true})).toBeVisible()
+ await expect(page.getByText('1 excepción física',{exact:true})).toBeVisible()
  await expect(page.getByText(/Base directa 58,3% · masa válida dentro de la base directa 100%/)).toBeVisible()
+ await expect(page.getByText(/Trazabilidad física 93,3%/)).toBeVisible()
+ await expect(page.getByText(/Diaz termiando · bloque 99 · guía 180 · lote mdq106/)).toBeVisible()
  await expect(page.getByText(/no reducen la nota del proveedor/)).toBeVisible()
  await expect(page.getByText(/revisiones de masa directas/)).toHaveCount(0)
  expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
- await page.screenshot({path:testInfo.outputPath('supplier-score-capture-semantics.png'),fullPage:true})
+ await page.screenshot({path:testInfo.outputPath('supplier-score-physical-support-decision.png'),fullPage:true})
 })
