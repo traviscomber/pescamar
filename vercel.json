@@ -6,6 +6,7 @@
     { "source": "/plantas", "destination": "/index.html" },
     { "source": "/plantas/:plantId", "destination": "/index.html" },
     { "source": "/importaciones", "destination": "/index.html" },
+    { "source": "/observabilidad", "destination": "/index.html" },
     { "source": "/operacion-2025", "destination": "/index.html" },
     { "source": "/creditos", "destination": "/index.html" },
     { "source": "/liquidaciones", "destination": "/index.html" },
