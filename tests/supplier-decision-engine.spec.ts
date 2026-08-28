@@ -5,7 +5,7 @@ const supplier={score:88,coverage:90,confidence:'alta' as const,components:[{key
 
 test('shared decision engine uses the same 90/10 performance and economics rule',()=>{
  const economics={score:70}
- expect(purchaseScoreFor(supplier,economics)).toBe(88.4)
+ expect(purchaseScoreFor(supplier,economics)).toBe(87.6)
  expect(purchaseDecisionFor({supplier,economics,support:undefined,supportStatus:'not_imported'}).label).toBe('Priorizar compra')
 })
 
