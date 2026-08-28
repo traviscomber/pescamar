@@ -1,5 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    { "path": "/api/cron-operational-health", "schedule": "17 * * * *" }
+  ],
   "rewrites": [
     { "source": "/timeline", "destination": "/index.html" },
     { "source": "/planificacion", "destination": "/index.html" },
