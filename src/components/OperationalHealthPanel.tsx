@@ -10,6 +10,7 @@ type Check={key:string;label:string;status:Health;detail:string;metrics?:Record<
 type Alert={id:string;severity:'critical'|'warning'|'info';domain:'data'|'traceability'|'vision'|'process'|'communications'|'platform';title:string;detail:string;actionPath:string}
 type Payload={ok?:boolean;status?:Health;summary?:{checks:number;healthy:number;degraded:number;stuck:number;broken:number;critical:number;warnings:number};checks?:Check[];alerts?:Alert[];method?:{version:string;staleProcessHours:number;scheduledHealthCheck:boolean};deployment?:{environment:string;commit:string|null};checkedAt?:string;error?:string}
 const statusLabel:Record<Health,string>={healthy:'Saludable',degraded:'Degradado',stuck:'Atascado',broken:'Roto'}
+const severityRank:Record<Alert['severity'],number>={critical:0,warning:1,info:2}
 const statusIcon=(status:Health)=>status==='healthy'?CheckCircle2:status==='stuck'||status==='broken'?ShieldAlert:AlertTriangle
 const domainIcon=(domain:Alert['domain'])=>domain==='vision'?Eye:domain==='communications'?MessageCircleMore:domain==='data'?Database:domain==='process'?Clock3:AlertTriangle
 function metricValue(value:number|string|null|boolean){if(value==null)return '—';if(typeof value==='boolean')return value?'Sí':'No';if(typeof value==='number')return new Intl.NumberFormat('es-CL',{maximumFractionDigits:1}).format(value);return value}
@@ -18,7 +19,7 @@ export function OperationalHealthPanel({expanded=false}:{expanded?:boolean}){
  const {operator}=useAuth(),[data,setData]=useState<Payload|null>(null),[error,setError]=useState(''),[loading,setLoading]=useState(true)
  const load=useCallback(async(silent=false)=>{if(!silent)setLoading(true);try{const response=await fetch('/api/operational-health',{cache:'no-store'}),payload=await response.json() as Payload;if(!response.ok||!payload.ok)throw new Error(payload.error??'No fue posible calcular salud operacional');setData(payload);setError('')}catch(cause){setError(cause instanceof Error?cause.message:'No fue posible calcular salud operacional')}finally{if(!silent)setLoading(false)}},[])
  useEffect(()=>{void load();const refresh=()=>void load(true),timer=window.setInterval(()=>{if(document.visibilityState==='visible')refresh()},30000);window.addEventListener('pescamar:data-updated',refresh);window.addEventListener('focus',refresh);return()=>{window.clearInterval(timer);window.removeEventListener('pescamar:data-updated',refresh);window.removeEventListener('focus',refresh)}},[load])
- const alerts=useMemo(()=>[...(data?.alerts??[])].sort((a,b)=>({critical:0,warning:1,info:2}[a.severity]-({critical:0,warning:1,info:2}[b.severity])),[data?.alerts])
+ const alerts=useMemo(()=>[...(data?.alerts??[])].sort((a,b)=>severityRank[a.severity]-severityRank[b.severity]),[data?.alerts])
  if(loading&&!data)return <section className="panel operational-health loading"><Activity size={18}/><div><b>Calculando salud operacional</b><small>Fuentes, trazabilidad, Vision, procesos y comunicaciones.</small></div></section>
  if(error&&!data)return <section className="panel operational-health error"><AlertTriangle size={18}/><div><b>Observabilidad no disponible</b><small>{error}</small></div></section>
  if(!data?.status)return null
