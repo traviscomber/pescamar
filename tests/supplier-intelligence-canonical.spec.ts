@@ -30,6 +30,17 @@ const supportPayload={
  }]
 }
 
+const economicPayload={
+ ok:true,
+ method:{version:'supplier-economics-v1-quality-adjusted',rule:'Economía histórica de erizo usa sólo captura directa con masa válida, precio de guía y Grade A. CUENTA2 permanece como evidencia financiera y packing de pulpo queda fuera del score de erizo.'},
+ summary:{suppliers:1,scored:1,historicalScored:1,liveScored:0,mixed:0},
+ suppliers:[{
+  supplierId:'supplier-1',supplier:'Proveedor QA',score:78,source:'historical',
+  historical:{samples:3,receivedKg:1800,purchaseCostClp:9720000,gradeAOutputKg:339.9,avgRawPriceClp:5400,costPerGradeAKg:28600,score:78},
+  live:{receptions:2,soldReceptions:0,receivedKg:420,soldKg:0,revenueClp:0,purchaseCostClp:0,transformationCostClp:0,contributionClp:0,contributionPerReceivedKg:null,score:null}
+ }]
+}
+
 async function mockApp(page:Page){
  await page.route('**/api/**',async route=>{
   const path=new URL(route.request().url()).pathname
@@ -39,23 +50,30 @@ async function mockApp(page:Page){
   if(path==='/api/partners')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({parties:[],suppliers:[],customers:[],purchases:[],invoices:[],permissions:{canWrite:true}})})
   if(path==='/api/supplier-intelligence')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(supplierPayload)})
   if(path==='/api/supplier-support-intelligence')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(supportPayload)})
+  if(path==='/api/supplier-economic-intelligence')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(economicPayload)})
   return route.fulfill({status:200,contentType:'application/json',body:'{}'})
  })
 }
 
-test('supplier score keeps roll-forward evidence separate and turns physical support into a decision',async({page},testInfo)=>{
+test('supplier buying score separates roll-forward, physical support and quality-adjusted economics',async({page},testInfo)=>{
  await mockApp(page)
  await page.goto('/proveedores-clientes')
- await expect(page.getByRole('heading',{name:'Score objetivo de proveedor'})).toBeVisible()
- await expect(page.getByText('supplier-score-v1.3-capture-semantics',{exact:true})).toBeVisible()
+ await expect(page.getByRole('heading',{name:'Score de compra de proveedor'})).toBeVisible()
+ await expect(page.getByText(/supplier-score-v1.3-capture-semantics \+ supplier-economics-v1-quality-adjusted/)).toBeVisible()
  await expect(page.getByText('Roll-forward planta',{exact:true})).toBeVisible()
- await expect(page.getByText('5',{exact:true}).first()).toBeVisible()
+ await expect(page.getByText('Economía calculada',{exact:true})).toBeVisible()
+ await expect(page.getByText('Economía de compra · 1 históricos · 0 con margen live',{exact:true})).toBeVisible()
  await expect(page.getByText('Evidencia física v2 · 11/12 cadenas conciliadas',{exact:true})).toBeVisible()
  await expect(page.getByText('Decisión actual · Revisar próxima recepción: Proveedor QA',{exact:true})).toBeVisible()
+ await expect(page.getByText(/Score compra 85,9 · desempeño 86,2 · economía 78/)).toBeVisible()
  await expect(page.getByText('Proveedor QA',{exact:true})).toBeVisible()
- await expect(page.getByText('Provisional · confianza baja · cobertura 65%',{exact:true})).toBeVisible()
+ await expect(page.getByText('Compra 85,9 · desempeño 86,2 · confianza baja',{exact:true})).toBeVisible()
  await page.getByText('Proveedor QA',{exact:true}).click()
  await expect(page.getByText('Revisar próxima recepción',{exact:true}).last()).toBeVisible()
+ await expect(page.getByText('Economía de compra',{exact:true})).toBeVisible()
+ await expect(page.getByText(/28\.600 CLP por kg Grade A útil · 3 registros directos con precio/)).toBeVisible()
+ await expect(page.getByText(/Economía · score 78/)).toBeVisible()
+ await expect(page.getByText(/3 registros económicos directos/)).toBeVisible()
  await expect(page.getByText('5 filas roll-forward',{exact:true})).toBeVisible()
  await expect(page.getByText('12 cadenas físicas v2',{exact:true})).toBeVisible()
  await expect(page.getByText('11/12 cadenas conciliadas',{exact:true})).toBeVisible()
@@ -63,8 +81,9 @@ test('supplier score keeps roll-forward evidence separate and turns physical sup
  await expect(page.getByText(/Base directa 58,3% · masa válida dentro de la base directa 100%/)).toBeVisible()
  await expect(page.getByText(/Trazabilidad física 93,3%/)).toBeVisible()
  await expect(page.getByText(/Diaz termiando · bloque 99 · guía 180 · lote mdq106/)).toBeVisible()
+ await expect(page.getByText(/CUENTA2 permanece como evidencia financiera y packing de pulpo queda fuera del score de erizo/)).toBeVisible()
  await expect(page.getByText(/no reducen la nota del proveedor/)).toBeVisible()
  await expect(page.getByText(/revisiones de masa directas/)).toHaveCount(0)
  expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
- await page.screenshot({path:testInfo.outputPath('supplier-score-physical-support-decision.png'),fullPage:true})
+ await page.screenshot({path:testInfo.outputPath('supplier-buying-score-economic-evidence.png'),fullPage:true})
 })
