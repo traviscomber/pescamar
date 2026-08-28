@@ -13,13 +13,14 @@ export default async function handler(req:Request,res:Response){
   const operator=await requireOperator(req)
   if(!operator)return res.status(401).json({ok:false,error:'Sesión requerida'})
   if(req.method!=='GET'){res.setHeader('Allow','GET');return res.status(405).json({ok:false,error:'Método no permitido'})}
+  const canSeeFinancialAmounts=['admin','operations','finance','viewer'].includes(operator.role)
   const url=new URL(`http://pescamar.local${req.url??''}`),supplier=clean(url.searchParams.get('supplier')??''),zone=clean(url.searchParams.get('zone')??'')
-  if(supplier.length<2)return res.status(200).json({ok:true,matched:false,suggestions:[]})
+  if(supplier.length<2)return res.status(200).json({ok:true,matched:false,suggestions:[],permissions:{canSeeFinancialAmounts}})
   const sql=getSql()
   const suggestionsRaw=await sql`select supplier,count(*) lots from historical_supplier_intelligence where lower(supplier) like ${`%${supplier.toLowerCase()}%`} group by supplier order by count(*) desc,supplier limit 5`
   const suggestions=(Array.isArray(suggestionsRaw)?suggestionsRaw:[]).map(row=>String((row as {supplier?:unknown}).supplier??'')).filter(Boolean)
   const matched=suggestions.find(name=>name.toLocaleLowerCase('es')===supplier.toLocaleLowerCase('es'))??null
-  if(!matched)return res.status(200).json({ok:true,matched:false,suggestions})
+  if(!matched)return res.status(200).json({ok:true,matched:false,suggestions,permissions:{canSeeFinancialAmounts}})
   const [priceRaw,zoneRaw]=await Promise.all([
    sql`with base as (
     select coalesce(nullif(btrim(supplier_name),''),nullif(btrim(supplier_original),'')) supplier,event_date,received_kg,guide_price_clp
@@ -47,6 +48,6 @@ export default async function handler(req:Request,res:Response){
   const price=(Array.isArray(priceRaw)?priceRaw[0]:undefined) as PriceRow|undefined,zonePrice=(Array.isArray(zoneRaw)?zoneRaw[0]:undefined) as ZoneRow|undefined
   const supplierAvg=n(price?.avg_price_clp),supplierZoneAvg=n(zonePrice?.supplier_zone_avg_price_clp),zoneAvg=n(zonePrice?.zone_avg_price_clp)
   const relativeToZonePct=supplierZoneAvg!=null&&zoneAvg!=null&&zoneAvg>0?Number((((supplierZoneAvg/zoneAvg)-1)*100).toFixed(1)):null
-  return res.status(200).json({ok:true,matched:true,supplier:matched,suggestions,price:{observations:Number(price?.observations??0),receivedKg:Number(price?.received_kg??0),avgPriceClp:supplierAvg,latestPriceClp:n(price?.latest_price_clp),minPriceClp:n(price?.min_price_clp),maxPriceClp:n(price?.max_price_clp)},zone:zonePrice?{name:zonePrice.zone,observations:Number(zonePrice.observations??0),receivedKg:Number(zonePrice.received_kg??0),supplierAvgPriceClp:supplierZoneAvg,peerAvgPriceClp:zoneAvg,relativeToZonePct}:null})
+  return res.status(200).json({ok:true,matched:true,supplier:matched,suggestions,permissions:{canSeeFinancialAmounts},price:{observations:Number(price?.observations??0),receivedKg:Number(price?.received_kg??0),avgPriceClp:canSeeFinancialAmounts?supplierAvg:null,latestPriceClp:canSeeFinancialAmounts?n(price?.latest_price_clp):null,minPriceClp:canSeeFinancialAmounts?n(price?.min_price_clp):null,maxPriceClp:canSeeFinancialAmounts?n(price?.max_price_clp):null},zone:zonePrice?{name:zonePrice.zone,observations:Number(zonePrice.observations??0),receivedKg:Number(zonePrice.received_kg??0),supplierAvgPriceClp:canSeeFinancialAmounts?supplierZoneAvg:null,peerAvgPriceClp:canSeeFinancialAmounts?zoneAvg:null,relativeToZonePct}:null})
  }catch(error){console.error('supplier_price_context_failed',error);return res.status(500).json({ok:false,error:'No fue posible calcular el contexto de precio del proveedor'})}
 }
