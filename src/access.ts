@@ -5,6 +5,7 @@ const access:Record<string,AppRole[]|"all">={
   "/timeline":"all",
   "/comunicaciones":["admin","operations","finance","quality","viewer"],
   "/auditoria":["admin","operations"],
+  "/observabilidad":["admin","operations","quality"],
   "/rollout":["admin","operations"],
   "/planificacion":["admin","operations","finance","viewer"],
   "/etiquetas":["admin","operations","quality","viewer"],
