@@ -1,3 +1,4 @@
+import {readFileSync} from 'node:fs'
 import {expect,test} from '@playwright/test'
 import ExcelJS from 'exceljs'
 import {parseProductionSupport} from '../api/_production-support-parser'
@@ -89,4 +90,15 @@ test('physical chain with no grade observations remains canonical block evidence
  expect(block?.lotReference).toBe('mdq185')
  expect(block?.observationCount).toBe(0)
  expect(block?.dataQualityFlags).toContain('no_grade_observations')
+})
+
+test('canonical production upload publishes main production and physical support v2 together',()=>{
+ const source=readFileSync('api/canonical-upload.ts','utf8')
+ expect(source).toContain("import {parseProductionSupport} from './_production-support-parser.js'")
+ expect(source).toContain('canonical_production_support_blocks')
+ expect(source).toContain('canonical_production_support_rows')
+ expect(source).toContain('result.supportBlocks=support.blocks')
+ expect(source).toContain('result.supportObservations=support.observations')
+ expect(source).toContain('sourceRecordCount=rows.length')
+ expect(source).toContain('writesLive:false')
 })
