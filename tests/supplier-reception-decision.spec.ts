@@ -1,5 +1,6 @@
 import {expect,test,type Page} from '@playwright/test'
 
+type Role='operations'|'quality'
 const baseSupplier={
  supplier:'Proveedor QA',score:88,label:'Fuerte',confidence:'alta',coverage:90,lots:24,receivedKg:18400,explanation:'Buen desempeño histórico.',
  components:[
@@ -12,20 +13,22 @@ const baseSupplier={
  ],
  zones:[{zone:'Quellón',lots:8,receivedKg:6200,gradeAYieldPct:14.6,totalYieldPct:18.2}],
 }
-const pricePayload={matched:true,supplier:'Proveedor QA',price:{observations:12,receivedKg:9100,avgPriceClp:2150,latestPriceClp:2200,minPriceClp:1900,maxPriceClp:2300},zone:{name:'Quellón',observations:20,receivedKg:15000,supplierAvgPriceClp:2150,peerAvgPriceClp:2070,relativeToZonePct:3.9}}
-const economicPayload={ok:true,suppliers:[{supplierId:'supplier-qa',supplier:'Proveedor QA',score:28,source:'historical',historical:{samples:10,receivedKg:7800,purchaseCostClp:16770000,gradeAOutputKg:1524.5,avgRawPriceClp:2150,costPerGradeAKg:11000,score:28},live:{receptions:0,soldReceptions:0,receivedKg:0,soldKg:0,revenueClp:0,purchaseCostClp:0,transformationCostClp:0,contributionClp:0,contributionPerReceivedKg:null,score:null}}]}
+const pricePayload={matched:true,supplier:'Proveedor QA',permissions:{canSeeFinancialAmounts:true},price:{observations:12,receivedKg:9100,avgPriceClp:2150,latestPriceClp:2200,minPriceClp:1900,maxPriceClp:2300},zone:{name:'Quellón',observations:20,receivedKg:15000,supplierAvgPriceClp:2150,peerAvgPriceClp:2070,relativeToZonePct:3.9}}
+const economicPayload={ok:true,permissions:{canSeeFinancialAmounts:true},suppliers:[{supplierId:'supplier-qa',supplier:'Proveedor QA',score:28,source:'historical',historical:{samples:10,receivedKg:7800,purchaseCostClp:16770000,gradeAOutputKg:1524.5,avgRawPriceClp:2150,costPerGradeAKg:11000,score:28},live:{receptions:0,soldReceptions:0,receivedKg:0,soldKg:0,revenueClp:0,purchaseCostClp:0,transformationCostClp:0,contributionClp:0,contributionPerReceivedKg:null,score:null}}]}
+const redactedPrice={...pricePayload,permissions:{canSeeFinancialAmounts:false},price:{...pricePayload.price,avgPriceClp:null,latestPriceClp:null,minPriceClp:null,maxPriceClp:null},zone:{...pricePayload.zone,supplierAvgPriceClp:null,peerAvgPriceClp:null}}
+const redactedEconomics={ok:true,permissions:{canSeeFinancialAmounts:false},suppliers:[{supplierId:'supplier-qa',supplier:'Proveedor QA',score:28,source:'historical',historical:{samples:10,receivedKg:7800,purchaseCostClp:null,gradeAOutputKg:1524.5,avgRawPriceClp:null,costPerGradeAKg:null,score:28},live:{receptions:0,soldReceptions:0,receivedKg:0,soldKg:0,revenueClp:null,purchaseCostClp:null,transformationCostClp:null,contributionClp:null,contributionPerReceivedKg:null,score:null}}]}
 const supportReady={ok:true,status:'ready',suppliers:[{supplier:'Proveedor QA',physicalBlocks:12,observations:44,autoLinkedBlocks:11,exceptions:1,traceabilityScore:93.3,unresolved:[{sheetName:'Diaz termiando',sourceBlock:99,guide:'180',lotReference:'mdq106',status:'unmatched'}]}]}
 
-async function mockReception(page:Page,support:unknown){
+async function mockReception(page:Page,support:unknown,role:Role='operations',economics:unknown=economicPayload,price:unknown=pricePayload){
  await page.route('**/api/**',async route=>{
   const path=new URL(route.request().url()).pathname
-  if(path==='/api/auth')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,operator:{id:'qa-operations',fullName:'QA Operaciones',email:'operations@example.test',role:'operations',plantIds:['ancud']}})})
+  if(path==='/api/auth')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,operator:{id:`qa-${role}`,fullName:`QA ${role}`,email:`${role}@example.test`,role,plantIds:['ancud']}})})
   if(path==='/api/status')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,platform:'vercel-functions',environment:'test',persistence:{database:true,files:true},metrics:{pendingDecisions:0,pendingCredits:0,activeOperators:1,receptions:0},commit:'qa',checkedAt:new Date().toISOString()})})
   if(path==='/api/receptions')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({receptions:[]})})
   if(path==='/api/history')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({records:[],summary:null})})
   if(path==='/api/supplier-intelligence')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,suppliers:[baseSupplier]})})
-  if(path==='/api/supplier-price-context')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(pricePayload)})
-  if(path==='/api/supplier-economic-intelligence')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(economicPayload)})
+  if(path==='/api/supplier-price-context')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(price)})
+  if(path==='/api/supplier-economic-intelligence')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(economics)})
   if(path==='/api/supplier-support-intelligence')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(support)})
   return route.fulfill({status:200,contentType:'application/json',body:'{}'})
  })
@@ -60,4 +63,16 @@ test('reception decision negotiates on weak economics when physical v2 evidence 
  await expect(page.getByText(/Sin margen live vinculado todavía/)).toBeVisible()
  expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
  await page.screenshot({path:testInfo.outputPath('reception-supplier-economic-decision.png'),fullPage:true})
+})
+
+test('quality keeps the recommendation but never sees supplier financial amounts',async({page},testInfo)=>{
+ await mockReception(page,{ok:true,status:'not_imported',suppliers:[]},'quality',redactedEconomics,redactedPrice)
+ await openSupplierDecision(page)
+ await expect(page.getByRole('heading',{name:'Negociar antes de comprar'})).toBeVisible()
+ await expect(page.getByText(/economía 28/)).toBeVisible()
+ await expect(page.getByText('+3.9%',{exact:true})).toBeVisible()
+ await expect(page.getByText(/\$11\.000/)).toHaveCount(0)
+ await expect(page.getByText(/\$2\.150/)).toHaveCount(0)
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
+ await page.screenshot({path:testInfo.outputPath('reception-quality-redacted-economics.png'),fullPage:true})
 })
