@@ -32,13 +32,9 @@ const supportPayload={
 
 const economicPayload={
  ok:true,
- method:{version:'supplier-economics-v1-quality-adjusted',rule:'Economía histórica de erizo usa sólo captura directa con masa válida, precio de guía y Grade A. CUENTA2 permanece como evidencia financiera y packing de pulpo queda fuera del score de erizo.'},
+ method:{version:'supplier-economics-v1-quality-adjusted',rule:'Economía histórica de erizo usa sólo captura directa con masa válida, precio de guía y Grade A: costo de materia prima / kg Grade A útil. Menor costo relativo es mejor. Economía live usa sólo recepciones de erizo con ventas confirmadas y sus liquidaciones/costos de transformación vinculados. CUENTA2 permanece como evidencia financiera y packing de pulpo queda fuera del score de erizo; ninguno se atribuye a un proveedor sin vínculo verificable.'},
  summary:{suppliers:1,scored:1,historicalScored:1,liveScored:0,mixed:0},
- suppliers:[{
-  supplierId:'supplier-1',supplier:'Proveedor QA',score:78,source:'historical',
-  historical:{samples:3,receivedKg:1800,purchaseCostClp:9720000,gradeAOutputKg:339.9,avgRawPriceClp:5400,costPerGradeAKg:28600,score:78},
-  live:{receptions:2,soldReceptions:0,receivedKg:420,soldKg:0,revenueClp:0,purchaseCostClp:0,transformationCostClp:0,contributionClp:0,contributionPerReceivedKg:null,score:null}
- }]
+ suppliers:[{supplierId:'supplier-1',supplier:'Proveedor QA',score:78,source:'historical',historical:{samples:3,receivedKg:3200,purchaseCostClp:27456000,gradeAOutputKg:960,avgRawPriceClp:8580,costPerGradeAKg:28600,score:78},live:{receptions:0,soldReceptions:0,receivedKg:0,soldKg:0,revenueClp:0,purchaseCostClp:0,transformationCostClp:0,contributionClp:0,contributionPerReceivedKg:null,score:null}}]
 }
 
 async function mockApp(page:Page){
@@ -64,12 +60,12 @@ test('supplier buying score separates roll-forward, physical support and quality
  await expect(page.getByText('Economía calculada',{exact:true})).toBeVisible()
  await expect(page.getByText('Economía de compra · 1 históricos · 0 con margen live',{exact:true})).toBeVisible()
  await expect(page.getByText('Evidencia física v2 · 11/12 cadenas conciliadas',{exact:true})).toBeVisible()
- await expect(page.getByText('Decisión actual · Revisar próxima recepción: Proveedor QA',{exact:true})).toBeVisible()
+ await expect(page.getByText('Decisión actual · Revisar trazabilidad: Proveedor QA',{exact:true})).toBeVisible()
  await expect(page.getByText(/Score compra 85,9 · desempeño 86,2 · economía 78/)).toBeVisible()
  await expect(page.getByText('Proveedor QA',{exact:true})).toBeVisible()
  await expect(page.getByText('Compra 85,9 · desempeño 86,2 · confianza baja',{exact:true})).toBeVisible()
  await page.getByText('Proveedor QA',{exact:true}).click()
- await expect(page.getByText('Revisar próxima recepción',{exact:true}).last()).toBeVisible()
+ await expect(page.getByText('Revisar trazabilidad',{exact:true}).last()).toBeVisible()
  await expect(page.getByText('Economía de compra',{exact:true})).toBeVisible()
  await expect(page.getByText(/28\.600 CLP por kg Grade A útil · 3 registros directos con precio/)).toBeVisible()
  await expect(page.getByText(/Economía · score 78/)).toBeVisible()
