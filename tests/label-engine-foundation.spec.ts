@@ -22,6 +22,14 @@ test('label templates are append-only and print jobs snapshot payloads idempoten
  expect(migration).toContain('label_templates_scope_code_version_unique')
 })
 
+test('Label Engine requires released label evidence before physical print queue',async()=>{
+ const api=await readFile('api/label-engine.ts','utf8')
+ expect(api).toContain("label.status!=='validated'")
+ expect(api).toContain('Peso de etiqueta no coincide con packing unit')
+ expect(api).toContain('Grade de etiqueta no coincide con packing unit')
+ expect(api).toContain("!['printed','reprinted'].includes(source.status)")
+})
+
 test('Label Engine never claims queue or reprint requests were physically printed',async()=>{
  const api=await readFile('api/label-engine.ts','utf8')
  expect(api).toContain("${copies},'queued',")
