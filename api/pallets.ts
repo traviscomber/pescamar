@@ -32,6 +32,7 @@ export default async function handler(req:Request,res:Response){
   return res.status(405).json({ok:false,error:'Método no permitido'})
  }catch(error){
   const message=error instanceof Error?error.message:''
+  if(message.includes('Pallet bloqueado por control regulatorio'))return res.status(409).json({ok:false,error:'Pallet bloqueado por control regulatorio; su composición no puede cambiar'})
   const missing=['pallets','pallet_packing_units','packing_units'].some(name=>message.includes(name))
   return res.status(missing?503:500).json({ok:false,error:missing?'Falta aplicar las migraciones Plant Execution 033 y 035':'No fue posible operar pallets'})
  }
