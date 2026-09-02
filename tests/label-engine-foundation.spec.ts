@@ -22,9 +22,10 @@ test('label templates are append-only and print jobs snapshot payloads idempoten
  expect(migration).toContain('label_templates_scope_code_version_unique')
 })
 
-test('Label Engine never claims a queued job was physically printed',async()=>{
+test('Label Engine never claims queue or reprint requests were physically printed',async()=>{
  const api=await readFile('api/label-engine.ts','utf8')
- expect(api).toContain("const status=sourceJobId?'reprinted':'queued'")
+ expect(api).toContain("${copies},'queued',")
  expect(api).not.toContain("status='printed'")
  expect(api).not.toContain("status='sent'")
+ expect(api).not.toContain("status='reprinted'")
 })
