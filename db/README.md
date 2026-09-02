@@ -53,6 +53,7 @@ Antes de producción se debe confirmar el esquema real del entorno objetivo. Que
 | `032_production_support_blocks.sql` | bloques/cadenas físicas de soporte de producción |
 | `033_plant_execution_foundation.sql` | estaciones, dispositivos, eventos idempotentes y unidades físicas de packing |
 | `034_label_engine.sql` | plantillas versionadas, vínculo etiqueta/packing y cola auditable de impresión |
+| `035_pallets.sql` | pallets físicos, membresía auditable de cajas y cierre derivado desde packing vivo |
 
 El inventario anterior describe el repositorio actual. Si se agrega una migración, debe agregarse también a esta tabla; CI verifica esa correspondencia.
 
@@ -67,6 +68,8 @@ El inventario anterior describe el repositorio actual. Si se agrega una migraci�
 - `canonical_packing_boxes` conserva evidencia canónica/importada; `packing_units` representa unidades físicas vivas creadas por Plant Execution. Nunca publicar una fila canónica directamente como packing vivo sin reconciliación determinística y aprobación.
 - Las plantillas de etiqueta son versionadas e inmutables por `scope + code + version`; cada print job conserva un `payload_snapshot` para reconstruir exactamente qué se solicitó imprimir.
 - Una cola de impresión no equivale a confirmación física: sólo un adapter de impresora validado puede promover un job de `queued`/`sent` a `printed`.
+- Una packing unit sólo puede pertenecer a un pallet activo a la vez. Los retiros se conservan como historial auditable con actor y motivo; no se borran membresías físicas para ocultar correcciones.
+- Cerrar un pallet deriva cantidad y kilos desde sus packing units activas. No crea por sí mismo movimientos de inventario ni despachos.
 
 ## Seguridad y tenancy operacional
 
