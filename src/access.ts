@@ -12,6 +12,7 @@ const access:Record<string,AppRole[]|"all">={
   "/frio":["admin","operations","quality","viewer"],
   "/control-regulatorio":["admin","operations","quality","viewer"],
   "/estaciones":["admin"],
+  "/impresion-etiquetas":["admin","operations","quality"],
   "/planificacion":["admin","operations","finance","viewer"],
   "/etiquetas":["admin","operations","quality","viewer"],
   "/proceso-erizo":["admin","operations","quality","viewer"],
