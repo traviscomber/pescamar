@@ -11,7 +11,7 @@ test('Floor Station is scoped to operator plants and remains read-only while the
   if(path==='/api/receptions')return json({receptions:[reception('11111111-1111-4111-8111-111111111111',101,'ancud','Proveedor Ancud'),reception('22222222-2222-4222-8222-222222222222',202,'quellon','Proveedor Quellón')]})
   if(path==='/api/status')return json({ok:true,platform:'vercel-functions',environment:'test',persistence:{database:true,files:true},metrics:{pendingDecisions:0,pendingCredits:0,activeOperators:1,receptions:2},commit:'qa-floor',checkedAt:new Date().toISOString()})
   if(path==='/api/plant-execution')return json({ok:true,writesEnabled:false,mode:'safe-read-only'})
-  if(path==='/api/plant-stations'){stationCalls++;return json({ok:true,writesEnabled:false,stations:[]})
+  if(path==='/api/plant-stations'){stationCalls++;return json({ok:true,writesEnabled:false,stations:[]})}
   return json({})
  })
  await page.goto('/floor')
