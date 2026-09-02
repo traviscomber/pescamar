@@ -52,6 +52,7 @@ Antes de producción se debe confirmar el esquema real del entorno objetivo. Que
 | `031_production_support_resolutions.sql` | resolución auditada de soporte canónico |
 | `032_production_support_blocks.sql` | bloques/cadenas físicas de soporte de producción |
 | `033_plant_execution_foundation.sql` | estaciones, dispositivos, eventos idempotentes y unidades físicas de packing |
+| `034_label_engine.sql` | plantillas versionadas, vínculo etiqueta/packing y cola auditable de impresión |
 
 El inventario anterior describe el repositorio actual. Si se agrega una migración, debe agregarse también a esta tabla; CI verifica esa correspondencia.
 
@@ -64,6 +65,8 @@ El inventario anterior describe el repositorio actual. Si se agrega una migraci�
 - Las funciones de compatibilidad idempotente son una red de seguridad, no una segunda fuente de verdad del esquema.
 - Cambios de esquema nuevos continúan exclusivamente en `db/migrations/` mediante migraciones versionadas y revisables.
 - `canonical_packing_boxes` conserva evidencia canónica/importada; `packing_units` representa unidades físicas vivas creadas por Plant Execution. Nunca publicar una fila canónica directamente como packing vivo sin reconciliación determinística y aprobación.
+- Las plantillas de etiqueta son versionadas e inmutables por `scope + code + version`; cada print job conserva un `payload_snapshot` para reconstruir exactamente qué se solicitó imprimir.
+- Una cola de impresión no equivale a confirmación física: sólo un adapter de impresora validado puede promover un job de `queued`/`sent` a `printed`.
 
 ## Seguridad y tenancy operacional
 
