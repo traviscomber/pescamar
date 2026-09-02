@@ -1,5 +1,5 @@
 import {readFile} from 'node:fs/promises'
-import {expect,test,type Page} from '@playwright/test'
+import {expect,test,type Locator,type Page} from '@playwright/test'
 
 test('cold control binds assets and sensor readings to canonical physical stations',async()=>{
  const [page,api,migration,app]=await Promise.all([
@@ -35,10 +35,10 @@ async function mock(page:Page,writesEnabled=true){
  })
 }
 
-async function selectAncud(page:Page){
- const assetPanel=page.locator('section.panel').filter({has:page.getByRole('heading',{name:'Activo de frío',exact:true})})
- await assetPanel.locator('select').first().selectOption('ancud')
-}
+function panel(page:Page,heading:string){return page.locator('section.panel').filter({has:page.getByRole('heading',{name:heading,exact:true})})}
+function selectByLabel(scope:Locator,label:string){return scope.locator('label').filter({hasText:label}).locator('select')}
+function inputByLabel(scope:Locator,label:string){return scope.locator('label').filter({hasText:label}).locator('input')}
+async function selectAncud(page:Page){await panel(page,'Activo de frío').locator('select').first().selectOption('ancud')}
 
 test('cold page renders physical station and its sensor without overflow',async({page},testInfo)=>{
  const errors:string[]=[]
@@ -47,10 +47,11 @@ test('cold page renders physical station and its sensor without overflow',async(
  await page.goto('/frio')
  await expect(page.getByRole('heading',{name:'Cadena de frío',exact:true})).toBeVisible()
  await selectAncud(page)
- await expect(page.getByLabel('Estación de frío',{exact:true})).toContainText('cold-01 · Frío 1')
- await page.getByLabel('Ciclo abierto',{exact:true}).selectOption('44444444-4444-4444-8444-444444444444')
- await page.getByLabel('Origen lectura',{exact:true}).selectOption('sensor')
- await expect(page.getByLabel('Sensor',{exact:true})).toContainText('SENSOR-QA-1')
+ const assetPanel=panel(page,'Activo de frío'),runPanel=panel(page,'Operar ciclo')
+ await expect(selectByLabel(assetPanel,'Estación de frío')).toContainText('cold-01 · Frío 1')
+ await selectByLabel(runPanel,'Ciclo abierto').selectOption('44444444-4444-4444-8444-444444444444')
+ await selectByLabel(runPanel,'Origen lectura').selectOption('sensor')
+ await expect(selectByLabel(runPanel,'Sensor')).toContainText('SENSOR-QA-1')
  expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
  expect(errors).toEqual([])
  await page.screenshot({path:testInfo.outputPath('cold-station-sensor.png'),fullPage:true})
@@ -60,9 +61,10 @@ test('cold controls respect the shared write gate',async({page})=>{
  await mock(page,false)
  await page.goto('/frio')
  await selectAncud(page)
- await page.getByLabel('Estación de frío',{exact:true}).selectOption('11111111-1111-4111-8111-111111111111')
- await page.getByLabel('Código',{exact:true}).fill('TUN-QA')
- await page.getByLabel('Nombre',{exact:true}).fill('Túnel QA')
+ const assetPanel=panel(page,'Activo de frío')
+ await selectByLabel(assetPanel,'Estación de frío').selectOption('11111111-1111-4111-8111-111111111111')
+ await inputByLabel(assetPanel,'Código').fill('TUN-QA')
+ await inputByLabel(assetPanel,'Nombre').fill('Túnel QA')
  await expect(page.getByRole('button',{name:'Guardar activo'})).toBeDisabled()
  await expect(page.getByRole('button',{name:'Iniciar ciclo'})).toBeDisabled()
 })
