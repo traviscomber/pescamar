@@ -19,7 +19,9 @@ test('Plant Execution control surfaces are routed, authorized and directly reach
 test('control page operates existing Pallets, Cold Chain and Regulatory APIs instead of parallel state',async()=>{
  const page=await readFile('src/pages/PlantExecutionControl.tsx','utf8')
  for(const endpoint of ['/api/pallets','/api/packing-units','/api/cold-chain','/api/regulatory-holds'])expect(page).toContain(endpoint)
- for(const action of ['create','addUnit','close','upsertAsset','startRun','addLoad','recordObservation','completeRun','openHold','releaseHold','rejectHold'])expect(page).toContain(`action:'${action}'`)
+ for(const action of ['create','addUnit','close','upsertAsset','startRun','addLoad','recordObservation','completeRun','openHold'])expect(page).toContain(`action:'${action}'`)
+ expect(page).toContain("resolve('releaseHold')")
+ expect(page).toContain("resolve('rejectHold')")
  expect(page).not.toContain('localStorage')
 })
 
