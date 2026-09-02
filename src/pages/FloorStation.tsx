@@ -24,7 +24,7 @@ export function FloorStation(){
   const code=scanCode.trim().toLowerCase();
   if(!code)return;
   const match=scopedLots.find(lot=>[lot.id,lot.receptionId].some(value=>String(value).trim().toLowerCase()===code));
-  if(!match){setScanFeedback({kind:"error",message:"Código no corresponde a un lote autorizado"});return;}
+  if(!match?.plantId||!match.receptionId){setScanFeedback({kind:"error",message:"Código no corresponde a un lote autorizado"});return;}
   setPlantId(match.plantId);setLotId(match.receptionId);setWeight("");setScanCode("");setScanFeedback({kind:"ok",message:`Lote ${match.id} seleccionado`});
  };
  return <>
