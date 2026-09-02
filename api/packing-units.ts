@@ -1,7 +1,7 @@
 import {requireOperator} from './_auth.js'
 import {getSql} from './_db.js'
 
-type Request={method?:string}
+type Request={method?:string;headers?:Record<string,string|string[]|undefined>}
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void}
 
 export default async function handler(req:Request,res:Response){
