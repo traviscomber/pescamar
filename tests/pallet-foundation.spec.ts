@@ -22,16 +22,28 @@ test('one physical packing unit has only one active pallet while history is pres
  expect(migration).toContain('previous_packing_status')
 })
 
-test('removing a box requires a reason and restores its previous packing state',async()=>{
+test('add and remove transitions lock an eligible building pallet and mutate membership with packing state in one statement',async()=>{
+ const api=await readFile('api/pallets.ts','utf8')
+ expect(api.match(/with eligible_pallet as/g)?.length).toBeGreaterThanOrEqual(3)
+ expect(api).toContain("status='building' for update")
+ expect(api).toContain('with eligible_pallet as')
+ expect(api).toContain('claimed as (update packing_units')
+ expect(api).toContain('added as (insert into pallet_packing_units')
+ expect(api).toContain('active_membership as')
+ expect(api).toContain('restored as (update packing_units')
+ expect(api).toContain('removed as (update pallet_packing_units')
+})
+
+test('removing a box requires a reason, restores its previous packing state and never deletes history',async()=>{
  const api=await readFile('api/pallets.ts','utf8')
  expect(api).toContain('reason.length<4')
- expect(api).toContain('previous_packing_status')
- expect(api).toContain("status=${membership.previous_packing_status}")
+ expect(api).toContain('m.previous_packing_status')
  expect(api).not.toContain('delete from pallet_packing_units')
 })
 
-test('closing a pallet derives totals from active live packing units without moving inventory',async()=>{
+test('closing a pallet locks lifecycle, derives totals from active units and does not move inventory',async()=>{
  const api=(await readFile('api/pallets.ts','utf8')).toLowerCase()
+ expect(api).toContain("status='building' for update")
  expect(api).toContain('sum(u.net_kg)')
  expect(api).toContain('i.removed_at is null')
  expect(api).toContain("status='closed'")
