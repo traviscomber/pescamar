@@ -11,6 +11,7 @@ const access:Record<string,AppRole[]|"all">={
   "/pallets":["admin","operations","quality","viewer"],
   "/frio":["admin","operations","quality","viewer"],
   "/control-regulatorio":["admin","operations","quality","viewer"],
+  "/estaciones":["admin"],
   "/planificacion":["admin","operations","finance","viewer"],
   "/etiquetas":["admin","operations","quality","viewer"],
   "/proceso-erizo":["admin","operations","quality","viewer"],
