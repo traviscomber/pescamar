@@ -4,20 +4,20 @@ const reception={id:'11111111-1111-4111-8111-111111111111',reception_number:301,
 const station={id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',plant_id:'ancud',code:'packing-01',name:'Packing 01',station_type:'packing',active:true,config:{},devices:[]}
 const auth={ok:true,operator:{id:'qa-operations',fullName:'QA Operations',email:'operations@example.test',role:'operations',plantIds:['ancud']}}
 
-async function commonRoute(route:import('@playwright/test').Route,writesEnabled:boolean,stationCalls:{value:number}){
+async function commonRoute(route:import('@playwright/test').Route,writesEnabled:boolean,stationCalls:{value:number}):Promise<boolean>{
  const path=new URL(route.request().url()).pathname
- const json=(body:unknown,status=200)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)})
+ const json=async(body:unknown,status=200)=>{await route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});return true}
  if(path==='/api/auth')return json(auth)
  if(path==='/api/receptions')return json({receptions:[reception]})
  if(path==='/api/status')return json({ok:true,platform:'vercel-functions',environment:'test',persistence:{database:true,files:true},metrics:{pendingDecisions:0,pendingCredits:0,activeOperators:1,receptions:1},commit:'qa-floor-write',checkedAt:new Date().toISOString()})
  if(path==='/api/plant-execution'&&route.request().method()==='GET')return json({ok:true,writesEnabled,mode:writesEnabled?'write-enabled':'safe-read-only'})
  if(path==='/api/plant-stations'){stationCalls.value++;return json({ok:true,writesEnabled,stations:writesEnabled?[station]:[]})}
- return null
+ return false
 }
 
 test('Floor remains read-only and never queries station tables while Plant Execution gate is disabled',async({page})=>{
  const stationCalls={value:0}
- await page.route('**/api/**',async route=>{if(await commonRoute(route,false,stationCalls))return;return route.fulfill({status:200,contentType:'application/json',body:'{}'})})
+ await page.route('**/api/**',async route=>{if(await commonRoute(route,false,stationCalls))return;await route.fulfill({status:200,contentType:'application/json',body:'{}'})})
  await page.goto('/floor')
  await expect(page.getByText('Modo seguro',{exact:true})).toBeVisible()
  await page.getByLabel('Peso de estación').fill('2,50')
@@ -33,9 +33,9 @@ test('Floor creates one idempotent packing request when gate and a real station 
   const path=new URL(route.request().url()).pathname
   if(path==='/api/plant-execution'&&route.request().method()==='POST'){
    const body=route.request().postDataJSON() as Record<string,unknown>;posts.push(body)
-   return route.fulfill({status:201,contentType:'application/json',body:JSON.stringify({ok:true,idempotent:false,packingUnit:{id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',packing_unit_code:body.packingUnitCode}})})
+   await route.fulfill({status:201,contentType:'application/json',body:JSON.stringify({ok:true,idempotent:false,packingUnit:{id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',packing_unit_code:body.packingUnitCode}})});return
   }
-  return route.fulfill({status:200,contentType:'application/json',body:'{}'})
+  await route.fulfill({status:200,contentType:'application/json',body:'{}'})
  })
  await page.goto('/floor')
  await expect(page.getByText('Escritura habilitada',{exact:true})).toBeVisible()
@@ -60,10 +60,10 @@ test('a network failure queues the same packing identity and replays it once con
   const path=new URL(route.request().url()).pathname
   if(path==='/api/plant-execution'&&route.request().method()==='POST'){
    const body=route.request().postDataJSON() as Record<string,unknown>;posts.push(body);postAttempt++
-   if(postAttempt===1)return route.abort('internetdisconnected')
-   return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,idempotent:true,packingUnit:{id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',packing_unit_code:body.packingUnitCode}})})
+   if(postAttempt===1){await route.abort('internetdisconnected');return}
+   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,idempotent:true,packingUnit:{id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',packing_unit_code:body.packingUnitCode}})});return
   }
-  return route.fulfill({status:200,contentType:'application/json',body:'{}'})
+  await route.fulfill({status:200,contentType:'application/json',body:'{}'})
  })
  await page.goto('/floor')
  await page.getByLabel('Peso de estación').fill('1,75')
