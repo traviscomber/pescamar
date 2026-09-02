@@ -1,6 +1,7 @@
 import {requireOperator,type SessionOperator} from './_auth.js'
 import {allowedPlantIds} from './_plants.js'
 import {getSql} from './_db.js'
+import {assessCommercialReadiness} from './_plant-readiness-rules.js'
 
 type Request={method?:string;headers?:Record<string,string|string[]|undefined>}
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void}
@@ -53,7 +54,7 @@ export default async function handler(req:Request,res:Response){
     const roles=roleMap((Array.isArray(operatorsRaw)?operatorsRaw:[]) as OperatorRow[]),receptions=byPlant((Array.isArray(receptionsRaw)?receptionsRaw:[]) as MetricRow[]),evidence=byPlant((Array.isArray(evidenceRaw)?evidenceRaw:[]) as MetricRow[]),quality=byPlant((Array.isArray(qualityRaw)?qualityRaw:[]) as MetricRow[]),production=byPlant((Array.isArray(productionRaw)?productionRaw:[]) as MetricRow[]),inventory=inventoryMap((Array.isArray(inventoryRaw)?inventoryRaw:[]) as InventoryRow[]),orders=byPlant((Array.isArray(ordersRaw)?ordersRaw:[]) as MetricRow[]),dispatches=byPlant((Array.isArray(dispatchesRaw)?dispatchesRaw:[]) as MetricRow[]),sales=byPlant((Array.isArray(salesRaw)?salesRaw:[]) as MetricRow[]),closes=byPlant((Array.isArray(closesRaw)?closesRaw:[]) as MetricRow[]),closeDays=closeDayMap((Array.isArray(closeDaysRaw)?closeDaysRaw:[]) as CloseDayRow[]),endToEnd=byPlant((Array.isArray(endToEndRaw)?endToEndRaw:[]) as MetricRow[])
     const plants=ids.filter(id=>visible(operator,id)).map(id=>{
       const role=roles.get(id)??new Map<string,{active:number;credentials:number}>(),ops=role.get('operations')??{active:0,credentials:0},qa=role.get('quality')??{active:0,credentials:0},viewer=role.get('viewer')??{active:0,credentials:0}
-      const users=[...role.values()].reduce((sum,item)=>sum+item.active,0),rec=receptions.get(id)?.count??0,ev=evidence.get(id)?.count??0,q=quality.get(id)?.count??0,p=production.get(id)?.count??0,inv=inventory.get(id)??0,commercial=(orders.get(id)?.count??0)+(dispatches.get(id)?.count??0)+(sales.get(id)?.count??0),linked=endToEnd.get(id)?.count??0,close=closes.get(id)?.count??0,distinctCloseDays=closeDays.get(id)?.length??0,consecutiveCloseDays=consecutiveDays(closeDays.get(id)??[])
+      const users=[...role.values()].reduce((sum,item)=>sum+item.active,0),rec=receptions.get(id)?.count??0,ev=evidence.get(id)?.count??0,q=quality.get(id)?.count??0,p=production.get(id)?.count??0,inv=inventory.get(id)??0,linked=endToEnd.get(id)?.count??0,commercial=assessCommercialReadiness({plantOrders:orders.get(id)?.count??0,dispatches:dispatches.get(id)?.count??0,sales:sales.get(id)?.count??0,linkedEndToEndReceptions:linked}),close=closes.get(id)?.count??0,distinctCloseDays=closeDays.get(id)?.length??0,consecutiveCloseDays=consecutiveDays(closeDays.get(id)??[])
       const checks=[
         {key:'operations-role',label:'Operaciones con credenciales',complete:ops.credentials>0,detail:ops.credentials?`${ops.credentials} usuario(s) Operaciones listo(s)`:'Falta usuario Operaciones activo con credenciales'},
         {key:'quality-role',label:'Calidad con credenciales',complete:qa.credentials>0,detail:qa.credentials?`${qa.credentials} usuario(s) Calidad listo(s)`:'Falta usuario Calidad activo con credenciales'},
@@ -62,7 +63,7 @@ export default async function handler(req:Request,res:Response){
         {key:'quality',label:'Control de calidad',complete:rec>0&&q>0,detail:q?`${q} lotes controlados`:'Sin controles vivos'},
         {key:'production',label:'Producción trazada',complete:rec>0&&p>0,detail:p?`${p} lotes producidos`:'Sin producción viva'},
         {key:'inventory',label:'Inventario ubicado',complete:inv>0,detail:inv?`${inv.toLocaleString('es-CL',{maximumFractionDigits:1})} kg`:'Sin posición física ubicada'},
-        {key:'commercial',label:'Flujo comercial',complete:commercial>0,detail:commercial?`${commercial} eventos/órdenes vigentes`:'Sin orden vigente, despacho ni venta'},
+        {key:'commercial',label:'Flujo comercial',complete:commercial.complete,detail:commercial.detail},
         {key:'linked-e2e',label:'Flujo E2E en un mismo lote',complete:linked>0,detail:linked?`${linked} lote(s) conectan evidencia → calidad → producción → inventario → comercial`:'Hay que completar toda la cadena sobre al menos un mismo lote; no basta sumar evidencia de lotes distintos'},
         {key:'close',label:'Cierre diario',complete:close>0,detail:close?`${close} cierres guardados`:'Sin cierre por planta'}
       ]
