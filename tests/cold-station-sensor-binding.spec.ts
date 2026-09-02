@@ -35,12 +35,15 @@ async function mock(page:Page,writesEnabled=true){
  })
 }
 
+async function selectAncud(page:Page){await page.getByLabel('Planta',{exact:true}).selectOption('ancud')}
+
 test('cold page renders physical station and its sensor without overflow',async({page},testInfo)=>{
  const errors:string[]=[]
  page.on('console',message=>{if(message.type()==='error')errors.push(message.text())})
  await mock(page,true)
  await page.goto('/frio')
  await expect(page.getByRole('heading',{name:'Cadena de frío',exact:true})).toBeVisible()
+ await selectAncud(page)
  await expect(page.getByLabel('Estación de frío',{exact:true})).toContainText('cold-01 · Frío 1')
  await page.getByLabel('Ciclo abierto',{exact:true}).selectOption('44444444-4444-4444-8444-444444444444')
  await page.getByLabel('Origen lectura',{exact:true}).selectOption('sensor')
@@ -53,6 +56,7 @@ test('cold page renders physical station and its sensor without overflow',async(
 test('cold controls respect the shared write gate',async({page})=>{
  await mock(page,false)
  await page.goto('/frio')
+ await selectAncud(page)
  await page.getByLabel('Estación de frío',{exact:true}).selectOption('11111111-1111-4111-8111-111111111111')
  await page.getByLabel('Código',{exact:true}).fill('TUN-QA')
  await page.getByLabel('Nombre',{exact:true}).fill('Túnel QA')
