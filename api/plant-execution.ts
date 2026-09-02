@@ -1,3 +1,4 @@
+import {createHash} from 'node:crypto'
 import {requireOperator,type SessionOperator} from './_auth.js'
 import {hasPlantAccess} from './_plants.js'
 import {getSql} from './_db.js'
@@ -8,7 +9,7 @@ type Request={method?:string;body?:unknown;headers?:Record<string,string|string[
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void}
 type Input={action?:unknown;stationId?:unknown;receptionId?:unknown;packingSpecId?:unknown;seaUrchinRunId?:unknown;packingUnitCode?:unknown;idempotencyKey?:unknown;netKg?:unknown;grossKg?:unknown;tareKg?:unknown;product?:unknown;grade?:unknown;format?:unknown;occurredAt?:unknown}
 type ScopeRow={station_id:string;plant_id:string;reception_id:string;species:string}
-type EventRow={id:string;station_id:string;reception_id:string|null;event_type:string;raw_value:string|null;net_kg:string|number|null}
+type EventRow={id:string;station_id:string;reception_id:string|null;event_type:string;raw_value:string|null;net_kg:string|number|null;payload_fingerprint:string|null}
 type PackingRow={id:string;packing_unit_code:string;source_device_event_id:string|null;net_kg:string|number;status:string;packed_at:string}
 
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -17,6 +18,7 @@ const numberOrNull=(value:unknown)=>{if(value==null||value==='')return null;cons
 const writesEnabled=()=>process.env.PLANT_EXECUTION_WRITES_ENABLED==='true'
 const canWrite=(operator:SessionOperator)=>['admin','operations','quality'].includes(operator.role)
 const first=<T,>(rows:unknown)=>Array.isArray(rows)?rows[0] as T|undefined:undefined
+const fingerprint=(parts:unknown[])=>createHash('sha256').update(JSON.stringify(parts)).digest('hex')
 
 export default async function handler(req:Request,res:Response){
  res.setHeader('Cache-Control','no-store')
@@ -68,16 +70,17 @@ async function mutate(req:Request,res:Response,operator:SessionOperator){
   if(min!=null&&netKg<min||max!=null&&netKg>max)return res.status(409).json({ok:false,error:'Peso fuera del rango de la especificación de packing'})
  }
 
+ const payloadFingerprint=fingerprint([stationId,receptionId,packingSpecId||null,seaUrchinRunId||null,packingUnitCode,netKg,grossKg,tareKg,product,grade,format])
  const rawValue=String(netKg)
- let event=first<EventRow>(await sql`select id,station_id,reception_id,event_type,raw_value,normalized_value->>'netKg' net_kg from device_events where plant_id=${scope.plant_id} and idempotency_key=${idempotencyKey} limit 1`)
- if(event){
-  const same=event.station_id===stationId&&event.reception_id===receptionId&&event.event_type==='manual_weight'&&Math.abs(Number(event.net_kg)-netKg)<=0.001
-  if(!same)return res.status(409).json({ok:false,error:'Idempotency key ya fue utilizada para otro evento'})
- }else{
-  event=first<EventRow>(await sql`insert into device_events(station_id,plant_id,operator_id,reception_id,event_type,raw_value,normalized_value,idempotency_key,occurred_at) values(${stationId}::uuid,${scope.plant_id},${operator.id}::uuid,${receptionId}::uuid,'manual_weight',${rawValue},jsonb_build_object('netKg',${netKg}::numeric,'grossKg',${grossKg}::numeric,'tareKg',${tareKg}::numeric),${idempotencyKey},${occurredAt.toISOString()}::timestamptz) on conflict(plant_id,idempotency_key) do nothing returning id,station_id,reception_id,event_type,raw_value,normalized_value->>'netKg' net_kg`)
-  if(!event)event=first<EventRow>(await sql`select id,station_id,reception_id,event_type,raw_value,normalized_value->>'netKg' net_kg from device_events where plant_id=${scope.plant_id} and idempotency_key=${idempotencyKey} limit 1`)
-  if(!event)return res.status(500).json({ok:false,error:'No fue posible registrar evento idempotente'})
+ const eventSelect=async()=>first<EventRow>(await sql`select id,station_id,reception_id,event_type,raw_value,normalized_value->>'netKg' net_kg,normalized_value->>'payloadFingerprint' payload_fingerprint from device_events where plant_id=${scope.plant_id} and idempotency_key=${idempotencyKey} limit 1`)
+ let event=await eventSelect()
+ if(!event){
+  event=first<EventRow>(await sql`insert into device_events(station_id,plant_id,operator_id,reception_id,event_type,raw_value,normalized_value,idempotency_key,occurred_at) values(${stationId}::uuid,${scope.plant_id},${operator.id}::uuid,${receptionId}::uuid,'manual_weight',${rawValue},jsonb_build_object('netKg',${netKg}::numeric,'grossKg',${grossKg}::numeric,'tareKg',${tareKg}::numeric,'payloadFingerprint',${payloadFingerprint}),${idempotencyKey},${occurredAt.toISOString()}::timestamptz) on conflict(plant_id,idempotency_key) do nothing returning id,station_id,reception_id,event_type,raw_value,normalized_value->>'netKg' net_kg,normalized_value->>'payloadFingerprint' payload_fingerprint`)
+  if(!event)event=await eventSelect()
  }
+ if(!event)return res.status(500).json({ok:false,error:'No fue posible registrar evento idempotente'})
+ const same=event.station_id===stationId&&event.reception_id===receptionId&&event.event_type==='manual_weight'&&Math.abs(Number(event.net_kg)-netKg)<=0.001&&event.payload_fingerprint===payloadFingerprint
+ if(!same)return res.status(409).json({ok:false,error:'Idempotency key ya fue utilizada para otra operación de packing'})
 
  let packing=first<PackingRow>(await sql`select id,packing_unit_code,source_device_event_id,net_kg,status,packed_at from packing_units where source_device_event_id=${event.id}::uuid limit 1`)
  if(packing)return res.status(200).json({ok:true,idempotent:true,eventId:event.id,packingUnit:packing})
