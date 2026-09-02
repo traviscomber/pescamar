@@ -10,6 +10,7 @@ type Input={action?:unknown;plantId?:unknown;palletId?:unknown;palletCode?:unkno
 type PalletRow={id:string;pallet_code:string;plant_id:string;status:string;product:string|null;species:string|null;grade:string|null;destination:string|null}
 type PackingRow={id:string;packing_unit_code:string;plant_id:string;product:string|null;species:string;grade:string|null;net_kg:string|number;status:string}
 type MembershipRow={id:string;pallet_id:string;packing_unit_id:string;previous_packing_status:string}
+type CloseRow={box_count:number;net_kg:string|number;products:number;species_count:number;grades:number;product:string|null;species:string|null;grade:string|null;closed_id:string|null;pallet_code:string|null;plant_id:string|null;status:string|null;destination:string|null;closed_at:string|null}
 
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const palletCode=/^[A-Z0-9][A-Z0-9._/-]{2,79}$/
@@ -85,15 +86,13 @@ async function addUnit(input:Input,res:Response,operator:SessionOperator){
  if(composition&&(composition.products>0||composition.species_count>0||composition.grades>0)){
   if(composition.product!==packing.product||composition.species!==packing.species||composition.grade!==packing.grade)return res.status(409).json({ok:false,error:'Packing unit no coincide con la composición del pallet'})
  }
- const inserted=first<{id:string}>(await sql`insert into pallet_packing_units(pallet_id,packing_unit_id,previous_packing_status,added_by_operator_id) values(${palletId}::uuid,${packingUnitId}::uuid,${packing.status},${operator.id}::uuid) on conflict (packing_unit_id) where removed_at is null do nothing returning id`)
- if(!inserted){
+ const updated=first<{id:string;packing_unit_code:string;status:string;net_kg:string|number}>(await sql`with eligible_pallet as (select id from pallets where id=${palletId}::uuid and status='building' for update), claimed as (update packing_units u set status='palletized',updated_at=now() where u.id=${packingUnitId}::uuid and u.status=${packing.status} and exists(select 1 from eligible_pallet) and not exists(select 1 from pallet_packing_units i where i.packing_unit_id=u.id and i.removed_at is null) returning u.id,u.packing_unit_code,u.status,u.net_kg), added as (insert into pallet_packing_units(pallet_id,packing_unit_id,previous_packing_status,added_by_operator_id) select ${palletId}::uuid,c.id,${packing.status},${operator.id}::uuid from claimed c returning packing_unit_id), touched as (update pallets p set updated_at=now() from eligible_pallet e where p.id=e.id and exists(select 1 from added) returning p.id) select c.id,c.packing_unit_code,c.status,c.net_kg from claimed c join added a on a.packing_unit_id=c.id cross join touched t`)
+ if(!updated){
   const concurrent=first<{pallet_id:string}>(await sql`select pallet_id from pallet_packing_units where packing_unit_id=${packingUnitId}::uuid and removed_at is null limit 1`)
   if(concurrent?.pallet_id===palletId)return res.status(200).json({ok:true,idempotent:true,palletId,packingUnitId})
-  return res.status(409).json({ok:false,error:'Packing unit fue palletizada concurrentemente'})
+  if(concurrent)return res.status(409).json({ok:false,error:'Packing unit fue palletizada concurrentemente en otro pallet'})
+  return res.status(409).json({ok:false,error:'Pallet o packing unit cambió de estado durante la palletización'})
  }
- const updated=first(await sql`update packing_units set status='palletized',updated_at=now() where id=${packingUnitId}::uuid and status=${packing.status} returning id,packing_unit_code,status,net_kg`)
- if(!updated)return res.status(409).json({ok:false,error:'Packing unit cambió de estado durante la palletización'})
- await sql`update pallets set updated_at=now() where id=${palletId}::uuid`
  return res.status(201).json({ok:true,idempotent:false,palletId,packingUnit:updated})
 }
 
@@ -106,11 +105,8 @@ async function removeUnit(input:Input,res:Response,operator:SessionOperator){
  if(pallet.status!=='building')return res.status(409).json({ok:false,error:'Sólo se pueden retirar cajas de un pallet en construcción'})
  const membership=first<MembershipRow>(await sql`select id,pallet_id,packing_unit_id,previous_packing_status from pallet_packing_units where pallet_id=${palletId}::uuid and packing_unit_id=${packingUnitId}::uuid and removed_at is null limit 1`)
  if(!membership)return res.status(404).json({ok:false,error:'Packing unit no pertenece activamente a este pallet'})
- const removed=first(await sql`update pallet_packing_units set removed_by_operator_id=${operator.id}::uuid,removed_at=now(),removal_reason=${reason} where id=${membership.id}::uuid and removed_at is null returning id`)
- if(!removed)return res.status(409).json({ok:false,error:'La membresía cambió concurrentemente'})
- const restored=first(await sql`update packing_units set status=${membership.previous_packing_status},updated_at=now() where id=${packingUnitId}::uuid and status='palletized' returning id,packing_unit_code,status,net_kg`)
- if(!restored)return res.status(409).json({ok:false,error:'Packing unit cambió de estado antes del retiro'})
- await sql`update pallets set updated_at=now() where id=${palletId}::uuid`
+ const restored=first<{id:string;packing_unit_code:string;status:string;net_kg:string|number}>(await sql`with eligible_pallet as (select id from pallets where id=${palletId}::uuid and status='building' for update), active_membership as (select i.id,i.previous_packing_status from pallet_packing_units i,eligible_pallet e where i.id=${membership.id}::uuid and i.pallet_id=e.id and i.packing_unit_id=${packingUnitId}::uuid and i.removed_at is null for update), restored as (update packing_units u set status=m.previous_packing_status,updated_at=now() from active_membership m where u.id=${packingUnitId}::uuid and u.status='palletized' returning u.id,u.packing_unit_code,u.status,u.net_kg), removed as (update pallet_packing_units i set removed_by_operator_id=${operator.id}::uuid,removed_at=now(),removal_reason=${reason} from active_membership m where i.id=m.id and i.removed_at is null and exists(select 1 from restored) returning i.id), touched as (update pallets p set updated_at=now() from eligible_pallet e where p.id=e.id and exists(select 1 from removed) returning p.id) select r.id,r.packing_unit_code,r.status,r.net_kg from restored r cross join removed x cross join touched t`)
+ if(!restored)return res.status(409).json({ok:false,error:'Pallet, membresía o packing unit cambió de estado durante el retiro'})
  return res.status(200).json({ok:true,palletId,packingUnit:restored,reason})
 }
 
@@ -122,10 +118,10 @@ async function closePallet(input:Input,res:Response,operator:SessionOperator){
  if(!pallet||!hasPlantAccess(operator,pallet.plant_id))return res.status(404).json({ok:false,error:'Pallet fuera de alcance'})
  if(pallet.status==='closed')return res.status(200).json({ok:true,idempotent:true,pallet})
  if(pallet.status!=='building')return res.status(409).json({ok:false,error:'Estado de pallet no permite cierre'})
- const summary=first<{box_count:number;net_kg:string|number;products:number;species_count:number;grades:number;product:string|null;species:string|null;grade:string|null}>(await sql`select count(*)::int box_count,coalesce(sum(u.net_kg),0) net_kg,count(distinct coalesce(u.product,''))::int products,count(distinct u.species)::int species_count,count(distinct coalesce(u.grade,''))::int grades,min(u.product) product,min(u.species) species,min(u.grade) grade from pallet_packing_units i join packing_units u on u.id=i.packing_unit_id where i.pallet_id=${palletId}::uuid and i.removed_at is null`)
- if(!summary?.box_count)return res.status(409).json({ok:false,error:'No se puede cerrar un pallet vacío'})
- if(summary.products>1||summary.species_count>1||summary.grades>1)return res.status(409).json({ok:false,error:'Pallet contiene una mezcla no autorizada'})
- const closed=first(await sql`update pallets set status='closed',product=${summary.product},species=${summary.species},grade=${summary.grade},box_count=${summary.box_count},net_kg=${summary.net_kg},closed_by_operator_id=${operator.id}::uuid,closed_at=now(),updated_at=now() where id=${palletId}::uuid and status='building' returning id,pallet_code,plant_id,status,product,species,grade,destination,box_count,net_kg,closed_at`)
- if(!closed)return res.status(409).json({ok:false,error:'Pallet cambió de estado durante el cierre'})
- return res.status(200).json({ok:true,idempotent:false,pallet:closed})
+ const result=first<CloseRow>(await sql`with eligible_pallet as (select id from pallets where id=${palletId}::uuid and status='building' for update), summary as (select count(*)::int box_count,coalesce(sum(u.net_kg),0) net_kg,count(distinct coalesce(u.product,''))::int products,count(distinct u.species)::int species_count,count(distinct coalesce(u.grade,''))::int grades,min(u.product) product,min(u.species) species,min(u.grade) grade from eligible_pallet e left join pallet_packing_units i on i.pallet_id=e.id and i.removed_at is null left join packing_units u on u.id=i.packing_unit_id), closed as (update pallets p set status='closed',product=s.product,species=s.species,grade=s.grade,box_count=s.box_count,net_kg=s.net_kg,closed_by_operator_id=${operator.id}::uuid,closed_at=now(),updated_at=now() from eligible_pallet e,summary s where p.id=e.id and s.box_count>0 and s.products<=1 and s.species_count<=1 and s.grades<=1 returning p.id closed_id,p.pallet_code,p.plant_id,p.status,p.destination,p.closed_at) select s.box_count,s.net_kg,s.products,s.species_count,s.grades,s.product,s.species,s.grade,c.closed_id,c.pallet_code,c.plant_id,c.status,c.destination,c.closed_at from summary s left join closed c on true`)
+ if(!result)return res.status(409).json({ok:false,error:'Pallet cambió de estado durante el cierre'})
+ if(!result.box_count)return res.status(409).json({ok:false,error:'No se puede cerrar un pallet vacío'})
+ if(result.products>1||result.species_count>1||result.grades>1)return res.status(409).json({ok:false,error:'Pallet contiene una mezcla no autorizada'})
+ if(!result.closed_id)return res.status(409).json({ok:false,error:'Pallet cambió de estado durante el cierre'})
+ return res.status(200).json({ok:true,idempotent:false,pallet:{id:result.closed_id,pallet_code:result.pallet_code,plant_id:result.plant_id,status:result.status,product:result.product,species:result.species,grade:result.grade,destination:result.destination,box_count:result.box_count,net_kg:result.net_kg,closed_at:result.closed_at}})
 }
