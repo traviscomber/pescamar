@@ -1,7 +1,7 @@
 import {readFile} from 'node:fs/promises'
 import {expect,test,type Page} from '@playwright/test'
 
-test('Plant Execution readiness remains evidence-only and requires confirmed physical label evidence',async()=>{
+test('Plant Execution readiness remains evidence-only, requires physical label evidence and links blockers to their controls',async()=>{
  const [api,component,rollout,contract]=await Promise.all([
   readFile('api/plant-execution-readiness.ts','utf8'),
   readFile('src/components/PlantExecutionReadiness.tsx','utf8'),
@@ -21,6 +21,10 @@ test('Plant Execution readiness remains evidence-only and requires confirmed phy
  expect(api).toContain('No modifica el gate UAT/LIVE')
  expect(component).toContain("fetch('/api/plant-execution-readiness'")
  expect(component).toContain('Señal separada del gate LIVE')
+ expect(component).toContain("label:{to:'/impresion-etiquetas'")
+ expect(component).toContain("packing:{to:'/floor'")
+ expect(component).toContain("cold:{to:'/frio'")
+ expect(component).toContain("regulatory:{to:'/control-regulatorio'")
  expect(rollout).toContain('<PlantExecutionReadiness/>')
  expect(contract).toContain('no equivale a UAT')
  expect(contract).toContain('nunca sustituye aceptación humana')
@@ -40,7 +44,7 @@ async function mock(page:Page){
  })
 }
 
-test('rollout shows missing physical label confirmation without promoting a plant to LIVE',async({page},testInfo)=>{
+test('rollout shows missing physical evidence as direct operational actions without promoting a plant to LIVE',async({page},testInfo)=>{
  await mock(page)
  await page.goto('/rollout')
  await expect(page.getByRole('heading',{name:'Plant Execution readiness'})).toBeVisible()
@@ -48,8 +52,13 @@ test('rollout shows missing physical label confirmation without promoting a plan
  await expect(page.getByText('2/7 señales observadas')).toBeVisible()
  await expect(page.getByText('Etiqueta física confirmada')).toBeVisible()
  await expect(page.getByText('0 impresiones confirmadas',{exact:false})).toBeVisible()
+ await expect(page.getByRole('link',{name:'Ir a piso: Packing real'})).toHaveAttribute('href','/floor')
+ await expect(page.getByRole('link',{name:'Preparar impresión: Etiqueta física confirmada'})).toHaveAttribute('href','/impresion-etiquetas')
+ await expect(page.getByRole('link',{name:'Operar pallets: Pallet trazable'})).toHaveAttribute('href','/pallets')
+ await expect(page.getByRole('link',{name:'Operar frío: Frío con evidencia'})).toHaveAttribute('href','/frio')
+ await expect(page.getByRole('link',{name:'Ejercitar hold: Control regulatorio ejercitado'})).toHaveAttribute('href','/control-regulatorio')
  await expect(page.getByText('pendiente')).toBeVisible()
  await expect(page.getByText('No modifica el gate UAT/LIVE',{exact:false})).toBeVisible()
  expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
- await page.screenshot({path:testInfo.outputPath('plant-execution-readiness-label.png'),fullPage:true})
+ await page.screenshot({path:testInfo.outputPath('plant-execution-readiness-actions.png'),fullPage:true})
 })
