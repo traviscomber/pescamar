@@ -58,6 +58,7 @@ Antes de producción se debe confirmar el esquema real del entorno objetivo. Que
 | `037_regulatory_holds.sql` | holds regulatorios auditables y bloqueo físico de despacho en DB |
 | `038_regulatory_pallet_membership_freeze.sql` | congela composición de pallets mientras un hold regulatorio siga bloqueando |
 | `039_cold_asset_active_run_exclusion.sql` | impide más de un ciclo de frío abierto simultáneo por activo físico |
+| `040_cold_sensor_station_scope.sql` | obliga observaciones sensor a coincidir con planta y estación física del activo |
 
 El inventario anterior describe el repositorio actual. Si se agrega una migración, debe agregarse también a esta tabla; CI verifica esa correspondencia.
 
@@ -77,6 +78,7 @@ El inventario anterior describe el repositorio actual. Si se agrega una migraci�
 - `sea_urchin_stage_checks.freezing` conserva el chequeo de etapa del proceso de erizo; `cold_runs` representa la sesión física de un túnel, cámara o equipo. Ninguno reemplaza al otro.
 - Un pallet o lote sólo puede pertenecer a un ciclo de frío activo a la vez. Al completar/cancelar el ciclo se libera la carga para conservar historial y permitir ciclos posteriores.
 - Un activo físico de frío sólo puede tener un `cold_run` en estado `open` a la vez; un mismo ciclo puede agrupar múltiples cargas.
+- Toda observación de frío debe pertenecer a la misma planta del ciclo; una observación `sensor` debe usar un sensor activo y, si el activo tiene `station_id`, ese sensor debe pertenecer exactamente a esa estación.
 - El cierre de un ciclo de frío exige carga activa y al menos una observación de temperatura; su estado final se deriva de los límites permitidos y de las observaciones registradas.
 - Frío no genera automáticamente movimientos de inventario ni despachos. Es evidencia y control físico, no un atajo transaccional.
 - Un hold regulatorio apunta exactamente a un lote, pallet o packing unit y conserva eventos de apertura/resolución; no se elimina para ocultar historia.
@@ -84,7 +86,7 @@ El inventario anterior describe el repositorio actual. Si se agrega una migraci�
 - Mientras el despacho comercial sea por lote/kg, un hold en una caja o pallet bloquea conservadoramente cualquier recepción trazada a esa unidad física.
 - Mientras un hold de pallet siga en `open` o `rejected`, su membresía física queda congelada: no se pueden agregar, retirar, mover ni borrar cajas para alterar la línea de bloqueo.
 - El gate regulatorio de despacho existe también en PostgreSQL sobre `lot_dispatches`; no depende de que la UI recuerde validar el hold.
-- La integración Sernapesca XML/Siscomex no forma parte de 037–039 y sólo debe implementarse cuando exista contrato oficial de endpoint, autenticación y formato.
+- La integración Sernapesca XML/Siscomex no forma parte de 037–040 y sólo debe implementarse cuando exista contrato oficial de endpoint, autenticación y formato.
 
 ## Seguridad y tenancy operacional
 
