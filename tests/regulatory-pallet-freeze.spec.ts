@@ -11,6 +11,16 @@ test('blocking pallet holds freeze physical membership at the database boundary'
  expect(migration).toContain('pallet bloqueado por control regulatorio')
 })
 
+test('hold creation and membership mutation serialize on the same pallet row',async()=>{
+ const migration=(await readFile('db/migrations/038_regulatory_pallet_membership_freeze.sql','utf8')).toLowerCase()
+ expect(migration).toContain('lock_regulatory_hold_pallet_scope')
+ expect(migration).toContain('before insert or update on regulatory_holds')
+ expect(migration).toContain('where id=new.pallet_id for update')
+ expect(migration).toContain('where id=old.pallet_id for update')
+ expect(migration).toContain('order by id')
+ expect(migration).toContain('for update')
+})
+
 test('regulatory pallet freeze preserves dispatch lineage instead of deleting membership history',async()=>{
  const regulatory=(await readFile('db/migrations/037_regulatory_holds.sql','utf8')).toLowerCase()
  const freeze=(await readFile('db/migrations/038_regulatory_pallet_membership_freeze.sql','utf8')).toLowerCase()
