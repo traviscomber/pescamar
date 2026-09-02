@@ -77,3 +77,28 @@ test('a network failure queues the same packing identity and replays it once con
  expect(posts[1].idempotencyKey).toBe(posts[0].idempotencyKey)
  expect(posts[1].packingUnitCode).toBe(posts[0].packingUnitCode)
 })
+
+test('a queued request rejected by contract moves to attention and leaves the automatic retry loop',async({page})=>{
+ const stationCalls={value:0}
+ let postAttempt=0
+ await page.route('**/api/**',async route=>{
+  if(await commonRoute(route,true,stationCalls))return
+  const path=new URL(route.request().url()).pathname
+  if(path==='/api/plant-execution'&&route.request().method()==='POST'){
+   postAttempt++
+   if(postAttempt===1){await route.abort('internetdisconnected');return}
+   await route.fulfill({status:409,contentType:'application/json',body:JSON.stringify({ok:false,error:'Peso fuera del rango de la especificación de packing'})});return
+  }
+  await route.fulfill({status:200,contentType:'application/json',body:'{}'})
+ })
+ await page.goto('/floor')
+ await page.getByLabel('Peso de estación').fill('9,99')
+ await page.getByRole('button',{name:/Crear packing unit/}).click()
+ await expect(page.getByRole('status')).toContainText('pendiente de sincronización')
+ await page.evaluate(()=>window.dispatchEvent(new Event('online')))
+ await expect(page.getByRole('alert')).toContainText('requiere revisión')
+ await expect(page.getByText('1 requiere revisión',{exact:true})).toBeVisible()
+ await page.evaluate(()=>window.dispatchEvent(new Event('online')))
+ await page.waitForTimeout(100)
+ expect(postAttempt).toBe(2)
+})
