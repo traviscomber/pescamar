@@ -2,6 +2,8 @@ import {requireOperator,type SessionOperator} from './_auth.js'
 import {hasPlantAccess} from './_plants.js'
 import {getSql} from './_db.js'
 
+declare const process:{env:Record<string,string|undefined>}
+
 type Request={method?:string;body?:unknown;headers?:Record<string,string|string[]|undefined>}
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void}
 type Input={action?:unknown;stationId?:unknown;receptionId?:unknown;packingSpecId?:unknown;seaUrchinRunId?:unknown;packingUnitCode?:unknown;idempotencyKey?:unknown;netKg?:unknown;grossKg?:unknown;tareKg?:unknown;product?:unknown;grade?:unknown;format?:unknown;occurredAt?:unknown}
