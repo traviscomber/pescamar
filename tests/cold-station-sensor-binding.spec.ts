@@ -36,8 +36,8 @@ async function mock(page:Page,writesEnabled=true){
 }
 
 function panel(page:Page,heading:string){return page.locator('section.panel').filter({has:page.getByRole('heading',{name:heading,exact:true})})}
-function selectByLabel(scope:Locator,label:string){return scope.locator('label').filter({hasText:label}).locator('select')}
-function inputByLabel(scope:Locator,label:string){return scope.locator('label').filter({hasText:label}).locator('input')}
+function selectByLabel(scope:Locator,label:string){return scope.locator('label').filter({hasText:new RegExp(`^${label}`)}).locator('select')}
+function inputByLabel(scope:Locator,label:string){return scope.locator('label').filter({hasText:new RegExp(`^${label}`)}).locator('input')}
 async function selectAncud(page:Page){await panel(page,'Activo de frío').locator('select').first().selectOption('ancud')}
 
 test('cold page renders physical station and its sensor without overflow',async({page},testInfo)=>{
