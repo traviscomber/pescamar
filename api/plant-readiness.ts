@@ -44,7 +44,7 @@ export default async function handler(req:Request,res:Response){
         and exists(select 1 from lot_events p where p.reception_id=r.id and p.event_type='production')
         and exists(select 1 from inventory_movements im where im.reception_id=r.id and im.to_location_id is not null and im.moved_kg>0)
         and (
-          exists(select 1 from sales_order_allocations a where a.reception_id=r.id)
+          exists(select 1 from sales_order_allocations a join sales_orders o on o.id=a.order_id where a.reception_id=r.id and o.status<>'cancelled')
           or exists(select 1 from lot_dispatches d where d.reception_id=r.id and d.status='confirmed')
           or exists(select 1 from lot_sales s where s.reception_id=r.id and s.status='confirmed')
         )
