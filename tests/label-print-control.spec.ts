@@ -1,5 +1,5 @@
 import {readFile} from 'node:fs/promises'
-import {expect,test,type Page} from '@playwright/test'
+import {expect,test,type Locator,type Page} from '@playwright/test'
 
 test('physical Label Engine preserves validated-label, printer and idempotency gates',async()=>{
  const [page,api,options,access,vercel]=await Promise.all([
@@ -14,7 +14,7 @@ test('physical Label Engine preserves validated-label, printer and idempotency g
  expect(page).toContain("idempotencyKey:`label-print-${crypto.randomUUID()}`")
  expect(api).toContain("label.status!=='validated'")
  expect(api).toContain("d.device_type='printer'")
- expect(api).toContain("status,'queued'")
+ expect(api).toContain("${copies},'queued'")
  expect(api).toContain("['printed','reprinted'].includes(source.status)")
  expect(options).toContain("status<>'voided'")
  expect(options).toContain("l.status='validated'")
@@ -37,16 +37,23 @@ async function mock(page:Page,writesEnabled=true){
  })
 }
 
+function printPanel(page:Page){return page.locator('section.panel').filter({has:page.getByRole('heading',{name:'Enviar a cola',exact:true})})}
+function selectByLabel(scope:Locator,label:string){return scope.locator('label').filter({hasText:new RegExp(`^${label}`)}).locator('select')}
+async function selectPrintIntent(page:Page){
+ const scope=printPanel(page)
+ await selectByLabel(scope,'Caja').selectOption('33333333-3333-4333-8333-333333333333')
+ await selectByLabel(scope,'Etiqueta validada').selectOption('55555555-5555-4555-8555-555555555555')
+ await selectByLabel(scope,'Plantilla').selectOption('22222222-2222-4222-8222-222222222222')
+ await selectByLabel(scope,'Impresora').selectOption('66666666-6666-4666-8666-666666666666')
+}
+
 test('quality can prepare a physical print job without overflow',async({page})=>{
  const errors:string[]=[]
  page.on('console',message=>{if(message.type()==='error')errors.push(message.text())})
  await mock(page,true)
  await page.goto('/impresion-etiquetas')
  await expect(page.getByRole('heading',{name:'Impresión de etiquetas',exact:true})).toBeVisible()
- await page.getByLabel('Caja',{exact:true}).selectOption('33333333-3333-4333-8333-333333333333')
- await page.getByLabel('Etiqueta validada',{exact:true}).selectOption('55555555-5555-4555-8555-555555555555')
- await page.getByLabel('Plantilla',{exact:true}).selectOption('22222222-2222-4222-8222-222222222222')
- await page.getByLabel('Impresora',{exact:true}).selectOption('66666666-6666-4666-8666-666666666666')
+ await selectPrintIntent(page)
  await expect(page.getByRole('button',{name:'Encolar impresión'})).toBeEnabled()
  expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
  expect(errors).toEqual([])
@@ -55,9 +62,6 @@ test('quality can prepare a physical print job without overflow',async({page})=>
 test('physical print mutations disable with the shared kill switch',async({page})=>{
  await mock(page,false)
  await page.goto('/impresion-etiquetas')
- await page.getByLabel('Caja',{exact:true}).selectOption('33333333-3333-4333-8333-333333333333')
- await page.getByLabel('Etiqueta validada',{exact:true}).selectOption('55555555-5555-4555-8555-555555555555')
- await page.getByLabel('Plantilla',{exact:true}).selectOption('22222222-2222-4222-8222-222222222222')
- await page.getByLabel('Impresora',{exact:true}).selectOption('66666666-6666-4666-8666-666666666666')
+ await selectPrintIntent(page)
  await expect(page.getByRole('button',{name:'Encolar impresión'})).toBeDisabled()
 })
