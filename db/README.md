@@ -54,6 +54,7 @@ Antes de producción se debe confirmar el esquema real del entorno objetivo. Que
 | `033_plant_execution_foundation.sql` | estaciones, dispositivos, eventos idempotentes y unidades físicas de packing |
 | `034_label_engine.sql` | plantillas versionadas, vínculo etiqueta/packing y cola auditable de impresión |
 | `035_pallets.sql` | pallets físicos, membresía auditable de cajas y cierre derivado desde packing vivo |
+| `036_cold_chain.sql` | activos de frío, ciclos físicos, cargas auditables y observaciones de temperatura |
 
 El inventario anterior describe el repositorio actual. Si se agrega una migración, debe agregarse también a esta tabla; CI verifica esa correspondencia.
 
@@ -70,6 +71,10 @@ El inventario anterior describe el repositorio actual. Si se agrega una migraci�
 - Una cola de impresión no equivale a confirmación física: sólo un adapter de impresora validado puede promover un job de `queued`/`sent` a `printed`.
 - Una packing unit sólo puede pertenecer a un pallet activo a la vez. Los retiros se conservan como historial auditable con actor y motivo; no se borran membresías físicas para ocultar correcciones.
 - Cerrar un pallet deriva cantidad y kilos desde sus packing units activas. No crea por sí mismo movimientos de inventario ni despachos.
+- `sea_urchin_stage_checks.freezing` conserva el chequeo de etapa del proceso de erizo; `cold_runs` representa la sesión física de un túnel, cámara o equipo. Ninguno reemplaza al otro.
+- Un pallet o lote sólo puede pertenecer a un ciclo de frío activo a la vez. Al completar/cancelar el ciclo se libera la carga para conservar historial y permitir ciclos posteriores.
+- El cierre de un ciclo de frío exige carga activa y al menos una observación de temperatura; su estado final se deriva de los límites permitidos y de las observaciones registradas.
+- Frío no genera automáticamente movimientos de inventario ni despachos. Es evidencia y control físico, no un atajo transaccional.
 
 ## Seguridad y tenancy operacional
 
