@@ -17,6 +17,8 @@ export type FloorQueueRecord={
  lastError?:string
 }
 
+export type FloorQueueSummary={pending:number;attention:number;total:number}
+
 const DB_NAME='pescamar-floor'
 const DB_VERSION=1
 const STORE_NAME='packing-queue'
@@ -93,7 +95,7 @@ export async function markFloorQueueAttempt(id:string,error?:string,attention=fa
  })
 }
 
-export async function pendingFloorQueueCount():Promise<number>{
- const rows=await listFloorQueue()
- return rows.filter(row=>row.status==='pending').length
+export async function floorQueueSummary():Promise<FloorQueueSummary>{
+ const rows=await listFloorQueue(),pending=rows.filter(row=>row.status==='pending').length,attention=rows.filter(row=>row.status==='attention').length
+ return {pending,attention,total:rows.length}
 }
