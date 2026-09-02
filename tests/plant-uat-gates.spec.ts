@@ -51,7 +51,7 @@ test('rollout separates linked UAT readiness from human LIVE review and keeps bl
  await expect(page.getByRole('link',{name:'Configurar usuarios'})).toHaveAttribute('href','/operadores')
  await expect(page.getByRole('link',{name:'Abrir comercial'})).toHaveAttribute('href','/ordenes-venta?plantId=quellon')
  await expect(page.getByRole('link',{name:'Continuar lote'})).toHaveAttribute('href','/plantas/quellon')
- await expect(page.getByRole('link',{name:'Abrir planta'})).toHaveAttribute('href','/plantas/quellon')
+ await expect(page.getByRole('link',{name:'Abrir planta',exact:true})).toHaveAttribute('href','/plantas/quellon')
  expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
  await page.screenshot({path:testInfo.outputPath('plant-uat-actionable-rollout.png'),fullPage:true})
 })
