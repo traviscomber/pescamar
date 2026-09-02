@@ -12,10 +12,10 @@ const readyChecks=[
  {key:'linked-e2e',label:'Flujo E2E en un mismo lote',complete:true,detail:'1 lote(s) conectan evidencia → calidad → producción → inventario → comercial'},
  {key:'close',label:'Cierre diario',complete:true,detail:'3 cierres guardados'},
 ]
-const blockedChecks=readyChecks.map(check=>check.key==='operations-role'?{...check,complete:false,detail:'Falta usuario Operaciones activo con credenciales'}:check.key==='commercial'?{...check,complete:false,detail:'Sin orden vigente, despacho ni venta'}:check.key==='linked-e2e'?{...check,complete:false,detail:'Hay que completar toda la cadena sobre al menos un mismo lote; no basta sumar evidencia de lotes distintos'}:check)
+const blockedChecks=readyChecks.map(check=>check.key==='operations-role'?{...check,complete:false,detail:'Falta usuario Operaciones activo con credenciales'}:check.key==='quality'?{...check,complete:false,detail:'Sin controles vivos'}:check.key==='commercial'?{...check,complete:false,detail:'Sin orden vigente, asignación enlazada, despacho ni venta'}:check.key==='linked-e2e'?{...check,complete:false,detail:'Hay que completar toda la cadena sobre al menos un mismo lote; no basta sumar evidencia de lotes distintos'}:check)
 const payload={ok:true,summary:{blocked:1,inProgress:0,readyForHumanUat:1,readyForHumanLiveReview:1,live:0},gate:{version:'plant-uat-v3-linked-e2e',rule:'UAT exige roles y evidencia viva end-to-end enlazada sobre al menos un mismo lote: evidencia documental, Calidad, Producción, ubicación física y señal comercial vigente deben compartir reception_id. La revisión LIVE exige además al menos 3 fechas consecutivas con cierre operacional. LIVE nunca se infiere: requiere confirmación humana, cero P0/P1 y aceptación del responsable.'},disclaimer:'Gate basado en evidencia operacional enlazada. La presencia agregada de eventos en una planta no prueba un flujo E2E y la actividad comercial cancelada no cuenta. Los cierres consecutivos son evidencia de continuidad, no prueba automática de independencia del equipo técnico ni autorización LIVE.',plants:[
  {plantId:'ancud',score:100,completed:10,total:10,latestActivityAt:'2026-08-28T01:30:00.000Z',uat:{state:'ready_for_human_uat',humanAcceptanceRequired:true,blockers:[]},liveReadiness:{state:'ready_for_human_live_review',requiredConsecutiveCloseDays:3,consecutiveCloseDays:3,continuityEvidenceComplete:true,humanAcceptanceRequired:true,supportIndependenceRequiresHumanConfirmation:true,autoLive:false},metrics:{users:3,operationsUsers:1,operationsCredentials:1,qualityUsers:1,qualityCredentials:1,viewerUsers:1,receptions:3,receptionsWithEvidence:3,qualityLots:3,productionLots:2,locatedKg:120,salesOrders:1,dispatches:1,sales:0,endToEndReceptions:1,dailyCloses:3,distinctCloseDays:3},checks:readyChecks},
- {plantId:'quellon',score:70,completed:7,total:10,latestActivityAt:'2026-08-28T01:00:00.000Z',uat:{state:'blocked',humanAcceptanceRequired:true,blockers:[{key:'operations-role',label:'Operaciones con credenciales',detail:'Falta usuario Operaciones activo con credenciales'},{key:'commercial',label:'Flujo comercial',detail:'Sin orden vigente, despacho ni venta'},{key:'linked-e2e',label:'Flujo E2E en un mismo lote',detail:'Hay que completar toda la cadena sobre al menos un mismo lote; no basta sumar evidencia de lotes distintos'}]},liveReadiness:{state:'uat_incomplete',requiredConsecutiveCloseDays:3,consecutiveCloseDays:1,continuityEvidenceComplete:false,humanAcceptanceRequired:true,supportIndependenceRequiresHumanConfirmation:true,autoLive:false},metrics:{users:1,operationsUsers:0,operationsCredentials:0,qualityUsers:1,qualityCredentials:1,viewerUsers:0,receptions:2,receptionsWithEvidence:2,qualityLots:2,productionLots:1,locatedKg:45,salesOrders:0,dispatches:0,sales:0,endToEndReceptions:0,dailyCloses:1,distinctCloseDays:1},checks:blockedChecks},
+ {plantId:'quellon',score:60,completed:6,total:10,latestActivityAt:'2026-08-28T01:00:00.000Z',uat:{state:'blocked',humanAcceptanceRequired:true,blockers:[{key:'operations-role',label:'Operaciones con credenciales',detail:'Falta usuario Operaciones activo con credenciales'},{key:'quality',label:'Control de calidad',detail:'Sin controles vivos'},{key:'commercial',label:'Flujo comercial',detail:'Sin orden vigente, asignación enlazada, despacho ni venta'},{key:'linked-e2e',label:'Flujo E2E en un mismo lote',detail:'Hay que completar toda la cadena sobre al menos un mismo lote; no basta sumar evidencia de lotes distintos'}]},liveReadiness:{state:'uat_incomplete',requiredConsecutiveCloseDays:3,consecutiveCloseDays:1,continuityEvidenceComplete:false,humanAcceptanceRequired:true,supportIndependenceRequiresHumanConfirmation:true,autoLive:false},metrics:{users:1,operationsUsers:0,operationsCredentials:0,qualityUsers:1,qualityCredentials:1,viewerUsers:0,receptions:2,receptionsWithEvidence:2,qualityLots:0,productionLots:1,locatedKg:45,salesOrders:0,dispatches:0,sales:0,endToEndReceptions:0,dailyCloses:1,distinctCloseDays:1},checks:blockedChecks},
 ]}
 
 async function mock(page:Page,role:'admin'|'operations'|'quality'='admin'){
@@ -30,7 +30,7 @@ async function mock(page:Page,role:'admin'|'operations'|'quality'='admin'){
  })
 }
 
-test('rollout separates linked UAT readiness from human LIVE review',async({page},testInfo)=>{
+test('rollout separates linked UAT readiness from human LIVE review and keeps blockers actionable',async({page},testInfo)=>{
  await mock(page,'admin')
  await page.goto('/rollout')
  await expect(page.getByRole('heading',{name:'UAT por planta'})).toBeVisible()
@@ -45,8 +45,16 @@ test('rollout separates linked UAT readiness from human LIVE review',async({page
  await expect(page.getByText(/actividad comercial cancelada no cuenta/)).toBeVisible()
  await expect(page.getByText(/LIVE nunca se infiere/)).toBeVisible()
  await expect(page.getByText(/no prueba automática de independencia del equipo técnico/)).toBeVisible()
+ await page.getByRole('link',{name:/Quellón/}).click()
+ await expect(page).toHaveURL(/\/rollout\?plantId=quellon$/)
+ await expect(page.getByRole('heading',{name:'Readiness operacional verificable'})).toBeVisible()
+ await expect(page.getByRole('link',{name:'Configurar usuarios'})).toHaveAttribute('href','/operadores')
+ await expect(page.getByRole('link',{name:'Resolver calidad'})).toHaveAttribute('href','/recepciones?plantId=quellon')
+ await expect(page.getByRole('link',{name:'Abrir comercial'})).toHaveAttribute('href','/ordenes-venta?plantId=quellon')
+ await expect(page.getByRole('link',{name:'Continuar lote'})).toHaveAttribute('href','/plantas/quellon')
+ await expect(page.getByRole('link',{name:'Abrir planta',exact:true})).toHaveAttribute('href','/plantas/quellon')
  expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
- await page.screenshot({path:testInfo.outputPath('plant-uat-linked-e2e.png'),fullPage:true})
+ await page.screenshot({path:testInfo.outputPath('plant-uat-actionable-rollout.png'),fullPage:true})
 })
 
 test('operations can inspect UAT gate while quality remains outside rollout governance',async({page})=>{
