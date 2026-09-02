@@ -56,6 +56,7 @@ Antes de producción se debe confirmar el esquema real del entorno objetivo. Que
 | `035_pallets.sql` | pallets físicos, membresía auditable de cajas y cierre derivado desde packing vivo |
 | `036_cold_chain.sql` | activos de frío, ciclos físicos, cargas auditables y observaciones de temperatura |
 | `037_regulatory_holds.sql` | holds regulatorios auditables y bloqueo físico de despacho en DB |
+| `038_regulatory_pallet_membership_freeze.sql` | congela composición de pallets mientras un hold regulatorio siga bloqueando |
 
 El inventario anterior describe el repositorio actual. Si se agrega una migración, debe agregarse también a esta tabla; CI verifica esa correspondencia.
 
@@ -79,8 +80,9 @@ El inventario anterior describe el repositorio actual. Si se agrega una migraci�
 - Un hold regulatorio apunta exactamente a un lote, pallet o packing unit y conserva eventos de apertura/resolución; no se elimina para ocultar historia.
 - Estados `open` y `rejected` bloquean despacho. Sólo `released` deja de bloquear ese hold.
 - Mientras el despacho comercial sea por lote/kg, un hold en una caja o pallet bloquea conservadoramente cualquier recepción trazada a esa unidad física.
+- Mientras un hold de pallet siga en `open` o `rejected`, su membresía física queda congelada: no se pueden agregar, retirar, mover ni borrar cajas para alterar la línea de bloqueo.
 - El gate regulatorio de despacho existe también en PostgreSQL sobre `lot_dispatches`; no depende de que la UI recuerde validar el hold.
-- La integración Sernapesca XML/Siscomex no forma parte de 037 y sólo debe implementarse cuando exista contrato oficial de endpoint, autenticación y formato.
+- La integración Sernapesca XML/Siscomex no forma parte de 037–038 y sólo debe implementarse cuando exista contrato oficial de endpoint, autenticación y formato.
 
 ## Seguridad y tenancy operacional
 
