@@ -51,6 +51,7 @@ Antes de producción se debe confirmar el esquema real del entorno objetivo. Que
 | `030_production_support_evidence.sql` | evidencia canónica de soporte de producción |
 | `031_production_support_resolutions.sql` | resolución auditada de soporte canónico |
 | `032_production_support_blocks.sql` | bloques/cadenas físicas de soporte de producción |
+| `033_plant_execution_foundation.sql` | estaciones, dispositivos, eventos idempotentes y unidades físicas de packing |
 
 El inventario anterior describe el repositorio actual. Si se agrega una migración, debe agregarse también a esta tabla; CI verifica esa correspondencia.
 
@@ -62,12 +63,15 @@ El inventario anterior describe el repositorio actual. Si se agrega una migraci�
 - Un archivo fuente no se considera canónico sólo por nombre: debe conservar linaje, hash y estado de aprobación según el flujo de importación.
 - Las funciones de compatibilidad idempotente son una red de seguridad, no una segunda fuente de verdad del esquema.
 - Cambios de esquema nuevos continúan exclusivamente en `db/migrations/` mediante migraciones versionadas y revisables.
+- `canonical_packing_boxes` conserva evidencia canónica/importada; `packing_units` representa unidades físicas vivas creadas por Plant Execution. Nunca publicar una fila canónica directamente como packing vivo sin reconciliación determinística y aprobación.
 
 ## Seguridad y tenancy operacional
 
 Las recepciones y recursos operativos protegidos deben conservar un camino explícito hacia `plant_id` y el actor autorizado. La interfaz no sustituye los controles server-side. Identidad de operador, alcance por planta, auditoría y credenciales deben permanecer coherentes con las migraciones versionadas.
 
 La contraseña aceptada por la API debe mantenerse dentro de los límites vigentes definidos por el código; los mecanismos de rate limiting y auditoría de autenticación no deben exponerse mediante valores sensibles en logs o UI.
+
+Plant Execution mantiene sus escrituras deshabilitadas hasta que un preview Neon aislado haya sido verificado. `PLANT_EXECUTION_WRITES_ENABLED=true` sólo puede habilitarse en un entorno cuyo `DATABASE_URL` haya sido comprobado contra la rama esperada.
 
 ## Primera activación
 
