@@ -17,5 +17,6 @@ test('Plant Execution schema preserves event-to-packing idempotency and canonica
  expect(migration).toContain('unique(plant_id,idempotency_key)')
  expect(migration).toContain('packing_units_source_device_event_unique')
  expect(contract).toContain('canonical_packing_boxes')
- expect(contract).toContain('NO crea `packing_units`')
+ expect(contract).toContain('no se reutiliza como tabla transaccional viva de piso')
+ expect(contract).toContain('### `packing_units`')
 })
