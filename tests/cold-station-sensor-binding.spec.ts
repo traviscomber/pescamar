@@ -35,7 +35,10 @@ async function mock(page:Page,writesEnabled=true){
  })
 }
 
-async function selectAncud(page:Page){await page.getByLabel('Planta',{exact:true}).selectOption('ancud')}
+async function selectAncud(page:Page){
+ const assetPanel=page.locator('section.panel').filter({has:page.getByRole('heading',{name:'Activo de frío',exact:true})})
+ await assetPanel.locator('select').first().selectOption('ancud')
+}
 
 test('cold page renders physical station and its sensor without overflow',async({page},testInfo)=>{
  const errors:string[]=[]
