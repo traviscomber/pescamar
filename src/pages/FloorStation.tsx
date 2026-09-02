@@ -3,7 +3,7 @@ import {CloudOff,PackagePlus,Scale,ScanLine,ShieldCheck,Wifi} from "lucide-react
 import {PageHeader} from "../components/PageHeader";
 import {useAuth} from "../auth";
 import {useLots} from "../store";
-import {listFloorQueue,markFloorQueueAttempt,pendingFloorQueueCount,queueFloorPacking,removeFloorQueue,type FloorPackingRequest} from "../floorQueue";
+import {floorQueueSummary,listFloorQueue,markFloorQueueAttempt,queueFloorPacking,removeFloorQueue,type FloorPackingRequest} from "../floorQueue";
 import "../floor.css";
 
 type PlantExecutionStatus={ok?:boolean;writesEnabled?:boolean;mode?:string;error?:string};
@@ -35,7 +35,7 @@ export function FloorStation(){
  const [stationError,setStationError]=useState("");
  const [feedback,setFeedback]=useState<Feedback|null>(null);
  const [saving,setSaving]=useState(false);
- const [pendingCount,setPendingCount]=useState(0);
+ const [queueState,setQueueState]=useState({pending:0,attention:0,total:0});
  const [online,setOnline]=useState(()=>navigator.onLine);
  const effectivePlant=plantId||plantIds[0]||"";
  const plantLots=scopedLots.filter(lot=>lot.plantId===effectivePlant);
@@ -45,7 +45,7 @@ export function FloorStation(){
  const normalizedWeight=Number(weight.replace(",","."));
  const validWeight=Number.isFinite(normalizedWeight)&&normalizedWeight>0;
 
- const refreshQueueCount=useCallback(async()=>{try{setPendingCount(await pendingFloorQueueCount())}catch{setPendingCount(0)}},[]);
+ const refreshQueueState=useCallback(async()=>{try{setQueueState(await floorQueueSummary())}catch{setQueueState({pending:0,attention:0,total:0})}},[]);
 
  useEffect(()=>{
   let active=true;
@@ -62,7 +62,7 @@ export function FloorStation(){
 
  const replayQueue=useCallback(async()=>{
   if(writesEnabled!==true||!navigator.onLine)return;
-  let synced=0;
+  let synced=0,attention=0;
   try{
    const rows=await listFloorQueue();
    for(const row of rows){
@@ -72,18 +72,20 @@ export function FloorStation(){
      const payload=await response.json() as PackingPayload;
      if(response.ok){await removeFloorQueue(row.id);synced++;continue}
      if(response.status===503&&payload.code==="PLANT_EXECUTION_WRITES_DISABLED")break;
-     await markFloorQueueAttempt(row.id,payload.error??`HTTP ${response.status}`,response.status>=400&&response.status<500);
-     if(response.status>=400&&response.status<500)continue;
+     const requiresAttention=response.status>=400&&response.status<500;
+     await markFloorQueueAttempt(row.id,payload.error??`HTTP ${response.status}`,requiresAttention);
+     if(requiresAttention){attention++;continue}
      break;
     }catch(cause){await markFloorQueueAttempt(row.id,cause instanceof Error?cause.message:"Sin conectividad");break}
    }
   }finally{
-   await refreshQueueCount();
-   if(synced>0)setFeedback({kind:"ok",message:`${synced} operación${synced===1?"":"es"} pendiente${synced===1?"":"s"} sincronizada${synced===1?"":"s"}`});
+   await refreshQueueState();
+   if(attention>0)setFeedback({kind:"error",message:`${attention} operación${attention===1?"":"es"} requiere${attention===1?"":"n"} revisión antes de reintentar`});
+   else if(synced>0)setFeedback({kind:"ok",message:`${synced} operación${synced===1?"":"es"} pendiente${synced===1?"":"s"} sincronizada${synced===1?"":"s"}`});
   }
- },[refreshQueueCount,writesEnabled]);
+ },[refreshQueueState,writesEnabled]);
 
- useEffect(()=>{void refreshQueueCount()},[refreshQueueCount]);
+ useEffect(()=>{void refreshQueueState()},[refreshQueueState]);
  useEffect(()=>{
   const onOnline=()=>{setOnline(true);void replayQueue()};
   const onOffline=()=>setOnline(false);
@@ -105,27 +107,28 @@ export function FloorStation(){
   const request=newPackingRequest(selectedStation.id,selected.receptionId,effectivePlant,normalizedWeight);
   setSaving(true);setFeedback(null);
   try{
-   if(!navigator.onLine){await queueFloorPacking(request);await refreshQueueCount();setFeedback({kind:"pending",message:`${request.packingUnitCode} quedó pendiente de sincronización`});setWeight("");return}
+   if(!navigator.onLine){await queueFloorPacking(request);await refreshQueueState();setFeedback({kind:"pending",message:`${request.packingUnitCode} quedó pendiente de sincronización`});setWeight("");return}
    try{
     const response=await fetch("/api/plant-execution",{method:"POST",headers:jsonHeaders,body:JSON.stringify(request)});
     const payload=await response.json() as PackingPayload;
     if(!response.ok){setFeedback({kind:"error",message:payload.error??"No fue posible crear packing unit"});return}
     setWeight("");setFeedback({kind:"ok",message:`${payload.packingUnit?.packing_unit_code??request.packingUnitCode} registrada${payload.idempotent?" · reintento idempotente":""}`});
    }catch{
-    await queueFloorPacking(request);await refreshQueueCount();setWeight("");setFeedback({kind:"pending",message:`${request.packingUnitCode} quedó pendiente de sincronización`});
+    await queueFloorPacking(request);await refreshQueueState();setWeight("");setFeedback({kind:"pending",message:`${request.packingUnitCode} quedó pendiente de sincronización`});
    }
   }finally{setSaving(false)}
  };
 
  const writeReady=writesEnabled===true&&Boolean(selectedStation);
  const modeLabel=writesEnabled===null?"Verificando gate":writesEnabled?selectedStation?"Escritura habilitada":"Sin estación configurada":"Modo seguro";
+ const queueLabel=queueState.attention?`${queueState.attention} requiere${queueState.attention===1?"":"n"} revisión`:queueState.pending?`${queueState.pending} pendiente${queueState.pending===1?"":"s"} de sync`:"Sin cola pendiente";
  return <>
   <PageHeader eyebrow="Plant Execution · Floor" title="Estación de planta" description={writesEnabled?"Captura operacional por lote con scanner HID, packing idempotente y recuperación offline.":"Superficie operacional táctil conectada al lote real. Las escrituras permanecen bloqueadas hasta habilitar Plant Execution en un entorno DB verificado."}/>
   {loading?<div className="system-banner">Sincronizando lotes autorizados…</div>:null}
   {error?<div className="system-banner error" role="alert">{error}</div>:null}
   {stationError?<div className="system-banner error" role="alert">{stationError}</div>:null}
   <section className="floor-status-strip" aria-label="Estado de estación">
-   <div>{online?<Wifi size={18}/>:<CloudOff size={18}/>}<span><b>{online?"Aplicación conectada":"Sin conexión"}</b><small>{pendingCount?`${pendingCount} pendiente${pendingCount===1?"":"s"} de sync`:"Sin cola pendiente"}</small></span></div>
+   <div>{online?<Wifi size={18}/>:<CloudOff size={18}/>}<span><b>{online?"Aplicación conectada":"Sin conexión"}</b><small>{queueLabel}</small></span></div>
    <div><ScanLine size={18}/><span><b>Scanner</b><small>USB HID / teclado listo</small></span></div>
    <div><Scale size={18}/><span><b>Balanza</b><small>Entrada manual · adapter pendiente</small></span></div>
    <div><ShieldCheck size={18}/><span><b>{modeLabel}</b><small>{writesEnabled?selectedStation?.name??"Configure estación real":"Sin escrituras DB"}</small></span></div>
@@ -150,6 +153,6 @@ export function FloorStation(){
     </div>
    </div>:<div className="floor-empty"><Scale size={30}/><h2>Sin lotes disponibles</h2><p>La estación sólo muestra recepciones reales dentro del alcance de planta del operador.</p></div>}
   </section>
-  <section className="floor-next-gate panel"><div><span className="overline">Continuidad operacional</span><h2>{writesEnabled?"Floor listo para packing idempotente":"Escritura aislada pendiente"}</h2><p>{writesEnabled?"Los eventos sin red quedan en IndexedDB y se reintentan con la misma identidad al recuperar conectividad. Los errores de contrato requieren revisión humana y no entran en loop.":"El frontend ya conoce el gate real y no consulta estaciones ni intenta escrituras mientras Plant Execution permanezca deshabilitado."}</p></div><span className={`status-pill ${writesEnabled?"":"warning"}`}>{writesEnabled?`${pendingCount} pendientes`:"Bloqueado por #68"}</span></section>
+  <section className="floor-next-gate panel"><div><span className="overline">Continuidad operacional</span><h2>{writesEnabled?"Floor listo para packing idempotente":"Escritura aislada pendiente"}</h2><p>{writesEnabled?"Los eventos sin red quedan en IndexedDB y se reintentan con la misma identidad al recuperar conectividad. Los errores de contrato pasan a revisión humana y salen del loop automático.":"El frontend ya conoce el gate real y no consulta estaciones ni intenta escrituras mientras Plant Execution permanezca deshabilitado."}</p></div><span className={`status-pill ${writesEnabled&&queueState.attention===0?"":"warning"}`}>{writesEnabled?queueState.attention?`${queueState.attention} revisar`:`${queueState.pending} pendientes`:"Bloqueado por #68"}</span></section>
  </>;
 }
