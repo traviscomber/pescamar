@@ -14,18 +14,32 @@ test('Plant Execution control surfaces are routed, authorized and directly reach
   expect(shell).toContain(`to:\"${route}\"`)
   expect(vercel).toContain(`\"source\": \"${route}\"`)
  }
+ expect(app).toContain('import("./pages/RegulatoryControl")')
 })
 
-test('control page operates existing Pallets, Cold Chain and Regulatory APIs instead of parallel state',async()=>{
+test('pallet and cold controls operate existing APIs without parallel state',async()=>{
  const page=await readFile('src/pages/PlantExecutionControl.tsx','utf8')
- for(const endpoint of ['/api/pallets','/api/packing-units','/api/cold-chain','/api/regulatory-holds'])expect(page).toContain(endpoint)
- for(const action of ['create','addUnit','close','upsertAsset','startRun','addLoad','recordObservation','completeRun','openHold'])expect(page).toContain(`action:'${action}'`)
- expect(page).toContain("resolve('releaseHold')")
- expect(page).toContain("resolve('rejectHold')")
+ for(const endpoint of ['/api/pallets','/api/packing-units','/api/cold-chain'])expect(page).toContain(endpoint)
+ for(const action of ['create','addUnit','close','upsertAsset','startRun','addLoad','recordObservation','completeRun'])expect(page).toContain(`action:'${action}'`)
  expect(page).not.toContain('localStorage')
 })
 
-test('available packing units are scoped, authenticated and exclude active pallet membership',async()=>{
+test('regulatory control covers lot pallet and box targets including palletized boxes',async()=>{
+ const [page,targets]=await Promise.all([readFile('src/pages/RegulatoryControl.tsx','utf8'),readFile('api/regulatory-targets.ts','utf8')])
+ expect(page).toContain('/api/regulatory-holds')
+ expect(page).toContain('/api/regulatory-targets')
+ expect(page).toContain("value=\"reception\"")
+ expect(page).toContain("value=\"pallet\"")
+ expect(page).toContain("value=\"unit\"")
+ expect(page).toContain("action:'openHold'")
+ expect(page).toContain("resolve('releaseHold')")
+ expect(page).toContain("resolve('rejectHold')")
+ expect(targets).toContain('requireOperator(req)')
+ expect(targets).toContain('active_pallet_code')
+ expect(targets).toContain('operator.plantIds')
+})
+
+test('available packing units stay scoped and exclude active pallet membership',async()=>{
  const api=await readFile('api/packing-units.ts','utf8')
  expect(api).toContain('requireOperator(req)')
  expect(api).toContain("u.status in ('packed','released')")
