@@ -2,6 +2,7 @@ import {Activity,Boxes,CheckCircle2,Clock3,Factory,Printer,ShieldCheck} from 'lu
 import {useEffect,useState} from 'react'
 import {Link} from 'react-router-dom'
 import {plants as configuredPlants} from '../plants'
+import '../readiness.css'
 
 type Check={key:string;label:string;complete:boolean;detail:string}
 type Plant={plantId:string;score:number;completed:number;total:number;hasPhysicalUatEvidence:boolean;checks:Check[];metrics:{stations:number;devices:number;printers:number;packingUnits:number;labelTemplates:number;printedLabelJobs:number;closedPallets:number;linkedColdAssets:number;coldRunsWithEvidence:number;resolvedHolds:number}}
