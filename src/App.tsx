@@ -25,7 +25,7 @@ const DailyClose=lazy(()=>import("./pages/DailyClose").then(module=>({default:mo
 const FloorStation=lazy(()=>import("./pages/FloorStation").then(module=>({default:module.FloorStation})));
 const PalletsControl=lazy(()=>import("./pages/PlantExecutionControl").then(module=>({default:module.PalletsControl})));
 const ColdChainControl=lazy(()=>import("./pages/PlantExecutionControl").then(module=>({default:module.ColdChainControl})));
-const RegulatoryControl=lazy(()=>import("./pages/PlantExecutionControl").then(module=>({default:module.RegulatoryControl})));
+const RegulatoryControl=lazy(()=>import("./pages/RegulatoryControl").then(module=>({default:module.RegulatoryControl})));
 const Inventory=lazy(()=>import("./pages/Inventory").then(module=>({default:module.Inventory})));
 const MaterialsInventory=lazy(()=>import("./pages/MaterialsInventory").then(module=>({default:module.MaterialsInventory})));
 const Partners=lazy(()=>import("./pages/Partners").then(module=>({default:module.Partners})));
