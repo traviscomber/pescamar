@@ -18,3 +18,9 @@ test('regulatory pallet freeze preserves dispatch lineage instead of deleting me
  expect(freeze).not.toContain('delete from pallet_packing_units')
  expect(freeze).not.toContain('update regulatory_holds')
 })
+
+test('pallet API exposes a regulatory membership freeze as a conflict instead of a server error',async()=>{
+ const api=await readFile('api/pallets.ts','utf8')
+ expect(api).toContain("message.includes('Pallet bloqueado por control regulatorio')")
+ expect(api).toContain("res.status(409).json({ok:false,error:'Pallet bloqueado por control regulatorio; su composición no puede cambiar'})")
+})
