@@ -13,6 +13,7 @@
     { "source": "/pallets", "destination": "/index.html" },
     { "source": "/frio", "destination": "/index.html" },
     { "source": "/control-regulatorio", "destination": "/index.html" },
+    { "source": "/estaciones", "destination": "/index.html" },
     { "source": "/operacion-2025", "destination": "/index.html" },
     { "source": "/planificacion", "destination": "/index.html" },
     { "source": "/etiquetas", "destination": "/index.html" },
