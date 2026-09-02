@@ -65,8 +65,7 @@ create table if not exists packing_specs (
   rules jsonb not null default '{}'::jsonb,
   active boolean not null default true,
   created_by_operator_id uuid references operators(id),
-  created_at timestamptz not null default now(),
-  unique(code,version)
+  created_at timestamptz not null default now()
 );
 
 create table if not exists packing_units (
@@ -97,6 +96,8 @@ create index if not exists plant_stations_plant_active_idx on plant_stations(pla
 create index if not exists plant_devices_station_active_idx on plant_devices(station_id,active);
 create index if not exists device_events_reception_time_idx on device_events(reception_id,occurred_at desc);
 create index if not exists device_events_station_time_idx on device_events(station_id,occurred_at desc);
+create unique index if not exists packing_specs_scope_code_version_unique on packing_specs(coalesce(plant_id,''),code,version);
 create index if not exists packing_specs_active_idx on packing_specs(active,product,species);
+create unique index if not exists packing_units_source_device_event_unique on packing_units(source_device_event_id) where source_device_event_id is not null;
 create index if not exists packing_units_reception_time_idx on packing_units(reception_id,packed_at desc);
 create index if not exists packing_units_plant_status_idx on packing_units(plant_id,status,packed_at desc);
