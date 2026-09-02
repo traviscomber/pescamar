@@ -98,7 +98,6 @@ async function queuePrint(input:Input,res:Response,operator:SessionOperator){
   if(!same)return res.status(409).json({ok:false,error:'Idempotency key ya utilizada para otra impresión'})
   return res.status(200).json({ok:true,idempotent:true,job:existing})
  }
- const status=sourceJobId?'reprinted':'queued'
- const job=first(await sql`insert into label_print_jobs(plant_id,packing_unit_id,product_label_id,label_template_id,printer_device_id,requested_by_operator_id,copies,status,payload_snapshot,idempotency_key,source_job_id) values(${packing.plant_id},${packingUnitId}::uuid,${productLabelId||null}::uuid,${labelTemplateId}::uuid,${printerDeviceId}::uuid,${operator.id}::uuid,${copies},${status},${JSON.stringify(payload)}::jsonb,${idempotencyKey},${sourceJobId||null}::uuid) returning id,plant_id,packing_unit_id,product_label_id,label_template_id,printer_device_id,copies,status,idempotency_key,source_job_id,requested_at`)
+ const job=first(await sql`insert into label_print_jobs(plant_id,packing_unit_id,product_label_id,label_template_id,printer_device_id,requested_by_operator_id,copies,status,payload_snapshot,idempotency_key,source_job_id) values(${packing.plant_id},${packingUnitId}::uuid,${productLabelId||null}::uuid,${labelTemplateId}::uuid,${printerDeviceId}::uuid,${operator.id}::uuid,${copies},'queued',${JSON.stringify(payload)}::jsonb,${idempotencyKey},${sourceJobId||null}::uuid) returning id,plant_id,packing_unit_id,product_label_id,label_template_id,printer_device_id,copies,status,idempotency_key,source_job_id,requested_at`)
  return res.status(201).json({ok:true,idempotent:false,job})
 }
