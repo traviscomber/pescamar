@@ -1,119 +1,150 @@
 # Pescamar — Aceptación de piloto
 
-Este documento separa los controles que ya pueden validarse automáticamente de las pruebas que requieren identidades humanas y operación real. No se deben crear datos simulados para completar esta lista.
+Este contrato separa lo que puede validarse automáticamente de lo que requiere personas, datos y operación real. **No se deben crear datos simulados, seeds productivos ni hechos ficticios para completar un gate.**
 
-## Gates automáticos ya exigidos
+## 1. Gates automáticos de release
 
 Cada PR hacia `main` debe completar el workflow **Quality**:
 
 - `npm ci` con lockfile;
 - ESLint sin errores;
-- TypeScript de frontend;
-- TypeScript de Vercel Functions;
-- build Vite de producción.
+- TypeScript de frontend y Vercel Functions;
+- build Vite de producción;
+- release smoke;
+- seguridad de formularios;
+- identidad estable de operador;
+- contratos de Auditoría;
+- Chromium desktop y mobile.
 
-Vercel Preview debe quedar `READY` antes del merge. Después del merge, Producción debe quedar `READY` y sin clusters de errores runtime nuevos.
+Vercel Preview debe quedar `READY` antes del merge. Después del merge, Producción debe quedar `READY` en el SHA esperado y sin nuevos errores runtime atribuibles al release.
 
-## Datos y migraciones
+## 2. Esquema y fuente de verdad
 
-Antes de aceptar el piloto en producción, ejecutar o confirmar explícitamente las migraciones canónicas en Neon en este orden:
+`db/migrations/` es la fuente canónica del esquema. Antes de aceptar un piloto se debe confirmar que el entorno Neon objetivo contiene **todos los archivos versionados actualmente presentes en ese directorio, ejecutados en orden ascendente**. No usar una lista histórica parcial como sustituto.
 
-1. `001_core.sql`
-2. `002_settlement_workflow.sql`
-3. `003_operator_auth.sql`
-4. `004_reception_plant_evidence.sql`
-5. `005_auth_abuse_audit.sql`
+`db/README.md` mantiene el inventario actual y CI comprueba que toda migración del directorio esté documentada. Las compatibilidades idempotentes de runtime no reemplazan la confirmación del esquema versionado.
 
-Las compatibilidades idempotentes de runtime permiten que estructuras aditivas existan antes de la ventana de mantenimiento, pero no reemplazan la confirmación del esquema versionado completo.
+## 3. Identidades reales requeridas
 
-## Identidades reales requeridas
-
-Crear al menos cinco cuentas reales o las equivalentes que use Pescamar durante el piloto:
+Crear las cuentas reales —o equivalentes aprobadas por Pescamar— necesarias para cubrir estas perspectivas:
 
 | Perfil | Rol de sistema | Alcance esperado |
 | --- | --- | --- |
-| Administrador | `admin` | Seis plantas, operadores, configuración, auditoría y rollback global |
-| Operaciones | `operations` | Sólo plantas asignadas; recepciones, importaciones y decisiones operacionales |
-| Calidad | `quality` | Sólo plantas asignadas; recepciones y decisiones de recepción |
-| Finanzas | `finance` | Sólo plantas asignadas; anticipos, liquidaciones y decisiones financieras |
-| Lectura / Gerencia | `viewer` | Consulta de operación autorizada sin acciones de escritura |
+| Administrador | `admin` | seis plantas, operadores, configuración, auditoría y rollback global |
+| Operaciones | `operations` | sólo plantas asignadas; recepción, importación y operación |
+| Calidad | `quality` | sólo plantas asignadas; control y decisiones de calidad |
+| Finanzas | `finance` | sólo plantas asignadas; anticipos, liquidaciones y decisiones financieras |
+| Lectura / Gerencia | `viewer` | consulta autorizada sin acciones de escritura |
 
-La asignación exacta de personas y plantas debe provenir de Pescamar, no inferirse ni inventarse.
+La asignación exacta de personas y plantas debe provenir de Pescamar. No inferir nombres, permisos ni alcance.
 
-## Matriz de aceptación autenticada
+## 4. Matriz de aceptación autenticada
 
 ### Administración
 
 - iniciar y cerrar sesión correctamente;
 - ver las seis plantas;
-- crear/restablecer un operador con contraseña de 12 a 256 caracteres;
+- crear/restablecer un operador con credenciales válidas;
 - asignar y cambiar alcance de plantas;
-- consultar la auditoría de autenticación;
-- comprobar que una reversión global de importación sólo está disponible para Administración.
+- consultar auditoría de autenticación y operación;
+- comprobar que acciones globales/reversibles de administración no aparecen para otros roles.
 
 ### Operaciones
 
 - ver únicamente plantas asignadas;
 - crear una recepción únicamente en una planta autorizada;
-- adjuntar al menos una evidencia HTTPS real;
-- comprobar que la recepción aparece con planta y evidencia;
-- publicar una importación sólo para plantas autorizadas;
-- confirmar que no puede abrir Créditos, Liquidaciones, Operadores ni Configuración.
+- adjuntar evidencia real;
+- comprobar que la recepción aparece con planta, evidencia e identidad del actor;
+- publicar importaciones sólo dentro del alcance autorizado;
+- confirmar que no puede ejecutar acciones financieras o administrativas reservadas.
 
 ### Calidad
 
 - ver únicamente plantas asignadas;
 - consultar y decidir recepciones dentro del alcance;
-- confirmar que no ve anticipos ni liquidaciones pendientes;
-- confirmar que no puede publicar importaciones ni administrar operadores.
+- registrar control de calidad sobre un lote real;
+- confirmar que no puede administrar operadores ni ejecutar acciones financieras reservadas.
 
 ### Finanzas
 
-- ver únicamente recepciones/liquidaciones de plantas asignadas;
-- crear una liquidación desde una recepción aprobada de su alcance;
+- ver únicamente operación financiera de plantas autorizadas;
+- crear una liquidación desde una recepción válida de su alcance;
 - aprobar/rechazar anticipos y liquidaciones con comentario obligatorio;
-- confirmar recuperación idempotente del anticipo al aprobar una liquidación;
-- confirmar que no puede decidir recepciones fuera de su rol/alcance.
+- confirmar recuperación idempotente de anticipo cuando corresponda;
+- confirmar que no puede decidir recepción/calidad fuera de su rol.
 
-### Lectura
+### Lectura / Gerencia
 
 - consultar dashboard, plantas, producción, fuente canónica y recepciones autorizadas;
-- no ver botón **Nueva recepción**;
-- no ver Decisiones, Créditos, Liquidaciones, Importaciones, Operadores ni Configuración;
-- intentar una URL restringida y comprobar redirección a Inicio;
-- verificar que las APIs protegidas continúan rechazando operaciones aunque se evite la UI.
+- no ver acciones de creación/edición reservadas;
+- intentar una ruta restringida y comprobar redirección/denegación;
+- verificar que las APIs protegidas rechazan escrituras aunque se evite la UI.
 
-## Seguridad
+## 5. Gate UAT técnico por planta
 
-Con una cuenta de prueba autorizada para QA:
+El endpoint y la interfaz de rollout calculan evidencia viva por planta. Para quedar **Lista para UAT humano** deben completarse los siguientes diez gates técnicos:
 
-- realizar cuatro credenciales incorrectas y comprobar que todavía no existe bloqueo;
-- realizar el quinto intento fallido para la misma combinación IP/correo y comprobar HTTP `429`/`Retry-After` en el siguiente intento;
-- comprobar el evento en Auditoría sin exponer IP ni correo en texto claro;
-- esperar o limpiar el bloqueo siguiendo el procedimiento de QA antes de validar login correcto;
-- confirmar cookie de sesión `HttpOnly`, `Secure` y `SameSite=Strict` en producción.
+1. Operaciones con credenciales reales.
+2. Calidad con credenciales reales.
+3. Al menos una recepción real.
+4. Evidencia documental asociada a recepción.
+5. Control de Calidad real.
+6. Producción trazada.
+7. Inventario ubicado físicamente.
+8. Señal comercial vigente: orden no cancelada, despacho confirmado o venta confirmada.
+9. **Flujo E2E en un mismo lote:** al menos un `reception_id` debe conectar evidencia → Calidad → Producción → inventario → comercial vigente. No basta sumar eventos de lotes distintos.
+10. Al menos un cierre diario de la planta.
 
-No ejecutar este escenario sobre credenciales personales o cuentas operativas del piloto.
+El gate UAT es read-only: observa hechos existentes, no crea datos para completar la matriz.
 
-## Flujo operacional mínimo de punta a punta
+## 6. Revisión LIVE humana
 
-Con datos reales autorizados para la prueba:
+UAT técnico completo **no** declara una planta LIVE. Para habilitar una revisión LIVE humana se requiere además:
 
-1. Operaciones registra una recepción con planta, guía, pesos y evidencia.
-2. Calidad u Operaciones autorizados aprueban la recepción con comentario.
-3. Finanzas crea la liquidación con precio por kg y descuentos documentados.
-4. Finanzas o Administración aprueba la liquidación.
-5. Si existe anticipo aprobado, comprobar recuperación y pago neto.
-6. Revisar historial, snapshot y acciones de aprobación para verificar identidad y trazabilidad.
+- al menos **3 días consecutivos** con cierre operacional registrado;
+- confirmación humana de que esos días se operaron sin soporte técnico manual cuando ese criterio aplique a la ola de rollout;
+- cero P0/P1 abiertos que comprometan la operación;
+- revisión de los resultados por el responsable operacional;
+- aceptación humana explícita.
 
-## Gate de salida
+Los tres días de cierres son evidencia de continuidad, no prueba automática de independencia del equipo técnico. El sistema nunca debe inferir `LIVE` por sí solo.
 
-El piloto puede declararse **PASS** cuando:
+## 7. Flujo operacional real de punta a punta
+
+Con datos reales autorizados para la prueba, seleccionar al menos una recepción y mantener el mismo `reception_id` a través de la cadena:
+
+1. Operaciones registra recepción con planta, proveedor, pesos y evidencia.
+2. Calidad registra/valida el control correspondiente.
+3. Producción registra la transformación/rendimiento del mismo lote.
+4. El lote queda ubicado mediante un movimiento real de inventario.
+5. El mismo lote participa en actividad comercial vigente: asignación a orden no cancelada, despacho confirmado o venta confirmada.
+6. Se registra el cierre diario de la planta.
+7. Se revisan Ficha 360/Timeline y Auditoría para confirmar continuidad e identidad de actores.
+
+Cuando el piloto incluya flujo financiero, validar además liquidación, aprobación y recuperación de anticipos según corresponda. La evidencia financiera complementa el UAT operacional; no sustituye la cadena física/comercial del lote.
+
+## 8. Seguridad
+
+Con cuentas de QA autorizadas:
+
+- validar rate limiting de login sin usar credenciales personales ni cuentas productivas activas;
+- comprobar cookie de sesión y controles server-side vigentes;
+- verificar acceso positivo y negativo por rol/planta;
+- comprobar que auditoría no exponga secretos ni identificadores sensibles en texto claro;
+- confirmar que `AUTH_BYPASS` permanece deshabilitado en producción normal.
+
+## 9. Gate de salida
+
+Un cambio técnico puntual puede obtener **PASS** cuando sus gates de CI, preview, producción y runtime están verificados.
+
+El **piloto Pescamar** puede declararse **PASS** únicamente cuando:
 
 - Quality y Vercel están verdes en el commit de producción;
-- Neon tiene las migraciones canónicas confirmadas;
-- las cinco perspectivas anteriores completan su matriz sin P1/P2 abiertos;
-- el flujo operacional real de punta a punta completa sin datos mock;
+- el esquema Neon objetivo está reconciliado con todos los archivos de `db/migrations/`;
+- las perspectivas de rol relevantes completan su matriz sin fallas críticas;
+- existe al menos un flujo real enlazado por lote que complete los diez gates UAT;
+- la continuidad LIVE requerida ha sido observada y aceptada humanamente;
+- no existen P0/P1 abiertos atribuibles al piloto;
 - no existen errores runtime nuevos atribuibles al release.
 
-Hasta entonces el estado correcto es **HOLD — ingeniería desplegada, aceptación autenticada pendiente**.
+Hasta entonces el estado correcto es **HOLD — ingeniería desplegada, aceptación real pendiente**.
