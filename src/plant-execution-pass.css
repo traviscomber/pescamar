@@ -1,0 +1,163 @@
+/* Plant Execution UI pass — physical task first, trace/history second. */
+
+/* Repeated execution links behave as compact navigation, not a row of CTAs. */
+.page-header .row-actions:has(a[href="/floor"]):has(a[href="/pallets"]){
+  display:flex!important;
+  flex-wrap:nowrap!important;
+  gap:0!important;
+  max-width:min(54vw,680px);
+  overflow-x:auto;
+  scrollbar-width:thin;
+  border-bottom:1px solid var(--line);
+}
+.page-header .row-actions:has(a[href="/floor"]):has(a[href="/pallets"]) .button{
+  flex:0 0 auto;
+  width:auto!important;
+  min-height:36px!important;
+  padding:7px 10px!important;
+  border:0!important;
+  border-bottom:2px solid transparent!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  white-space:nowrap;
+  font-size:12px;
+}
+
+/* Planning: recommendation and compatibility are ledger-like sections. */
+.main-content:has(>.operational-strip)>.panel:has(.daily-plan-list),
+.main-content:has(>.operational-strip)>.planning-workspace,
+.main-content:has(>.operational-strip)>.panel:has(.compact-ledger){
+  padding:22px 0!important;
+  border:0!important;
+  border-top:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  margin-top:0!important;
+}
+.main-content:has(>.operational-strip)>.planning-workspace{
+  border-bottom:1px solid var(--line)!important;
+}
+.main-content:has(>.operational-strip) .daily-plan-list,
+.main-content:has(>.operational-strip) .planning-list{
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+}
+.main-content:has(>.operational-strip) .daily-plan-row,
+.main-content:has(>.operational-strip) .planning-order{
+  margin:0!important;
+  border:0!important;
+  border-bottom:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.main-content:has(>.operational-strip) .daily-plan-row:last-child,
+.main-content:has(>.operational-strip) .planning-order:last-child{border-bottom:0!important}
+
+/* Floor: station status is one instrumentation rail, not four cards. */
+.floor-status-strip{
+  gap:0!important;
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+}
+.floor-status-strip>div{
+  min-width:0;
+  border:0!important;
+  border-right:1px solid var(--line)!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.floor-status-strip>div:last-child{border-right:0!important}
+.floor-active-lot{border-radius:9px;box-shadow:none}
+.floor-lot-metrics{
+  gap:0!important;
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+}
+.floor-lot-metrics>div{
+  border:0!important;
+  border-right:1px solid var(--line)!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.floor-lot-metrics>div:nth-child(2n){border-right:0!important}
+.floor-lot-metrics>div:nth-child(n+3){border-top:1px solid var(--line)!important}
+.floor-next-gate{
+  padding:16px 0!important;
+  border:0!important;
+  border-top:1px solid var(--line)!important;
+  border-bottom:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+
+/* Pallets, cold chain, regulatory and labels: forms keep boundaries; audit trails do not need another card. */
+.main-content>.signal-grid~.panel:has(.compact-ledger){
+  padding:22px 0!important;
+  border:0!important;
+  border-top:1px solid var(--line)!important;
+  border-bottom:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.main-content>.signal-grid~.panel:has(.compact-ledger)>.section-heading{margin-bottom:12px}
+.main-content>.signal-grid~.panel:has(.compact-ledger) .compact-ledger{
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+}
+.main-content>.signal-grid~.panel:has(.compact-ledger) .alert-row.static{
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+
+/* Material inventory is a stock ledger; inherited finance rule also flattens it, this locks the intent. */
+.main-content>.signal-grid+.panel:has(.data-table){
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.main-content>.signal-grid+.panel:has(.data-table)>.section-heading{margin-bottom:12px}
+
+/* Label engine: job queue is trace, while print/template forms remain deliberate task panels. */
+.main-content>.signal-grid~.panel:has(.compact-ledger) .section-heading>.button.secondary{
+  border-color:transparent!important;
+  background:transparent!important;
+}
+
+@media(max-width:980px){
+  .floor-status-strip>div:nth-child(2n){border-right:0!important}
+  .floor-status-strip>div:nth-child(n+3){border-top:1px solid var(--line)!important}
+}
+
+@media(max-width:720px){
+  .page-header .row-actions:has(a[href="/floor"]):has(a[href="/pallets"]){
+    width:100%;
+    max-width:100%;
+    overflow-x:auto;
+  }
+  .page-header .row-actions:has(a[href="/floor"]):has(a[href="/pallets"]) .button{
+    min-width:max-content!important;
+    min-height:40px!important;
+  }
+}
+
+@media(max-width:640px){
+  .floor-status-strip>div{
+    border-right:0!important;
+    border-top:1px solid var(--line)!important;
+    padding:12px 2px!important;
+  }
+  .floor-status-strip>div:first-child{border-top:0!important}
+  .floor-lot-metrics>div{
+    padding:13px 8px!important;
+  }
+  .main-content:has(>.operational-strip)>.panel:has(.daily-plan-list),
+  .main-content:has(>.operational-strip)>.planning-workspace,
+  .main-content:has(>.operational-strip)>.panel:has(.compact-ledger){padding:18px 0!important}
+}
