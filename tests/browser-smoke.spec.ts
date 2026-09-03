@@ -155,3 +155,27 @@ test('mobile drawer traps focus, closes with Escape and restores trigger focus',
   await expect(backdrop).toHaveCount(0)
   await expect(trigger).toBeFocused()
 })
+
+test('inventory shell and signal rail remain stable',async({page},testInfo)=>{
+  await page.addInitScript(()=>localStorage.setItem('pescamar-theme','dark'))
+  await mockAuthenticatedApp(page,'operations',['ancud'])
+  await page.goto('/inventario')
+  await expect(page.getByRole('heading',{name:'Inventario',exact:true})).toBeVisible()
+  await expect(page.locator('.topbar-context')).toContainText('Red Pescamar')
+  await expect(page.locator('.topbar-context')).toContainText('Inventario')
+  const signals=page.locator('.inventory-signals .signal-card')
+  await expect(signals).toHaveCount(4)
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
+  await page.screenshot({path:testInfo.outputPath('inventory-shell.png'),fullPage:true})
+})
+
+test('Pescamar IA shell keeps stage and module hierarchy',async({page},testInfo)=>{
+  await page.addInitScript(()=>localStorage.setItem('pescamar-theme','dark'))
+  await mockAuthenticatedApp(page,'operations',['ancud'])
+  await page.goto('/pescamar-ia')
+  await expect(page.getByRole('heading',{name:'Pescamar IA',exact:true})).toBeVisible()
+  await expect(page.locator('.topbar-context')).toContainText('Inteligencia y control')
+  await expect(page.locator('.topbar-context')).toContainText('Pescamar IA')
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
+  await page.screenshot({path:testInfo.outputPath('pescamar-ia-shell.png'),fullPage:true})
+})
