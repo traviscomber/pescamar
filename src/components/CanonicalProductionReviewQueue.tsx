@@ -32,11 +32,13 @@ const focusLabels:Record<ReviewFocus,string>={
   chronology_review:'revisar secuencia',
   manual_review:'revisión manual'
 }
+const focusOrder:ReviewFocus[]=['process_date_review','source_completion','chronology_review','context_review','reception_date_review','production_date_review','formula_review','manual_review']
 const fieldLabels={reception:'recepción',process:'proceso',production:'producción'} as const
 
 export function CanonicalProductionReviewQueue(){
   const [payload,setPayload]=useState<ReviewPayload|null>(null)
   const [error,setError]=useState('')
+  const [focusFilter,setFocusFilter]=useState<ReviewFocus|'all'>('all')
   useEffect(()=>{
     let active=true
     void fetch('/api/canonical-production-review',{cache:'no-store'}).then(async response=>{
@@ -48,10 +50,12 @@ export function CanonicalProductionReviewQueue(){
     return()=>{active=false}
   },[])
   const rows=payload?.rows??[]
-  const rowsBySource=useMemo(()=>rows.reduce<Record<string,ReviewRow[]>>((acc,row)=>{(acc[row.source_file]??=[]).push(row);return acc},{}),[rows])
+  const visibleRows=useMemo(()=>focusFilter==='all'?rows:rows.filter(row=>row.triage.focus===focusFilter),[focusFilter,rows])
+  const rowsBySource=useMemo(()=>visibleRows.reduce<Record<string,ReviewRow[]>>((acc,row)=>{(acc[row.source_file]??=[]).push(row);return acc},{}),[visibleRows])
   const sourceNames=useMemo(()=>Object.keys(rowsBySource).sort((a,b)=>b.localeCompare(a)),[rowsBySource])
   const summary=payload?.summary
   const lotEvidence=summary?.lotEvidence
+  const availableFocuses=useMemo(()=>focusOrder.filter(focus=>(summary?.focusCounts?.[focus]??0)>0),[summary?.focusCounts])
 
   return <section className="panel import-history" data-testid="canonical-production-review-queue">
     <header className="panel-header"><div><span className="overline teal">Revisión canónica</span><h2>Cola de producción</h2></div><span>{summary?`${nf.format(summary.rows)} pendientes`:'Cargando…'}</span></header>
@@ -63,16 +67,22 @@ export function CanonicalProductionReviewQueue(){
         {lotEvidence?<div data-testid="lot-date-evidence"><FileSpreadsheet size={17}/><span><b>{nf.format(lotEvidence.parseableRows)} lotes con fecha interpretable</b><small>{nf.format(lotEvidence.processMatches)} coinciden con fecha de proceso ({pf.format(lotEvidence.processMatchRate)}). {nf.format(lotEvidence.flaggedProcessConflicts)} filas con flags muestran conflicto entre fecha de lote y proceso.</small></span><em>EVIDENCIA</em></div>:null}
       </div>
       <div className="governance-note"><ShieldCheck size={19}/><div><b>Evidencia intacta</b><p>{payload?.governance?.rule}</p></div></div>
+      <div className="page-actions" role="group" aria-label="Filtrar cola por foco de revisión" style={{justifyContent:'flex-start',marginBottom:16}} data-testid="production-review-focus-filters">
+        <button type="button" className={`button ${focusFilter==='all'?'primary':''}`} aria-pressed={focusFilter==='all'} onClick={()=>setFocusFilter('all')}>Todo · {nf.format(summary.rows)}</button>
+        {availableFocuses.map(focus=><button key={focus} type="button" className={`button ${focusFilter===focus?'primary':''}`} aria-pressed={focusFilter===focus} onClick={()=>setFocusFilter(focus)}>{focusLabels[focus]} · {nf.format(summary.focusCounts[focus]??0)}</button>)}
+      </div>
+      <p data-testid="production-review-visible-count"><small>Mostrando {nf.format(visibleRows.length)} de {nf.format(summary.rows)} filas de revisión.</small></p>
       {sourceNames.map(sourceName=>{
         const sourceRows=rowsBySource[sourceName]??[]
         const sourceSummary=summary.bySource.find(item=>item.source_file===sourceName)
         return <details key={sourceName} className="review-queue-source" open={sourceName.includes('2026')}>
-          <summary><b>{sourceName}</b> · {nf.format(sourceSummary?.rows??sourceRows.length)} filas · {nf.format(sourceSummary?.flagged_rows??0)} con flags · {nf.format(sourceSummary?.non_unique_context_rows??0)} en contexto no único</summary>
+          <summary><b>{sourceName}</b> · {nf.format(sourceRows.length)} visibles · {nf.format(sourceSummary?.rows??sourceRows.length)} en cola fuente</summary>
           <div className="detail-alerts">{sourceRows.map(row=><div key={`${row.source_file_hash}:${row.source_row}`} data-testid="canonical-review-row">
             <FileSpreadsheet size={17}/><span><b>Fila {row.source_row} · {formatDate(row.event_date)} · {row.supplier_name??'Proveedor sin nombre'}</b><small>Lote {row.lot_code??'—'} · guía {row.guide_number??'—'} · guía kg {formatNumber(row.guide_kg)} · recibido {formatNumber(row.received_kg)} kg · {row.review_reasons.map(reason=>reasonLabels[reason]??reason).join(' · ')}{triageText(row.triage)} · hash {row.source_file_hash.slice(0,10)}…</small></span><em>{focusLabels[row.triage.focus]}</em>
           </div>)}</div>
         </details>
       })}
+      {!visibleRows.length?<div className="empty-inline"><div><b>Sin filas para este foco</b><small>La evidencia permanece intacta; cambia el filtro para continuar la revisión.</small></div></div>:null}
     </>:!error?<div className="empty-inline"><div><b>Cargando evidencia</b><small>Se está preparando la cola sin modificar registros históricos.</small></div></div>:null}
   </section>
 }
