@@ -43,9 +43,11 @@ assert(/<html\s+lang=["']es["']/.test(indexHtml.text),'document language must be
 assert(/name=["']viewport["'][^>]*width=device-width/.test(indexHtml.text),'mobile viewport meta is missing')
 assert(indexHtml.text.includes('id="root"'),'application root is missing')
 assert(mainSource.includes("import './app.css'"),'governed app.css entrypoint is not loaded')
-assert(appCss.includes('@layer base, premium, control, modules, auth, brand, responsive, accessibility'),'CSS cascade layer order is missing')
+assert(appCss.includes('@layer base, premium, control, modules, auth, brand, responsive, system, accessibility'),'CSS cascade layer order is missing or canonical system layer is misplaced')
 assert(appCss.includes("@import './mobile.css' layer(responsive)"),'mobile.css is not assigned to responsive layer')
+assert(appCss.includes("@import './design-system.css' layer(system)"),'canonical design-system.css is not assigned to system layer')
 assert(appCss.includes("@import './a11y.css' layer(accessibility)"),'a11y.css is not assigned to accessibility layer')
+assert(appCss.indexOf("@import './design-system.css' layer(system)")<appCss.indexOf("@import './a11y.css' layer(accessibility)"),'accessibility layer must remain the final override after the canonical design system')
 assert(mobileCss.includes('@media(max-width:720px)'),'mobile breakpoint contract is missing')
 assert(mobileCss.includes('safe-area-inset-bottom'),'safe-area support is missing')
 assert(a11yCss.includes(':focus-visible'),'visible focus contract is missing')
@@ -121,4 +123,4 @@ if(failures.length){
   for(const failure of failures)console.error(`- ${failure}`)
   process.exit(1)
 }
-console.log('Release smoke PASS: shell, layered CSS, mobile, accessibility, auth, clean reception capture, authenticated credit identity, migration-only schema, SQL role/plant isolation, overview performance/freshness, modal keyboard safety, lot financial boundaries, daily close boundaries and evidence ownership contracts verified')
+console.log('Release smoke PASS: shell, canonical layered CSS, mobile, accessibility, auth, clean reception capture, authenticated credit identity, migration-only schema, SQL role/plant isolation, overview performance/freshness, modal keyboard safety, lot financial boundaries, daily close boundaries and evidence ownership contracts verified')

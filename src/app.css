@@ -1,4 +1,4 @@
-@layer base, premium, control, modules, auth, brand, responsive, accessibility;
+@layer base, premium, control, modules, auth, brand, responsive, system, accessibility;
 
 @import './styles.css' layer(base);
 @import './premium.css' layer(premium);
@@ -10,4 +10,5 @@
 @import './frida.css' layer(brand);
 @import './readability.css' layer(brand);
 @import './mobile.css' layer(responsive);
+@import './design-system.css' layer(system);
 @import './a11y.css' layer(accessibility);
