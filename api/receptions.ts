@@ -82,17 +82,14 @@ async function createReception(body: unknown, response: Response, operator: Sess
   if(!(await validateStoredEvidence(evidence,operator))) return response.status(403).json({ok:false,error:"Una evidencia adjunta no pertenece a tu sesión o ya está asociada"});
 
   const sql=getSql();
+  const supplierMatches=await sql`select id,legal_name from parties where kind='supplier'::party_kind and active and lower(trim(legal_name))=lower(trim(${supplier})) order by created_at limit 2` as Array<{id:string;legal_name:string}>;
+  if(supplierMatches.length===0)return response.status(409).json({ok:false,error:"El proveedor no existe como ficha activa en el maestro. Créalo o actívalo en Proveedores y clientes antes de registrar la recepción."});
+  if(supplierMatches.length>1)return response.status(409).json({ok:false,error:"La identidad del proveedor es ambigua en el maestro. Resuelve las fichas duplicadas antes de registrar la recepción."});
+  const supplierId=supplierMatches[0].id;
   const rows = await sql`
-    with existing_party as (
-      select id from parties where kind='supplier'::party_kind and lower(legal_name)=lower(${supplier}) order by created_at limit 1
-    ), inserted_party as (
-      insert into parties(kind,legal_name) select 'supplier'::party_kind,${supplier} where not exists(select 1 from existing_party)
-      on conflict(kind,legal_name) do update set updated_at=now() returning id
-    ), party as (
-      select id from existing_party union all select id from inserted_party limit 1
-    ), reception as (
+    with reception as (
       insert into receptions(supplier_id,plant_id,species,extraction_zone,received_at,guide_kg,gross_kg,tare_kg,drained_kg,accepted_kg,temperature_c,quality_status,evidence_count,status,source,source_reference,created_by_operator_id)
-      select id,${plantId},${species},${zone},${receivedAt.toISOString()}::timestamptz,${guide},${gross},${tare},${drained},${accepted},${temperature},'Muestreo',${evidence.length},'pending',${operator.fullName},${guideReference},${operator.id}::uuid from party
+      values (${supplierId}::uuid,${plantId},${species},${zone},${receivedAt.toISOString()}::timestamptz,${guide},${gross},${tare},${drained},${accepted},${temperature},'Muestreo',${evidence.length},'pending',${operator.fullName},${guideReference},${operator.id}::uuid)
       returning id,reception_number,received_at,source_reference
     ), inserted_evidence as (
       insert into reception_evidence(reception_id,kind,label,url,note,created_by,created_by_operator_id)
