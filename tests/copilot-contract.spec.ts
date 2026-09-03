@@ -27,6 +27,17 @@ test('canonical context is role and plant scoped before model invocation',async(
  assert.match(context,/corporateHistory=admin\|\|allowed\.length>=6/)
 })
 
+test('Pescamar IA distinguishes canonical packing evidence from live inventory',async()=>{
+ const [handler,context]=await Promise.all([read('api/copilot.ts'),read('api/_copilot-context.ts')])
+ assert.match(handler,/\[canonical_inventory\]/)
+ assert.match(handler,/outsideCoverageLots/)
+ assert.match(handler,/no lo llames fallo de match/)
+ assert.match(context,/canonical_inventory/)
+ assert.match(context,/outsideCoverageLots/)
+ assert.match(context,/writesLiveInventory:false/)
+ assert.match(context,/exact_lot_only; outside upstream coverage is not a failed match/)
+})
+
 test('assistant UI exposes evidence, scope and read-only boundaries',async()=>{
  const [page,app,access,os,vercel]=await Promise.all([read('src/pages/Copilot.tsx'),read('src/App.tsx'),read('src/access.ts'),read('src/os.ts'),read('vercel.json')])
  assert.match(page,/Evidencia consultada/)
