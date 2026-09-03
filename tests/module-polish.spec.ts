@@ -11,6 +11,8 @@ async function mockOperations(page:Page){
     if(path==='/api/operations-overview')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({balances:[],inventory:{coverage:'live',items:[],summary:{totalKg:0,rawKg:0,processedKg:0}},economics:{marginAvailable:false,reason:'Sin ventas vinculadas',historicalCoverage:{operationalRecords:0,pricedRecords:0,pricedPct:0,pricedKg:0,rawMaterialCostClp:0},historicalBySupplier:[]}})})
     if(path==='/api/inventory')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({locations:[],lots:[],movements:[],permissions:{canWrite:true}})})
     if(path==='/api/canonical-inventory-evidence')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({stock:[],packing:[],lotLinks:[],summary:{stockRows:0,packingBoxes:0,packingKg:0,packingLots:0,matchedLots:0,unmatchedLots:0},governance:{rule:'Evidencia separada'}})})
+    if(path==='/api/credits')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,credits:[]})})
+    if(path==='/api/canonical-finance-evidence')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ledger:{rows:0,flagged:0,inflow_clp:0,outflow_clp:0,final_balance_clp:0},transfers:{rows:0,flagged:0,amount_clp:0},matching:{transfers:0,exact_matches:0,unmatched:0,ambiguous:0,exact_match_amount_clp:0},governance:{rule:'Evidencia separada'}})})
     return route.fulfill({status:200,contentType:'application/json',body:'{}'})
   })
 }
@@ -49,17 +51,31 @@ test('production live workspace precedes analytical balance and nested KPI frami
   await page.screenshot({path:testInfo.outputPath('production-live-before-analysis.png'),fullPage:true})
 })
 
-test('inventory live position precedes canonical read-only evidence',async({page},testInfo)=>{
+test('inventory live position precedes one canonical read-only evidence section',async({page},testInfo)=>{
   test.skip(testInfo.project.name!=='desktop-chromium','Visual hierarchy contract is exercised once on Chromium')
   await mockOperations(page)
   await page.goto('/inventario')
   const workspace=page.locator('.inventory-workspace'),evidence=page.locator('.canonical-inventory-evidence')
   await expect(workspace).toBeVisible()
+  await expect(evidence).toHaveCount(1)
   await expect(evidence).toBeVisible()
   const [workspaceBox,evidenceBox]=await Promise.all([workspace.boundingBox(),evidence.boundingBox()])
   expect(workspaceBox&&evidenceBox?workspaceBox.y<evidenceBox.y:false).toBe(true)
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
   await page.screenshot({path:testInfo.outputPath('inventory-live-before-evidence.png'),fullPage:true})
+})
+
+test('credits show operational requests before one canonical finance evidence section',async({page},testInfo)=>{
+  test.skip(testInfo.project.name!=='desktop-chromium','Visual hierarchy contract is exercised once on Chromium')
+  await mockOperations(page)
+  await page.goto('/creditos')
+  const workspace=page.locator('.credit-layout'),evidence=page.getByRole('region',{name:'Evidencia canónica CUENTA2'})
+  await expect(workspace).toBeVisible()
+  await expect(evidence).toHaveCount(1)
+  await expect(evidence).toBeVisible()
+  const [workspaceBox,evidenceBox]=await Promise.all([workspace.boundingBox(),evidence.boundingBox()])
+  expect(workspaceBox&&evidenceBox?workspaceBox.y<evidenceBox.y:false).toBe(true)
+  await page.screenshot({path:testInfo.outputPath('credits-operational-before-evidence.png'),fullPage:true})
 })
 
 test('reception provenance band remains secondary and unframed',async({page},testInfo)=>{
