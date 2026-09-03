@@ -42,17 +42,11 @@ export default async function handler(request:Request,response:Response){
         guide_kg numeric,received_kg numeric,difference_kg numeric,quality_discount numeric,grade_breakdown jsonb,yields jsonb,client text,observations text,
         data_quality_flags text[],raw_record jsonb
       )
-      on conflict(source_file_hash,source_row) do update set
-        record_status=excluded.record_status,event_date=excluded.event_date,reception_date=excluded.reception_date,process_date=excluded.process_date,
-        production_date=excluded.production_date,guide_number=excluded.guide_number,supplier_original=excluded.supplier_original,supplier_name=excluded.supplier_name,
-        extraction_zone=excluded.extraction_zone,guide_price_clp=excluded.guide_price_clp,process_site_original=excluded.process_site_original,lot_code=excluded.lot_code,
-        guide_kg=excluded.guide_kg,received_kg=excluded.received_kg,difference_kg=excluded.difference_kg,quality_discount=excluded.quality_discount,
-        grade_breakdown=excluded.grade_breakdown,yields=excluded.yields,client=excluded.client,observations=excluded.observations,
-        data_quality_flags=excluded.data_quality_flags,raw_record=excluded.raw_record
+      on conflict(source_file_hash,source_row) do nothing
     `
     const after=await sql`select count(*)::int as count,count(*) filter(where cardinality(data_quality_flags)>0)::int as flagged from historical_production_records where source_file_hash=${fileHash}`
-    const summary=firstRow(after),total=Number(summary?.count??0),flagged=Number(summary?.flagged??0)
-    return response.status(200).json({ok:true,total,inserted:Math.max(0,total-existing),duplicates:Math.min(existing,total),flagged,fileHash})
+    const summary=firstRow(after),total=Number(summary?.count??0),flagged=Number(summary?.flagged??0),inserted=Math.max(0,total-existing),duplicates=Math.max(0,clean.length-inserted)
+    return response.status(200).json({ok:true,total,inserted,duplicates,flagged,fileHash,immutable:true})
   }catch(error){
     const message=error instanceof Error?error.message:''
     return response.status(message.includes('DATABASE_URL')?503:500).json({ok:false,error:message.includes('DATABASE_URL')?'Base de datos no conectada':'No fue posible publicar la producción histórica'})
