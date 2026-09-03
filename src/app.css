@@ -5,6 +5,7 @@
 @import './control.css' layer(control);
 @import './planning.css' layer(modules);
 @import './communications.css' layer(modules);
+@import './components/data-continuity.css' layer(modules);
 @import './auth.css' layer(auth);
 @import './login-premium.css' layer(auth);
 @import './frida.css' layer(brand);
