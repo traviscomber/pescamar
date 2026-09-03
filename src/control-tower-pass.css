@@ -1,0 +1,150 @@
+/* Control tower UI pass — entities retain boundaries, monitoring and history become continuous surfaces. */
+
+/* Plants: real plants stay cards; historical/memory context becomes report infrastructure. */
+.corporate-plant-card{
+  border-radius:9px!important;
+  box-shadow:none!important;
+}
+.main-content:has(>.plant-grid.corporate-plant-grid)>.panel:has(.corporate-plant-grid),
+.main-content:has(>.plant-detail-toolbar)>.panel:has(.balance-summary){
+  padding:22px 0!important;
+  border:0!important;
+  border-top:1px solid var(--line)!important;
+  border-bottom:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.main-content:has(>.plant-detail-toolbar)>.panel:has(.balance-summary) .balance-summary{
+  margin-bottom:0;
+}
+
+/* Partner directory is a master-data ledger; intelligence modules above it remain explicit. */
+.main-content:has(>.event-kind-tabs+.signal-grid)>.panel:has(.compact-ledger){
+  padding:22px 0!important;
+  border:0!important;
+  border-top:1px solid var(--line)!important;
+  border-bottom:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.main-content:has(>.event-kind-tabs+.signal-grid)>.panel:has(.compact-ledger)>.section-heading{margin-bottom:12px}
+.main-content:has(>.event-kind-tabs+.signal-grid)>.panel:has(.compact-ledger) .compact-ledger{
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+}
+.main-content:has(>.event-kind-tabs+.signal-grid)>.panel:has(.compact-ledger) .compact-ledger button{
+  grid-template-columns:30px minmax(0,1fr) minmax(0,max-content);
+}
+.main-content:has(>.event-kind-tabs+.signal-grid)>.panel:has(.compact-ledger) .compact-ledger button>strong{
+  min-width:0;
+  max-width:100%;
+  overflow-wrap:anywhere;
+  text-align:right;
+}
+
+/* Communications: six signals read as a 3x2 instrumentation matrix with real row boundaries. */
+.communication-overview{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+}
+.communication-overview>.signal-card:nth-child(3n){border-right:0!important}
+.communication-overview>.signal-card:nth-child(n+4){border-top:1px solid var(--line)!important}
+.communications-directory-grid>.panel{
+  border-radius:9px!important;
+  box-shadow:none!important;
+}
+.communications-channels,
+.communications-inbox{
+  padding:22px 0!important;
+  border:0!important;
+  border-top:1px solid var(--line)!important;
+  border-bottom:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.communications-channels>.section-heading,
+.communications-inbox>.section-heading{margin-bottom:14px}
+.communications-inbox .event-kind-tabs{
+  max-width:100%;
+  overflow-x:auto;
+  flex-wrap:nowrap!important;
+  scrollbar-width:thin;
+}
+.communications-inbox .event-kind-tabs button{flex:0 0 auto;white-space:nowrap}
+
+/* Timeline: filtering is infrastructure, events are the content. */
+.timeline-toolbar.panel{
+  padding:10px 0!important;
+  border:0!important;
+  border-top:1px solid var(--line)!important;
+  border-bottom:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.timeline-loading.panel{
+  padding:18px 0!important;
+  border:0!important;
+  border-bottom:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.timeline-filters{
+  overflow-x:auto;
+  flex-wrap:nowrap!important;
+  scrollbar-width:thin;
+}
+.timeline-filters button{flex:0 0 auto;white-space:nowrap}
+
+/* Audit: filters + register form one control surface rather than two cards. */
+.audit-filters.panel{
+  padding:12px 0!important;
+  border:0!important;
+  border-top:1px solid var(--line)!important;
+  border-bottom:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.audit-panel.panel{
+  padding:22px 0!important;
+  border:0!important;
+  border-bottom:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.audit-panel>.panel-header{margin-bottom:14px}
+.audit-panel .table-wrap{
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+}
+
+/* Expanded observability is a control plane: checks align to a clean grid without floating shadows. */
+.operational-health.expanded .operational-health-hero,
+.operational-health.expanded .operational-check{
+  box-shadow:none!important;
+}
+.operational-health.expanded .operational-health-hero{border-radius:9px!important}
+.operational-health.expanded .operational-check{border-radius:7px!important}
+
+@media(max-width:900px){
+  .communication-overview{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .communication-overview>.signal-card:nth-child(3n){border-right:1px solid var(--line)!important}
+  .communication-overview>.signal-card:nth-child(2n){border-right:0!important}
+  .communication-overview>.signal-card:nth-child(n+3){border-top:1px solid var(--line)!important}
+}
+
+@media(max-width:620px){
+  .communication-overview{grid-template-columns:1fr!important}
+  .communication-overview>.signal-card{
+    border-right:0!important;
+    border-top:1px solid var(--line)!important;
+  }
+  .communication-overview>.signal-card:first-child{border-top:0!important}
+  .communications-directory-grid{grid-template-columns:1fr!important}
+  .communications-channels,.communications-inbox,.audit-panel.panel{padding:18px 0!important}
+}
