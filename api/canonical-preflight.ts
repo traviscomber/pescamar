@@ -6,9 +6,10 @@ import {getSql} from './_db.js'
 type Request={method?:string;body?:unknown;headers?:Record<string,string|string[]|undefined>}
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void}
 type Payload={fileName?:unknown;base64?:unknown}
-type SheetProfile={name:string;rows:number;columns:number}
+type SheetProfile={name:string;rows:number;columns:number;hidden:boolean}
 
 type SourceContract={
+  canonicalFileName:string
   sourceKind:string
   requiredSheets:string[]
   countRows:(wb:ExcelJS.Workbook)=>Record<string,number>
@@ -62,14 +63,16 @@ function packingRows(wb:ExcelJS.Workbook){
   return result
 }
 
-const contracts:Record<string,SourceContract>={
-  'planilla de produccion 2026.xlsx':{
+const contracts:SourceContract[]=[
+  {
+    canonicalFileName:'planilla de produccion 2026.xlsx',
     sourceKind:'production_2026',
     requiredSheets:['Producción Pescamar 2026'],
     countRows:wb=>({production:productionRows(wb)}),
     validate:wb=>productionRows(wb)>0?[]:['La hoja de producción no contiene filas con lote en la columna esperada.'],
   },
-  'CUENTA2.xlsx':{
+  {
+    canonicalFileName:'CUENTA2.xlsx',
     sourceKind:'account_2026',
     requiredSheets:['CUENTA CORRIENTE','STOCK FISICO ERIZOS','STOCK PULPO','TRANSF RECIBIDAS'],
     countRows:accountRows,
@@ -78,7 +81,8 @@ const contracts:Record<string,SourceContract>={
       return Object.values(counts).some(value=>value>0)?[]:['Las hojas financieras/stock no contienen filas reconocibles.']
     },
   },
-  'packing pulpo pescamar 2026-2.xlsx':{
+  {
+    canonicalFileName:'packing pulpo pescamar 2026-2.xlsx',
     sourceKind:'packing_octopus_2026',
     requiredSheets:['BLOQUE','IQF'],
     countRows:packingRows,
@@ -89,6 +93,14 @@ const contracts:Record<string,SourceContract>={
       return issues
     },
   },
+]
+
+function detectContract(fileName:string,wb:ExcelJS.Workbook){
+  const byName=contracts.find(contract=>contract.canonicalFileName===fileName)
+  if(byName)return {contract:byName,detectedBy:'filename' as const}
+  const sheetNames=new Set(wb.worksheets.map(sheet=>sheet.name))
+  const structural=contracts.filter(contract=>contract.requiredSheets.every(name=>sheetNames.has(name)))
+  return structural.length===1?{contract:structural[0],detectedBy:'structure' as const}:{contract:null,detectedBy:'unrecognized' as const}
 }
 
 export default async function handler(req:Request,res:Response){
@@ -99,24 +111,27 @@ export default async function handler(req:Request,res:Response){
     if(!operator)return res.status(403).json({ok:false,error:'Permisos insuficientes'})
     const body=(req.body??{}) as Payload,fileName=txt(body.fileName),base64=txt(body.base64)
     if(!fileName||!base64)return res.status(400).json({ok:false,error:'Archivo requerido'})
-    const contract=contracts[fileName]
-    if(!contract)return res.status(400).json({ok:false,error:'Nombre de fuente no reconocido para preflight canónico'})
+    if(!fileName.toLowerCase().endsWith('.xlsx'))return res.status(400).json({ok:false,error:'El preflight acepta archivos XLSX'})
     const buf=Buffer.from(base64.replace(/^data:.*?;base64,/,''),'base64')
     if(!buf.length||buf.length>15*1024*1024)return res.status(413).json({ok:false,error:'Archivo inválido o demasiado grande'})
 
     const fileHash=createHash('sha256').update(buf).digest('hex')
     const wb=new ExcelJS.Workbook()
     await wb.xlsx.load(buf)
-    const sheetProfiles:SheetProfile[]=wb.worksheets.map(sheet=>({name:sheet.name,rows:sheet.rowCount,columns:sheet.columnCount}))
-    const missingSheets=contract.requiredSheets.filter(name=>!wb.getWorksheet(name))
-    const issues=[...missingSheets.map(name=>`Falta la hoja requerida: ${name}.`),...contract.validate(wb)]
-    const counts=contract.countRows(wb)
+    const sheetProfiles:SheetProfile[]=wb.worksheets.map(sheet=>({name:sheet.name,rows:sheet.rowCount,columns:sheet.columnCount,hidden:sheet.state!=='visible'}))
+    const {contract,detectedBy}=detectContract(fileName,wb)
+    const missingSheets=contract?contract.requiredSheets.filter(name=>!wb.getWorksheet(name)):[]
+    const issues=contract
+      ?[...missingSheets.map(name=>`Falta la hoja requerida: ${name}.`),...contract.validate(wb)]
+      :['La estructura no coincide de forma inequívoca con una fuente canónica soportada. Requiere Canonical Intake antes de registrar o publicar.']
+    const counts=contract?contract.countRows(wb):{}
 
     const sql=getSql()
     const exactRows=await sql`select file_hash from canonical_source_files where file_hash=${fileHash} and file_name=${fileName} and canonical=true limit 1`
     const nameRows=await sql`select file_hash from canonical_source_files where file_name=${fileName} and canonical=true limit 1`
     const registeredCanonical=Array.isArray(exactRows)&&exactRows.length>0
     const knownCanonicalName=Array.isArray(nameRows)&&nameRows.length>0
+    const structureOk=Boolean(contract)&&issues.length===0
 
     return res.status(200).json({
       ok:true,
@@ -124,11 +139,13 @@ export default async function handler(req:Request,res:Response){
       fileName,
       fileHash,
       fileSize:buf.length,
-      sourceKindCandidate:contract.sourceKind,
+      sourceKindCandidate:contract?.sourceKind??null,
+      canonicalFileNameCandidate:contract?.canonicalFileName??null,
+      detectedBy,
       registeredCanonical,
       knownCanonicalName,
-      structureOk:issues.length===0,
-      requiredSheets:contract.requiredSheets,
+      structureOk,
+      requiredSheets:contract?.requiredSheets??[],
       sheets:sheetProfiles,
       counts,
       issues,
@@ -138,7 +155,9 @@ export default async function handler(req:Request,res:Response){
         requiresCanonicalRegistration:!registeredCanonical,
         rule:registeredCanonical
           ?'El archivo coincide por nombre y SHA-256 con una fuente canónica aprobada. El preflight no escribió datos.'
-          :'El preflight sólo valida estructura. Un hash nuevo debe auditarse y registrarse explícitamente antes de publicar staging.',
+          :structureOk
+            ?'La estructura es reconocible, pero el nombre + SHA-256 no están aprobados como esta fuente exacta. Debe auditarse y registrarse antes de publicar staging.'
+            :'El preflight sólo inspeccionó el XLSX. La fuente requiere Canonical Intake antes de cualquier registro o publicación.',
       },
     })
   }catch(error){
