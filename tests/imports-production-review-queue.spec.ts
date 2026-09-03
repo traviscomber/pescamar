@@ -9,10 +9,10 @@ test('imports exposes canonical production review as read-only lineage evidence'
     if(path==='/api/canonical-production-review'){
       reviewMethods.push(request.method())
       return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,rows:[
-        {source_file_hash:'hash-2026',source_file:'planilla de produccion 2026.xlsx',source_row:221,event_date:'2026-06-12T00:00:00.000Z',supplier_name:'Patricio Diaz',lot_code:'mdq213100626',guide_number:'123',guide_kg:60,received_kg:59.6,reception_date:'2026-06-12T00:00:00.000Z',process_date:'2026-06-11T00:00:00.000Z',production_date:'2026-06-12T00:00:00.000Z',data_quality_flags:['date_sequence_inconsistent'],context_rows:1,review_reasons:['date_sequence_inconsistent']},
-        {source_file_hash:'hash-context',source_file:'planilla de produccion 2026.xlsx',source_row:156,event_date:'2026-05-25T00:00:00.000Z',supplier_name:'Gladys Mansilla',lot_code:'fq152230526',guide_number:'511',guide_kg:354,received_kg:354,reception_date:'2026-05-25T00:00:00.000Z',process_date:'2026-05-25T00:00:00.000Z',production_date:'2026-05-26T00:00:00.000Z',data_quality_flags:[],context_rows:2,review_reasons:['non_unique_context']},
-        {source_file_hash:'hash-2025',source_file:'planilla de produccion 2025.xlsx',source_row:20,event_date:'2025-04-02T00:00:00.000Z',supplier_name:'Eugenio Mardones',lot_code:'ig-demo',guide_number:'10',guide_kg:100,received_kg:98,reception_date:'2025-04-02T00:00:00.000Z',process_date:null,production_date:'2025-04-03T00:00:00.000Z',data_quality_flags:['missing_process_date'],context_rows:1,review_reasons:['missing_process_date']}
-      ],summary:{rows:54,flaggedRows:50,nonUniqueContextRows:4,nonUniqueContexts:2,firstDate:'2025-03-22T00:00:00.000Z',lastDate:'2026-06-12T00:00:00.000Z',bySource:[{source_file:'planilla de produccion 2025.xlsx',rows:39,flagged_rows:37,non_unique_context_rows:2},{source_file:'planilla de produccion 2026.xlsx',rows:15,flagged_rows:13,non_unique_context_rows:2}]},governance:{mode:'evidence_only',writesHistorical:false,writesLive:false,rule:'Esta cola expone evidencia canónica para revisión humana. No corrige, elimina, fusiona ni deduplica registros históricos.'}})})
+        {source_file_hash:'hash-2026',source_file:'planilla de produccion 2026.xlsx',source_row:221,event_date:'2026-06-12T00:00:00.000Z',supplier_name:'Patricio Diaz',lot_code:'mdq213100626',guide_number:'123',guide_kg:59.6,received_kg:59.6,reception_date:'2026-10-09T00:00:00.000Z',process_date:'2026-06-10T00:00:00.000Z',production_date:'2026-06-12T00:00:00.000Z',data_quality_flags:['date_sequence_inconsistent'],context_rows:1,review_reasons:['date_sequence_inconsistent'],triage:{focus:'reception_date_review',lotDate:'2026-06-10',lotDateMatches:['process'],referenceOnly:true}},
+        {source_file_hash:'hash-context',source_file:'planilla de produccion 2026.xlsx',source_row:156,event_date:'2026-05-25T00:00:00.000Z',supplier_name:'Gladys Mansilla',lot_code:'fq152230526',guide_number:'511',guide_kg:354,received_kg:354,reception_date:'2026-05-22T00:00:00.000Z',process_date:'2026-05-23T00:00:00.000Z',production_date:'2026-05-24T00:00:00.000Z',data_quality_flags:[],context_rows:2,review_reasons:['non_unique_context'],triage:{focus:'context_review',lotDate:'2026-05-23',lotDateMatches:['process'],referenceOnly:true}},
+        {source_file_hash:'hash-2025',source_file:'planilla de produccion 2025.xlsx',source_row:171,event_date:'2025-06-25T00:00:00.000Z',supplier_name:null,lot_code:'ig165250625',guide_number:null,guide_kg:null,received_kg:null,reception_date:null,process_date:null,production_date:'2025-06-25T00:00:00.000Z',data_quality_flags:['missing_process_date','missing_reception_date'],context_rows:1,review_reasons:['missing_process_date','missing_reception_date'],triage:{focus:'source_completion',lotDate:'2025-06-25',lotDateMatches:['production'],referenceOnly:true}}
+      ],summary:{rows:54,flaggedRows:50,nonUniqueContextRows:4,nonUniqueContexts:2,firstDate:'2025-03-22T00:00:00.000Z',lastDate:'2026-06-12T00:00:00.000Z',bySource:[{source_file:'planilla de produccion 2025.xlsx',rows:39,flagged_rows:37,non_unique_context_rows:2},{source_file:'planilla de produccion 2026.xlsx',rows:15,flagged_rows:13,non_unique_context_rows:2}],lotEvidence:{parseableRows:603,processMatches:530,productionMatches:169,receptionMatches:47,processMatchRate:530/603,flaggedWithLotDate:45,flaggedProcessConflicts:33},focusCounts:{reception_date_review:1,context_review:1,source_completion:1}},governance:{mode:'evidence_only',writesHistorical:false,writesLive:false,derivedLotDate:'reference_only',rule:'Esta cola expone evidencia canónica y una fecha derivada del código de lote sólo como ayuda de revisión. No corrige, elimina, fusiona ni deduplica registros históricos.'}})})
     }
     if(path==='/api/auth')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,operator:{id:'qa-admin',fullName:'QA Admin',email:'admin@example.test',role:'admin',plantIds:[]}})})
     if(path==='/api/plant-state')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,plants:[],history:[]})})
@@ -30,11 +30,19 @@ test('imports exposes canonical production review as read-only lineage evidence'
   await expect(queue).toContainText('50 filas con flags')
   await expect(queue).toContainText('4 filas en 2 contextos no únicos')
   await expect(queue).toContainText('Evidencia intacta')
+  const lotEvidence=queue.getByTestId('lot-date-evidence')
+  await expect(lotEvidence).toContainText('603 lotes con fecha interpretable')
+  await expect(lotEvidence).toContainText('530 coinciden con fecha de proceso')
+  await expect(lotEvidence).toContainText('33 filas con flags muestran conflicto')
   await expect(queue).toContainText('planilla de produccion 2026.xlsx')
-  await expect(queue.getByTestId('canonical-review-row').filter({hasText:'Fila 221'})).toContainText('Patricio Diaz')
-  await expect(queue.getByTestId('canonical-review-row').filter({hasText:'Fila 221'})).toContainText('mdq213100626')
-  await expect(queue.getByTestId('canonical-review-row').filter({hasText:'Fila 221'})).toContainText('secuencia de fechas inconsistente')
-  await expect(queue.getByTestId('canonical-review-row').filter({hasText:'Fila 156'})).toContainText('contexto base no único')
+  const row221=queue.getByTestId('canonical-review-row').filter({hasText:'Fila 221'})
+  await expect(row221).toContainText('Patricio Diaz')
+  await expect(row221).toContainText('mdq213100626')
+  await expect(row221).toContainText('secuencia de fechas inconsistente')
+  await expect(row221).toContainText('fecha derivada del lote')
+  await expect(row221).toContainText('coincide con proceso')
+  await expect(row221).toContainText('revisar fecha de recepción')
+  await expect(queue.getByTestId('canonical-review-row').filter({hasText:'Fila 156'})).toContainText('comparar contexto')
   expect(reviewMethods).toEqual(['GET'])
   expect(consoleErrors).toEqual([])
 })

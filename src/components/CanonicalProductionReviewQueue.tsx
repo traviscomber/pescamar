@@ -1,11 +1,15 @@
 import {AlertTriangle, FileSpreadsheet, ShieldCheck} from 'lucide-react'
 import {useEffect,useMemo,useState} from 'react'
 
-type ReviewRow={source_file_hash:string;source_file:string;source_row:number;event_date:string|null;supplier_name:string|null;lot_code:string|null;guide_number:string|null;guide_kg:number|string|null;received_kg:number|string|null;reception_date:string|null;process_date:string|null;production_date:string|null;data_quality_flags:string[];context_rows:number;review_reasons:string[]}
+type ReviewFocus='process_date_review'|'reception_date_review'|'production_date_review'|'source_completion'|'formula_review'|'context_review'|'chronology_review'|'manual_review'
+type ReviewTriage={focus:ReviewFocus;lotDate:string|null;lotDateMatches:Array<'reception'|'process'|'production'>;referenceOnly:boolean}
+type ReviewRow={source_file_hash:string;source_file:string;source_row:number;event_date:string|null;supplier_name:string|null;lot_code:string|null;guide_number:string|null;guide_kg:number|string|null;received_kg:number|string|null;reception_date:string|null;process_date:string|null;production_date:string|null;data_quality_flags:string[];context_rows:number;review_reasons:string[];triage:ReviewTriage}
 type ReviewSourceSummary={source_file:string;rows:number;flagged_rows:number;non_unique_context_rows:number}
-type ReviewPayload={ok?:boolean;rows?:ReviewRow[];summary?:{rows:number;flaggedRows:number;nonUniqueContextRows:number;nonUniqueContexts:number;firstDate:string|null;lastDate:string|null;bySource:ReviewSourceSummary[]};governance?:{mode:string;writesHistorical:boolean;writesLive:boolean;rule:string};error?:string}
+type LotEvidence={parseableRows:number;processMatches:number;productionMatches:number;receptionMatches:number;processMatchRate:number;flaggedWithLotDate:number;flaggedProcessConflicts:number}
+type ReviewPayload={ok?:boolean;rows?:ReviewRow[];summary?:{rows:number;flaggedRows:number;nonUniqueContextRows:number;nonUniqueContexts:number;firstDate:string|null;lastDate:string|null;bySource:ReviewSourceSummary[];lotEvidence:LotEvidence;focusCounts:Record<string,number>};governance?:{mode:string;writesHistorical:boolean;writesLive:boolean;derivedLotDate?:string;rule:string};error?:string}
 
 const nf=new Intl.NumberFormat('es-CL',{maximumFractionDigits:1})
+const pf=new Intl.NumberFormat('es-CL',{style:'percent',maximumFractionDigits:1})
 const df=new Intl.DateTimeFormat('es-CL',{day:'2-digit',month:'short',year:'numeric',timeZone:'UTC'})
 const reasonLabels:Record<string,string>={
   production_before_process:'producción antes de proceso',
@@ -18,6 +22,17 @@ const reasonLabels:Record<string,string>={
   yield_formula_error:'fórmula de rendimiento',
   non_unique_context:'contexto base no único'
 }
+const focusLabels:Record<ReviewFocus,string>={
+  process_date_review:'revisar fecha de proceso',
+  reception_date_review:'revisar fecha de recepción',
+  production_date_review:'revisar fecha de producción',
+  source_completion:'completar dato desde fuente',
+  formula_review:'revisar fórmula',
+  context_review:'comparar contexto',
+  chronology_review:'revisar secuencia',
+  manual_review:'revisión manual'
+}
+const fieldLabels={reception:'recepción',process:'proceso',production:'producción'} as const
 
 export function CanonicalProductionReviewQueue(){
   const [payload,setPayload]=useState<ReviewPayload|null>(null)
@@ -36,6 +51,7 @@ export function CanonicalProductionReviewQueue(){
   const rowsBySource=useMemo(()=>rows.reduce<Record<string,ReviewRow[]>>((acc,row)=>{(acc[row.source_file]??=[]).push(row);return acc},{}),[rows])
   const sourceNames=useMemo(()=>Object.keys(rowsBySource).sort((a,b)=>b.localeCompare(a)),[rowsBySource])
   const summary=payload?.summary
+  const lotEvidence=summary?.lotEvidence
 
   return <section className="panel import-history" data-testid="canonical-production-review-queue">
     <header className="panel-header"><div><span className="overline teal">Revisión canónica</span><h2>Cola de producción</h2></div><span>{summary?`${nf.format(summary.rows)} pendientes`:'Cargando…'}</span></header>
@@ -44,6 +60,7 @@ export function CanonicalProductionReviewQueue(){
       <div className="detail-alerts">
         <div><AlertTriangle size={17}/><span><b>{nf.format(summary.flaggedRows)} filas con flags</b><small>Fechas, fórmula, kilos o secuencias que requieren revisión humana.</small></span><em>REVISAR</em></div>
         <div><FileSpreadsheet size={17}/><span><b>{nf.format(summary.nonUniqueContextRows)} filas en {nf.format(summary.nonUniqueContexts)} contextos no únicos</b><small>Comparten clave base, pero no se asumen copias ni se deduplican automáticamente.</small></span><em>CONTEXTO</em></div>
+        {lotEvidence?<div data-testid="lot-date-evidence"><FileSpreadsheet size={17}/><span><b>{nf.format(lotEvidence.parseableRows)} lotes con fecha interpretable</b><small>{nf.format(lotEvidence.processMatches)} coinciden con fecha de proceso ({pf.format(lotEvidence.processMatchRate)}). {nf.format(lotEvidence.flaggedProcessConflicts)} filas con flags muestran conflicto entre fecha de lote y proceso.</small></span><em>EVIDENCIA</em></div>:null}
       </div>
       <div className="governance-note"><ShieldCheck size={19}/><div><b>Evidencia intacta</b><p>{payload?.governance?.rule}</p></div></div>
       {sourceNames.map(sourceName=>{
@@ -52,7 +69,7 @@ export function CanonicalProductionReviewQueue(){
         return <details key={sourceName} className="review-queue-source" open={sourceName.includes('2026')}>
           <summary><b>{sourceName}</b> · {nf.format(sourceSummary?.rows??sourceRows.length)} filas · {nf.format(sourceSummary?.flagged_rows??0)} con flags · {nf.format(sourceSummary?.non_unique_context_rows??0)} en contexto no único</summary>
           <div className="detail-alerts">{sourceRows.map(row=><div key={`${row.source_file_hash}:${row.source_row}`} data-testid="canonical-review-row">
-            <FileSpreadsheet size={17}/><span><b>Fila {row.source_row} · {formatDate(row.event_date)} · {row.supplier_name??'Proveedor sin nombre'}</b><small>Lote {row.lot_code??'—'} · guía {row.guide_number??'—'} · guía kg {formatNumber(row.guide_kg)} · recibido {formatNumber(row.received_kg)} kg · {row.review_reasons.map(reason=>reasonLabels[reason]??reason).join(' · ')} · hash {row.source_file_hash.slice(0,10)}…</small></span><em>{row.context_rows>1?'CONTEXTO':'FLAG'}</em>
+            <FileSpreadsheet size={17}/><span><b>Fila {row.source_row} · {formatDate(row.event_date)} · {row.supplier_name??'Proveedor sin nombre'}</b><small>Lote {row.lot_code??'—'} · guía {row.guide_number??'—'} · guía kg {formatNumber(row.guide_kg)} · recibido {formatNumber(row.received_kg)} kg · {row.review_reasons.map(reason=>reasonLabels[reason]??reason).join(' · ')}{triageText(row.triage)} · hash {row.source_file_hash.slice(0,10)}…</small></span><em>{focusLabels[row.triage.focus]}</em>
           </div>)}</div>
         </details>
       })}
@@ -60,5 +77,10 @@ export function CanonicalProductionReviewQueue(){
   </section>
 }
 
+function triageText(triage:ReviewTriage){
+  if(!triage.lotDate)return` · foco: ${focusLabels[triage.focus]}`
+  const matches=triage.lotDateMatches.length?`coincide con ${triage.lotDateMatches.map(field=>fieldLabels[field]).join(' / ')}`:'no coincide con las fechas registradas'
+  return` · fecha derivada del lote ${formatDate(triage.lotDate)} · ${matches} · foco: ${focusLabels[triage.focus]}`
+}
 function formatDate(value:string|null){if(!value)return'Fecha no informada';const date=new Date(value);return Number.isNaN(date.getTime())?value:df.format(date)}
 function formatNumber(value:number|string|null){if(value===null||value==='')return'—';const parsed=Number(value);return Number.isFinite(parsed)?nf.format(parsed):String(value)}
