@@ -17,6 +17,8 @@ done
 
 Antes de producción se debe confirmar el esquema real del entorno objetivo. Que una API aplique compatibilidad aditiva o que el build esté verde no demuestra por sí solo que todas las migraciones canónicas estén aplicadas.
 
+Desde `041_schema_migration_baseline.sql`, Neon conserva un registro explícito en `schema_migrations`. Las migraciones 001–040 pueden quedar registradas como `baseline` sólo después de verificar la estructura requerida; eso no reconstruye ni inventa sus timestamps históricos. La 041 y toda migración posterior deben registrarse individualmente como `applied` con evidencia temporal real.
+
 ## Inventario canónico actual
 
 | Migración | Alcance principal |
@@ -59,6 +61,7 @@ Antes de producción se debe confirmar el esquema real del entorno objetivo. Que
 | `038_regulatory_pallet_membership_freeze.sql` | congela composición de pallets mientras un hold regulatorio siga bloqueando |
 | `039_cold_asset_active_run_exclusion.sql` | impide más de un ciclo de frío abierto simultáneo por activo físico |
 | `040_cold_sensor_station_scope.sql` | obliga observaciones sensor a coincidir con planta y estación física del activo |
+| `041_schema_migration_baseline.sql` | establece `schema_migrations`, registra 001–040 como baseline estructural verificado y 041 como primera migración aplicada con timestamp real |
 
 El inventario anterior describe el repositorio actual. Si se agrega una migración, debe agregarse también a esta tabla; CI verifica esa correspondencia.
 
@@ -86,7 +89,7 @@ El inventario anterior describe el repositorio actual. Si se agrega una migraci�
 - Mientras el despacho comercial sea por lote/kg, un hold en una caja o pallet bloquea conservadoramente cualquier recepción trazada a esa unidad física.
 - Mientras un hold de pallet siga en `open` o `rejected`, su membresía física queda congelada: no se pueden agregar, retirar, mover ni borrar cajas para alterar la línea de bloqueo.
 - El gate regulatorio de despacho existe también en PostgreSQL sobre `lot_dispatches`; no depende de que la UI recuerde validar el hold.
-- La integración Sernapesca XML/Siscomex no forma parte de 037–040 y sólo debe implementarse cuando exista contrato oficial de endpoint, autenticación y formato.
+- La integración Sernapesca XML/Siscomex no forma parte de 037–041 y sólo debe implementarse cuando exista contrato oficial de endpoint, autenticación y formato.
 
 ## Seguridad y tenancy operacional
 
