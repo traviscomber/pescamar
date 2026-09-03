@@ -1,5 +1,6 @@
 import { AlertTriangle, CheckCircle2, Database, FileSpreadsheet, History, RotateCcw, ShieldCheck, Upload } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { CanonicalProductionReviewQueue } from '../components/CanonicalProductionReviewQueue'
 import { PlantImportModal } from '../components/PlantImportModal'
 import { PageHeader } from '../components/PageHeader'
 import { usePlatformStatus } from '../hooks/usePlatformStatus'
@@ -142,6 +143,8 @@ export function Imports(){
       {productionReview>0?<div className="governance-note"><AlertTriangle size={19}/><div><b>Por qué producción requiere revisión</b><p>{nf.format(Number(connections?.connections?.production?.production_before_process??0))} producción antes de proceso · {nf.format(Number(connections?.connections?.production?.date_sequence_inconsistent??0))} secuencia de fechas inconsistente · {nf.format(Number(connections?.connections?.production?.missing_process_date??0))} sin fecha de proceso · {nf.format(Number(connections?.connections?.production?.missing_reception_date??0))} sin fecha de recepción · {nf.format(Number(connections?.connections?.production?.missing_received_kg??0))} sin kg recibido · {nf.format(Number(connections?.connections?.production?.process_before_reception??0))} proceso antes de recepción · {nf.format(Number(connections?.connections?.production?.production_before_reception??0))} producción antes de recepción · {nf.format(Number(connections?.connections?.production?.yield_formula_error??0))} fórmula de rendimiento.</p><p>Los flags pueden coexistir: las {nf.format(Number(connections?.connections?.production?.flagged??0))} filas con flags son filas únicas. Otras {nf.format(Number(connections?.connections?.production?.non_unique_context_rows??0))} filas comparten {nf.format(Number(connections?.connections?.production?.non_unique_contexts??0))} contextos base no únicos; no se consideran copias idénticas ni se deduplican automáticamente.</p></div></div>:null}
       <div className="governance-note"><ShieldCheck size={19}/><div><b>Sin promoción implícita</b><p>{connections?.governance?.rule??'Las conexiones exactas se muestran como evidencia. Las filas ambiguas o con flags permanecen en staging hasta revisión.'}</p></div></div>
     </section>
+
+    <CanonicalProductionReviewQueue/>
 
     <section className="panel import-history">
       <header className="panel-header"><div><span className="overline">Fuentes canónicas</span><h2>Publicar evidencia 2026</h2></div><span>{canonicalRows?`${nf.format(canonicalRows)} filas staging`:'Pendiente de publicación'}</span></header>
