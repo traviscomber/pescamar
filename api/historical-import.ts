@@ -7,6 +7,7 @@ type PayloadRow={sourceRow:number;recordStatus:'operational'|'void';eventDate:st
 type Payload={fileName?:string;fileHash?:string;rows?:PayloadRow[]}
 type CountRow={count?:number|string;flagged?:number|string}
 type SourceRow={file_name?:unknown;canonical?:unknown}
+type LineageRow={source_row?:unknown}
 const firstRow=(value:unknown)=>Array.isArray(value)?(value[0] as CountRow|undefined):undefined
 
 export default async function handler(request:Request,response:Response){
@@ -31,6 +32,12 @@ export default async function handler(request:Request,response:Response){
     const existing=Number(firstRow(before)?.count??0)
     if(!approved&&existing===0)return response.status(409).json({ok:false,error:'La fuente histórica no está aprobada en el registro canónico ni corresponde a un linaje existente'})
     const sourceAuthority=approved?'canonical_source_files':'existing_lineage'
+    if(!approved){
+      const requestedRows=[...new Set(clean.map(row=>row.sourceRow))]
+      const lineageRaw=await sql`select source_row from historical_production_records where source_file_hash=${fileHash} and source_file=${fileName} and source_row=any(${requestedRows}::int[])`
+      const knownRows=new Set((Array.isArray(lineageRaw)?lineageRaw:[]).map(row=>Number((row as LineageRow).source_row)).filter(Number.isInteger))
+      if(requestedRows.some(sourceRow=>!knownRows.has(sourceRow)))return response.status(409).json({ok:false,error:'La fuente legacy sólo admite replay de filas ya registradas; no se pueden añadir filas sin el archivo canónico verificable'})
+    }
     await sql`
       insert into historical_production_records(
         source_row,source_file,source_file_hash,record_status,event_date,reception_date,process_date,production_date,
@@ -54,7 +61,7 @@ export default async function handler(request:Request,response:Response){
     `
     const after=await sql`select count(*)::int as count,count(*) filter(where cardinality(data_quality_flags)>0)::int as flagged from historical_production_records where source_file_hash=${fileHash} and source_file=${fileName}`
     const summary=firstRow(after),total=Number(summary?.count??0),flagged=Number(summary?.flagged??0),inserted=Math.max(0,total-existing),duplicates=Math.max(0,clean.length-inserted)
-    return response.status(200).json({ok:true,total,inserted,duplicates,flagged,fileHash,sourceAuthority,idempotent:true,immutable:true})
+    return response.status(200).json({ok:true,total,inserted,duplicates,flagged,fileHash,sourceAuthority,idempotent:true,immutable:true,legacyReplayOnly:!approved})
   }catch(error){
     const message=error instanceof Error?error.message:''
     return response.status(message.includes('DATABASE_URL')?503:500).json({ok:false,error:message.includes('DATABASE_URL')?'Base de datos no conectada':'No fue posible publicar la producción histórica'})
