@@ -12,6 +12,7 @@ test('Pescamar IA receives canonical source health only with corporate history s
   expect(source).toContain('context.data.canonical_health=canonicalHealth')
   expect(source).toContain("id:'canonical_health'")
   expect(source).toContain("path:'/importaciones'")
+  expect(source).toContain('freshness:canonicalHealth.checkedAt')
 })
 
 test('Pescamar IA distinguishes ingestion integrity from quality review',async()=>{
