@@ -49,3 +49,14 @@ test('module navigation resets the workspace to the top',async({page},testInfo)=
  await expect.poll(()=>page.evaluate(()=>window.scrollY)).toBe(0)
  await page.screenshot({path:testInfo.outputPath('route-scroll-reset.png'),fullPage:false})
 })
+
+test('360px management surfaces keep the viewport free of accidental horizontal overflow',async({page},testInfo)=>{
+ test.skip(testInfo.project.name!=='desktop-chromium','Exact 360px contract is exercised once on Chromium')
+ await page.setViewportSize({width:360,height:800})
+ await mockAdmin(page)
+ for(const path of ['/rentabilidad','/observabilidad']){
+  await page.goto(path)
+  await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true)
+ }
+ await page.screenshot({path:testInfo.outputPath('management-360px.png'),fullPage:true})
+})
