@@ -2,11 +2,13 @@ import {expect,test} from '@playwright/test'
 import {readFile} from 'node:fs/promises'
 
 const apiUrl=new URL('../api/canonical-source-health.ts',import.meta.url)
+const helperUrl=new URL('../api/_canonical-source-health.ts',import.meta.url)
 const componentUrl=new URL('../src/components/CanonicalSourceHealth.tsx',import.meta.url)
 const appUrl=new URL('../src/App.tsx',import.meta.url)
 
 test('source health remains read-only and only measures contracted source kinds',async()=>{
-  const source=await readFile(apiUrl,'utf8')
+  const source=await readFile(helperUrl,'utf8')
+  const endpoint=await readFile(apiUrl,'utf8')
   expect(source).toContain("production_2026:['production']")
   expect(source).toContain("finance_stock:['account','stock','transfers']")
   expect(source).toContain("packing_octopus_2026:['packing']")
@@ -16,11 +18,12 @@ test('source health remains read-only and only measures contracted source kinds'
   expect(source).not.toContain('insert into ')
   expect(source).not.toContain('delete from ')
   expect(source).not.toContain('update canonical_')
+  expect(endpoint).toContain('buildCanonicalSourceHealth')
 })
 
 test('source health separates row integrity from quality review signals',async()=>{
-  const source=await readFile(apiUrl,'utf8')
-  expect(source).toContain("expected===actual")
+  const source=await readFile(helperUrl,'utf8')
+  expect(source).toContain("expected===actual?'complete'")
   expect(source).toContain("actual<expected?'partial':'over'")
   expect(source).toContain('flaggedRows')
   expect(source).toContain('futureRows')
