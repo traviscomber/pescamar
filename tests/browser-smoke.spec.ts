@@ -68,20 +68,27 @@ test('keyboard focus reaches the login controls',async({page})=>{
   await expect(page.getByLabel('Contraseña')).toBeFocused()
 })
 
-test('canonical dashboard has one primary reception action and stable theme switching',async({page},testInfo)=>{
+test('canonical home starts with operational hierarchy and stable theme switching',async({page},testInfo)=>{
+  await page.addInitScript(()=>localStorage.setItem('pescamar-theme','light'))
   await mockAuthenticatedApp(page,'operations',['ancud'])
   await page.goto('/')
-  await expect(page.getByRole('heading',{name:'Operación',exact:true})).toBeVisible()
+  const h1=page.getByRole('heading',{name:'Qué requiere acción',exact:true})
+  await expect(h1).toBeVisible()
   await expect(page.getByRole('button',{name:/Nueva recepción/})).toHaveCount(1)
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
-  const h1Size=await page.getByRole('heading',{name:'Operación',exact:true}).evaluate(element=>Number.parseFloat(getComputedStyle(element).fontSize))
+  const h1Size=await h1.evaluate(element=>Number.parseFloat(getComputedStyle(element).fontSize))
   expect(h1Size).toBeGreaterThanOrEqual(30)
-  const theme=page.getByRole('button',{name:/Oscuro|Claro/})
+  const brief=page.getByRole('region',{name:'Centro de decisión'})
+  await expect(brief).toBeVisible()
+  const [h1Box,briefBox]=await Promise.all([h1.boundingBox(),brief.boundingBox()])
+  expect(h1Box&&briefBox?h1Box.y<briefBox.y:false).toBe(true)
+  const theme=page.getByRole('button',{name:'Cambiar a tema oscuro'})
   await expect(theme).toBeVisible()
   await theme.click()
   await expect(page.locator('html')).toHaveAttribute('data-theme','dark')
+  await expect(page.getByRole('button',{name:'Cambiar a tema claro'})).toBeVisible()
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
-  await page.screenshot({path:testInfo.outputPath('canonical-dashboard-dark.png'),fullPage:true})
+  await page.screenshot({path:testInfo.outputPath('canonical-home-dark.png'),fullPage:true})
 })
 
 for(const scenario of [
