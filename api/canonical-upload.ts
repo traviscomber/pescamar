@@ -160,8 +160,7 @@ export default async function handler(req:Request,res:Response){
   }else if(fileName==='packing pulpo pescamar 2026-2.xlsx'){
    const rows=packing(wb);await insert(sql,fileName,fileHash,'packing',rows);result.packing=rows.length;sourceRecordCount=rows.length
   }else return res.status(400).json({ok:false,error:'Fuente canónica no soportada'})
-  await sql`update canonical_source_files set record_count=${sourceRecordCount},imported_at=now() where file_hash=${fileHash}`
-  return res.status(200).json({ok:true,fileName,fileHash,result,idempotent:true,immutable:true,writesLive:false})
+  return res.status(200).json({ok:true,fileName,fileHash,result,sourceRecordCount,idempotent:true,immutable:true,writesLive:false})
  }catch(error){
   console.error('canonical_upload_failed',error)
   const message=error instanceof Error?error.message:''
