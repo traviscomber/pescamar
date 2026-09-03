@@ -18,19 +18,25 @@ export default async function handler(req:Request,res:Response){
         from historical_production_records where record_status='operational'
         group by source_file_hash,lower(trim(coalesce(lot_code,''))),trim(coalesce(guide_number,'')),lower(trim(coalesce(supplier_name,''))),guide_kg,received_kg
       ), scored as (
-        select h.*,coalesce(c.n,1)>1 duplicate_context,cardinality(coalesce(h.data_quality_flags,array[]::text[]))>0 flagged
+        select h.*,coalesce(c.n,1)>1 non_unique_context,cardinality(coalesce(h.data_quality_flags,array[]::text[]))>0 flagged
         from historical_production_records h left join contexts c on c.source_file_hash=h.source_file_hash and c.lot_key=lower(trim(coalesce(h.lot_code,''))) and c.guide_key=trim(coalesce(h.guide_number,'')) and c.supplier_key=lower(trim(coalesce(h.supplier_name,''))) and c.guide_kg is not distinct from h.guide_kg and c.received_kg is not distinct from h.received_kg
         where h.record_status='operational'
       ) select count(*)::int total,
-        count(*) filter(where not duplicate_context and received_kg is not null)::int reception_ready,
-        count(*) filter(where not duplicate_context and not flagged and received_kg is not null and reception_date is not null and process_date is not null and production_date is not null)::int timing_ready,
-        count(*) filter(where not duplicate_context and received_kg is not null and grade_breakdown is not null and grade_breakdown<>'{}'::jsonb)::int quality_ready,
-        count(*) filter(where duplicate_context or flagged)::int review_required,
-        count(*) filter(where duplicate_context)::int duplicate_context,
+        count(*) filter(where not non_unique_context and received_kg is not null)::int reception_ready,
+        count(*) filter(where not non_unique_context and not flagged and received_kg is not null and reception_date is not null and process_date is not null and production_date is not null)::int timing_ready,
+        count(*) filter(where not non_unique_context and received_kg is not null and grade_breakdown is not null and grade_breakdown<>'{}'::jsonb)::int quality_ready,
+        count(*) filter(where non_unique_context or flagged)::int review_required,
+        count(*) filter(where non_unique_context)::int non_unique_context_rows,
+        (select count(*)::int from contexts where n>1)::int non_unique_contexts,
         count(*) filter(where flagged)::int flagged,
-        count(*) filter(where received_kg is null)::int missing_received_kg,
-        count(*) filter(where reception_date is null)::int missing_reception_date,
-        count(*) filter(where process_date is null)::int missing_process_date,
+        count(*) filter(where 'production_before_process'=any(coalesce(data_quality_flags,array[]::text[])))::int production_before_process,
+        count(*) filter(where 'date_sequence_inconsistent'=any(coalesce(data_quality_flags,array[]::text[])))::int date_sequence_inconsistent,
+        count(*) filter(where 'missing_process_date'=any(coalesce(data_quality_flags,array[]::text[])))::int missing_process_date,
+        count(*) filter(where 'missing_reception_date'=any(coalesce(data_quality_flags,array[]::text[])))::int missing_reception_date,
+        count(*) filter(where 'missing_received_kg'=any(coalesce(data_quality_flags,array[]::text[])))::int missing_received_kg,
+        count(*) filter(where 'process_before_reception'=any(coalesce(data_quality_flags,array[]::text[])))::int process_before_reception,
+        count(*) filter(where 'production_before_reception'=any(coalesce(data_quality_flags,array[]::text[])))::int production_before_reception,
+        count(*) filter(where 'yield_formula_error'=any(coalesce(data_quality_flags,array[]::text[])))::int yield_formula_error,
         count(*) filter(where production_date is null)::int missing_production_date,
         count(*) filter(where grade_breakdown is null or grade_breakdown='{}'::jsonb)::int missing_grade_breakdown
       from scored`,
@@ -89,7 +95,7 @@ export default async function handler(req:Request,res:Response){
         finance:{...first(financeRaw),target:'Finanzas',mode:'unique_date_amount_or_group_total',grouping_rule:'same_date_bank_sender_to_unique_unclaimed_inflow_total'},
         stock:{...first(stockRaw),target:'Inventario',mode:'staging_only'}
       },
-      governance:{promotion:'blocked',writesLive:false,rule:'Las conexiones se calculan desde evidencia canónica. Revisión significa contradicción o ambigüedad real. Ausencias de maestro se mantienen como alta pendiente; faltas de cobertura permanecen como gaps de fuente. En finanzas, un grupo sólo se concilia cuando transferencias no emparejadas de la misma fecha, banco y remitente suman exactamente una única entrada contable de ese día que no esté ya reclamada por un match 1:1. Este endpoint no crea transacciones live.'}
+      governance:{promotion:'blocked',writesLive:false,rule:'Las conexiones se calculan desde evidencia canónica. Revisión significa contradicción, flag de calidad o contexto base no único. Varias filas que comparten lote, guía, proveedor y kilos no se declaran duplicadas ni se deduplican automáticamente: permanecen en revisión porque pueden representar procesos o desgloses distintos. Ausencias de maestro se mantienen como alta pendiente; faltas de cobertura permanecen como gaps de fuente. En finanzas, un grupo sólo se concilia cuando transferencias no emparejadas de la misma fecha, banco y remitente suman exactamente una única entrada contable de ese día que no esté ya reclamada por un match 1:1. Este endpoint no crea transacciones live.'}
     })
   }catch(error){
     const message=error instanceof Error?error.message:''
