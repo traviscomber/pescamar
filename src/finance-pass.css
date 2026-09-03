@@ -7,6 +7,7 @@
   border-radius:0!important;
   background:transparent!important;
   box-shadow:none!important;
+  transition:none!important;
 }
 .main-content:has(>.signal-grid+.panel .data-table)>.signal-grid+.panel>.section-heading{
   margin:0 0 12px;
