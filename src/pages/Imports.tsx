@@ -12,6 +12,7 @@ type CanonicalSource={file_hash:string;file_name:string;source_kind:string;perio
 type CanonicalRow={rows:number|string;flagged:number|string;guide_kg?:number|string;received_kg?:number|string;inflow_clp?:number|string;outflow_clp?:number|string;final_balance_clp?:number|string;amount_clp?:number|string;kg?:number|string;product_family?:string;pack_format?:string}
 type CanonicalStatus={sources?:CanonicalSource[];datasets?:{production?:CanonicalRow[];ledger?:CanonicalRow[];stock?:CanonicalRow[];transfers?:CanonicalRow[];packing?:CanonicalRow[]};error?:string}
 type CanonicalUploadResult={ok?:boolean;fileName?:string;fileHash?:string;result?:Record<string,number>;error?:string}
+type CanonicalPreflightResult={ok?:boolean;mode?:string;fileName?:string;fileHash?:string;fileSize?:number;sourceKindCandidate?:string;registeredCanonical?:boolean;knownCanonicalName?:boolean;structureOk?:boolean;requiredSheets?:string[];sheets?:{name:string;rows:number;columns:number}[];counts?:Record<string,number>;issues?:string[];governance?:{writesStaging?:boolean;writesLive?:boolean;requiresCanonicalRegistration?:boolean;rule?:string};error?:string}
 type CanonicalConnection={target:string;mode:string;total?:number|string;reception_ready?:number|string;timing_ready?:number|string;quality_ready?:number|string;review_required?:number|string;non_unique_context_rows?:number|string;non_unique_contexts?:number|string;production_before_process?:number|string;date_sequence_inconsistent?:number|string;missing_received_kg?:number|string;missing_reception_date?:number|string;missing_process_date?:number|string;process_before_reception?:number|string;production_before_reception?:number|string;yield_formula_error?:number|string;missing_production_date?:number|string;missing_grade_breakdown?:number|string;suppliers?:number|string;exact?:number|string;missing?:number|string;ambiguous?:number|string;unmatched?:number|string;lots?:number|string;exact_lots?:number|string;unmatched_lots?:number|string;outside_coverage_lots?:number|string;unresolved_within_coverage_lots?:number|string;boxes?:number|string;lot_referenced_boxes?:number|string;unreferenced_boxes?:number|string;unreferenced_kg?:number|string;upstream_last_date?:string|null;packing_first_date?:string|null;packing_last_date?:string|null;product_family?:string|null;kg?:number|string;transfers?:number|string;direct_exact_transfers?:number|string;grouped_exact_transfers?:number|string;grouped_exact_groups?:number|string;matched_transfers?:number|string;rows?:number|string;flagged?:number|string}
 type CanonicalConnections={connections?:{production?:CanonicalConnection;parties?:CanonicalConnection;packing?:CanonicalConnection;finance?:CanonicalConnection;stock?:CanonicalConnection};governance?:{promotion?:string;writesLive?:boolean;rule?:string};error?:string}
 const nf=new Intl.NumberFormat('es-CL',{maximumFractionDigits:1})
@@ -29,6 +30,8 @@ export function Imports(){
   const [reverting,setReverting]=useState('')
   const [canonicalBusy,setCanonicalBusy]=useState(false)
   const [canonicalResult,setCanonicalResult]=useState<CanonicalUploadResult|null>(null)
+  const [canonicalFile,setCanonicalFile]=useState<File|null>(null)
+  const [canonicalPreflight,setCanonicalPreflight]=useState<CanonicalPreflightResult|null>(null)
   const canonicalInput=useRef<HTMLInputElement>(null)
   const {status,error:statusError}=usePlatformStatus()
 
@@ -62,19 +65,40 @@ export function Imports(){
     await load()
   }
 
+  const readBase64=(file:File)=>new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onerror=()=>reject(new Error('No fue posible leer el archivo'));reader.onload=()=>resolve(String(reader.result??''));reader.readAsDataURL(file)})
+
+  const preflightCanonical=async(file:File)=>{
+    setCanonicalResult(null);setCanonicalPreflight(null);setCanonicalFile(null);setError('')
+    if(!approvedNames.has(file.name)){setCanonicalPreflight({ok:false,error:'El nombre no corresponde a una de las tres fuentes canónicas reconocidas.'});if(canonicalInput.current)canonicalInput.current.value='';return}
+    if(file.size>15*1024*1024){setCanonicalPreflight({ok:false,error:'El archivo supera 15 MB.'});if(canonicalInput.current)canonicalInput.current.value='';return}
+    setCanonicalBusy(true)
+    try{
+      const base64=await readBase64(file)
+      const response=await fetch('/api/canonical-preflight',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fileName:file.name,base64})})
+      const payload=await response.json() as CanonicalPreflightResult
+      if(!response.ok||!payload.ok)throw new Error(payload.error??'No fue posible analizar la fuente canónica')
+      setCanonicalFile(file)
+      setCanonicalPreflight(payload)
+    }catch(cause){
+      setCanonicalPreflight({ok:false,error:cause instanceof Error?cause.message:'No fue posible analizar la fuente canónica'})
+      if(canonicalInput.current)canonicalInput.current.value=''
+    }finally{setCanonicalBusy(false)}
+  }
+
   const uploadCanonical=async(file:File)=>{
-    if(!approvedNames.has(file.name)){setCanonicalResult({ok:false,error:'El archivo no corresponde a una de las tres fuentes canónicas aprobadas.'});return}
-    if(file.size>15*1024*1024){setCanonicalResult({ok:false,error:'El archivo supera 15 MB.'});return}
+    if(!canonicalPreflight?.structureOk||!canonicalPreflight.registeredCanonical){setCanonicalResult({ok:false,error:'La publicación requiere preflight estructural PASS y un hash canónico previamente aprobado.'});return}
     setCanonicalBusy(true);setCanonicalResult(null);setError('')
     try{
-      const base64=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onerror=()=>reject(new Error('No fue posible leer el archivo'));reader.onload=()=>resolve(String(reader.result??''));reader.readAsDataURL(file)})
+      const base64=await readBase64(file)
       const response=await fetch('/api/canonical-upload',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fileName:file.name,base64})})
       const payload=await response.json() as CanonicalUploadResult
       if(!response.ok)throw new Error(payload.error??'No fue posible publicar la fuente canónica')
       setCanonicalResult(payload)
+      setCanonicalFile(null);setCanonicalPreflight(null)
+      if(canonicalInput.current)canonicalInput.current.value=''
       await load()
     }catch(cause){setCanonicalResult({ok:false,error:cause instanceof Error?cause.message:'No fue posible publicar la fuente canónica'})}
-    finally{setCanonicalBusy(false);if(canonicalInput.current)canonicalInput.current.value=''}
+    finally{setCanonicalBusy(false)}
   }
 
   const latestActive=useMemo(()=>history.find(batch=>!batch.revertedAt),[history])
@@ -147,15 +171,25 @@ export function Imports(){
     <CanonicalProductionReviewQueue/>
 
     <section className="panel import-history">
-      <header className="panel-header"><div><span className="overline">Fuentes canónicas</span><h2>Publicar evidencia 2026</h2></div><span>{canonicalRows?`${nf.format(canonicalRows)} filas staging`:'Pendiente de publicación'}</span></header>
+      <header className="panel-header"><div><span className="overline">Fuentes canónicas</span><h2>Preflight y publicación 2026</h2></div><span>{canonicalRows?`${nf.format(canonicalRows)} filas staging`:'Pendiente de publicación'}</span></header>
       <div className="import-layout canonical-upload-layout">
         <article className="import-upload">
-          <input ref={canonicalInput} type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden onChange={event=>{const file=event.target.files?.[0];if(file)void uploadCanonical(file)}}/>
-          <button className="file-drop" disabled={canonicalBusy} onClick={()=>canonicalInput.current?.click()}><Upload size={28}/><b>{canonicalBusy?'Validando y publicando…':'Seleccionar XLSX canónico'}</b><small>Se acepta sólo uno de los tres archivos aprobados y el SHA-256 debe coincidir exactamente</small></button>
+          <input ref={canonicalInput} type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden onChange={event=>{const file=event.target.files?.[0];if(file)void preflightCanonical(file)}}/>
+          <button className="file-drop" disabled={canonicalBusy} onClick={()=>canonicalInput.current?.click()}><Upload size={28}/><b>{canonicalBusy?'Analizando XLSX…':canonicalFile?canonicalFile.name:'Seleccionar y analizar XLSX'}</b><small>El preflight calcula hash, valida estructura y consulta registro canónico sin publicar datos</small></button>
+          {canonicalPreflight?.ok?<>
+            <div className={`system-banner ${canonicalPreflight.structureOk?'':'error'}`}><FileSpreadsheet size={16}/><span><b>{canonicalPreflight.structureOk?'Estructura reconocida':'Estructura con observaciones'}</b> · hash {canonicalPreflight.fileHash?.slice(0,12)}… · {Object.entries(canonicalPreflight.counts??{}).map(([key,value])=>`${key}: ${value}`).join(' · ')||'sin filas reconocidas'}</span></div>
+            <div className="detail-alerts">
+              <div><CheckCircle2 size={17}/><span><b>Contrato de hojas</b><small>{canonicalPreflight.requiredSheets?.join(' · ')}</small></span><em>{canonicalPreflight.structureOk?'PASS':'HOLD'}</em></div>
+              <div><ShieldCheck size={17}/><span><b>Autoridad de fuente</b><small>{canonicalPreflight.governance?.rule}</small></span><em>{canonicalPreflight.registeredCanonical?'APROBADO':'HOLD'}</em></div>
+            </div>
+            {(canonicalPreflight.issues?.length??0)>0?<div className="system-banner error"><AlertTriangle size={16}/><span>{canonicalPreflight.issues?.join(' · ')}</span></div>:null}
+            {canonicalPreflight.registeredCanonical&&canonicalPreflight.structureOk&&canonicalFile?<button className="button primary" disabled={canonicalBusy} onClick={()=>void uploadCanonical(canonicalFile)}><Upload size={16}/>Publicar staging canónico</button>:null}
+          </>:canonicalPreflight?.error?<div className="system-banner error"><AlertTriangle size={16}/>{canonicalPreflight.error}</div>:null}
           {canonicalResult?<div className={`system-banner ${canonicalResult.ok?'':'error'}`}>{canonicalResult.ok?<><CheckCircle2 size={16}/><span><b>{canonicalResult.fileName}</b> publicado · {Object.entries(canonicalResult.result??{}).map(([key,value])=>`${key}: ${value}`).join(' · ')}</span></>:<><AlertTriangle size={16}/>{canonicalResult.error}</>}</div>:null}
         </article>
         <aside className="import-assignment">
-          <div className="governance-note"><ShieldCheck size={19}/><div><b>Promoción bloqueada</b><p>Esta acción sólo publica staging canónico. No crea recepciones, movimientos de inventario, ventas, liquidaciones ni pagos.</p></div></div>
+          <div className="governance-note"><ShieldCheck size={19}/><div><b>Preflight sin escrituras</b><p>Un archivo con estructura válida puede quedar en HOLD si su SHA-256 aún no está aprobado. El análisis no registra el hash automáticamente.</p></div></div>
+          <div className="governance-note"><ShieldCheck size={19}/><div><b>Promoción bloqueada</b><p>Publicar después del preflight sólo crea staging canónico. No crea recepciones, movimientos de inventario, ventas, liquidaciones ni pagos.</p></div></div>
           <div className="import-contract"><Database/><div><b>Hash + hoja + fila</b><p>La evidencia es idempotente y conserva el valor original en cada registro para auditoría posterior.</p></div></div>
         </aside>
       </div>
