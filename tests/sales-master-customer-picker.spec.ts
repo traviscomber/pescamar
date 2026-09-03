@@ -15,7 +15,7 @@ test('sales order creation selects an active mastered customer without writing t
   })
 
   await page.goto('/ordenes-venta')
-  await expect(page.getByRole('heading',{name:'Órdenes de venta'})).toBeVisible()
+  await expect(page.getByRole('heading',{name:'Órdenes de venta',exact:true})).toBeVisible()
   await page.getByRole('button',{name:'Nueva orden'}).click()
   const customer=page.getByLabel('Cliente')
   await expect(customer).toHaveRole('combobox')
