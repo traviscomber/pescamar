@@ -12,12 +12,11 @@ type CanonicalSource={file_hash:string;file_name:string;source_kind:string;perio
 type CanonicalRow={rows:number|string;flagged:number|string;guide_kg?:number|string;received_kg?:number|string;inflow_clp?:number|string;outflow_clp?:number|string;final_balance_clp?:number|string;amount_clp?:number|string;kg?:number|string;product_family?:string;pack_format?:string}
 type CanonicalStatus={sources?:CanonicalSource[];datasets?:{production?:CanonicalRow[];ledger?:CanonicalRow[];stock?:CanonicalRow[];transfers?:CanonicalRow[];packing?:CanonicalRow[]};error?:string}
 type CanonicalUploadResult={ok?:boolean;fileName?:string;fileHash?:string;result?:Record<string,number>;error?:string}
-type CanonicalPreflightResult={ok?:boolean;mode?:string;fileName?:string;fileHash?:string;fileSize?:number;sourceKindCandidate?:string;registeredCanonical?:boolean;knownCanonicalName?:boolean;structureOk?:boolean;requiredSheets?:string[];sheets?:{name:string;rows:number;columns:number}[];counts?:Record<string,number>;issues?:string[];governance?:{writesStaging?:boolean;writesLive?:boolean;requiresCanonicalRegistration?:boolean;rule?:string};error?:string}
+type CanonicalPreflightResult={ok?:boolean;mode?:string;fileName?:string;fileHash?:string;fileSize?:number;sourceKindCandidate?:string|null;canonicalFileNameCandidate?:string|null;detectedBy?:'filename'|'structure'|'unrecognized';registeredCanonical?:boolean;knownCanonicalName?:boolean;structureOk?:boolean;requiredSheets?:string[];sheets?:{name:string;rows:number;columns:number;hidden?:boolean}[];counts?:Record<string,number>;issues?:string[];governance?:{writesStaging?:boolean;writesLive?:boolean;requiresCanonicalRegistration?:boolean;rule?:string};error?:string}
 type CanonicalConnection={target:string;mode:string;total?:number|string;reception_ready?:number|string;timing_ready?:number|string;quality_ready?:number|string;review_required?:number|string;non_unique_context_rows?:number|string;non_unique_contexts?:number|string;production_before_process?:number|string;date_sequence_inconsistent?:number|string;missing_received_kg?:number|string;missing_reception_date?:number|string;missing_process_date?:number|string;process_before_reception?:number|string;production_before_reception?:number|string;yield_formula_error?:number|string;missing_production_date?:number|string;missing_grade_breakdown?:number|string;suppliers?:number|string;exact?:number|string;missing?:number|string;ambiguous?:number|string;unmatched?:number|string;lots?:number|string;exact_lots?:number|string;unmatched_lots?:number|string;outside_coverage_lots?:number|string;unresolved_within_coverage_lots?:number|string;boxes?:number|string;lot_referenced_boxes?:number|string;unreferenced_boxes?:number|string;unreferenced_kg?:number|string;upstream_last_date?:string|null;packing_first_date?:string|null;packing_last_date?:string|null;product_family?:string|null;kg?:number|string;transfers?:number|string;direct_exact_transfers?:number|string;grouped_exact_transfers?:number|string;grouped_exact_groups?:number|string;matched_transfers?:number|string;rows?:number|string;flagged?:number|string}
 type CanonicalConnections={connections?:{production?:CanonicalConnection;parties?:CanonicalConnection;packing?:CanonicalConnection;finance?:CanonicalConnection;stock?:CanonicalConnection};governance?:{promotion?:string;writesLive?:boolean;rule?:string};error?:string}
 const nf=new Intl.NumberFormat('es-CL',{maximumFractionDigits:1})
 const clp=new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0})
-const approvedNames=new Set(['planilla de produccion 2026.xlsx','CUENTA2.xlsx','packing pulpo pescamar 2026-2.xlsx'])
 
 export function Imports(){
   const [plants,setPlants]=useState<PlantState[]>(configuredPlants)
@@ -69,7 +68,7 @@ export function Imports(){
 
   const preflightCanonical=async(file:File)=>{
     setCanonicalResult(null);setCanonicalPreflight(null);setCanonicalFile(null);setError('')
-    if(!approvedNames.has(file.name)){setCanonicalPreflight({ok:false,error:'El nombre no corresponde a una de las tres fuentes canónicas reconocidas.'});if(canonicalInput.current)canonicalInput.current.value='';return}
+    if(!file.name.toLowerCase().endsWith('.xlsx')){setCanonicalPreflight({ok:false,error:'El preflight acepta archivos XLSX.'});if(canonicalInput.current)canonicalInput.current.value='';return}
     if(file.size>15*1024*1024){setCanonicalPreflight({ok:false,error:'El archivo supera 15 MB.'});if(canonicalInput.current)canonicalInput.current.value='';return}
     setCanonicalBusy(true)
     try{
@@ -175,11 +174,11 @@ export function Imports(){
       <div className="import-layout canonical-upload-layout">
         <article className="import-upload">
           <input ref={canonicalInput} type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden onChange={event=>{const file=event.target.files?.[0];if(file)void preflightCanonical(file)}}/>
-          <button className="file-drop" disabled={canonicalBusy} onClick={()=>canonicalInput.current?.click()}><Upload size={28}/><b>{canonicalBusy?'Analizando XLSX…':canonicalFile?canonicalFile.name:'Seleccionar y analizar XLSX'}</b><small>El preflight calcula hash, valida estructura y consulta registro canónico sin publicar datos</small></button>
+          <button className="file-drop" disabled={canonicalBusy} onClick={()=>canonicalInput.current?.click()}><Upload size={28}/><b>{canonicalBusy?'Analizando XLSX…':canonicalFile?canonicalFile.name:'Seleccionar y analizar XLSX'}</b><small>Puede inspeccionar un XLSX nuevo por estructura. El preflight calcula hash y nunca publica datos.</small></button>
           {canonicalPreflight?.ok?<>
-            <div className={`system-banner ${canonicalPreflight.structureOk?'':'error'}`}><FileSpreadsheet size={16}/><span><b>{canonicalPreflight.structureOk?'Estructura reconocida':'Estructura con observaciones'}</b> · hash {canonicalPreflight.fileHash?.slice(0,12)}… · {Object.entries(canonicalPreflight.counts??{}).map(([key,value])=>`${key}: ${value}`).join(' · ')||'sin filas reconocidas'}</span></div>
+            <div className={`system-banner ${canonicalPreflight.structureOk?'':'error'}`}><FileSpreadsheet size={16}/><span><b>{canonicalPreflight.structureOk?'Estructura reconocida':'Canonical Intake requerido'}</b> · hash {canonicalPreflight.fileHash?.slice(0,12)}… · {Object.entries(canonicalPreflight.counts??{}).map(([key,value])=>`${key}: ${value}`).join(' · ')||'sin filas clasificadas'}</span></div>
             <div className="detail-alerts">
-              <div><CheckCircle2 size={17}/><span><b>Contrato de hojas</b><small>{canonicalPreflight.requiredSheets?.join(' · ')}</small></span><em>{canonicalPreflight.structureOk?'PASS':'HOLD'}</em></div>
+              <div><CheckCircle2 size={17}/><span><b>Detección de contrato</b><small>{canonicalPreflight.sourceKindCandidate?`${canonicalPreflight.sourceKindCandidate} · ${canonicalPreflight.detectedBy==='structure'?'reconocido por hojas':canonicalPreflight.detectedBy==='filename'?'reconocido por nombre':'sin clasificación'}`:'No coincide con un contrato soportado'}{canonicalPreflight.canonicalFileNameCandidate&&canonicalPreflight.canonicalFileNameCandidate!==canonicalPreflight.fileName?` · referencia ${canonicalPreflight.canonicalFileNameCandidate}`:''}</small></span><em>{canonicalPreflight.structureOk?'PASS':'HOLD'}</em></div>
               <div><ShieldCheck size={17}/><span><b>Autoridad de fuente</b><small>{canonicalPreflight.governance?.rule}</small></span><em>{canonicalPreflight.registeredCanonical?'APROBADO':'HOLD'}</em></div>
             </div>
             {(canonicalPreflight.issues?.length??0)>0?<div className="system-banner error"><AlertTriangle size={16}/><span>{canonicalPreflight.issues?.join(' · ')}</span></div>:null}
@@ -188,7 +187,7 @@ export function Imports(){
           {canonicalResult?<div className={`system-banner ${canonicalResult.ok?'':'error'}`}>{canonicalResult.ok?<><CheckCircle2 size={16}/><span><b>{canonicalResult.fileName}</b> publicado · {Object.entries(canonicalResult.result??{}).map(([key,value])=>`${key}: ${value}`).join(' · ')}</span></>:<><AlertTriangle size={16}/>{canonicalResult.error}</>}</div>:null}
         </article>
         <aside className="import-assignment">
-          <div className="governance-note"><ShieldCheck size={19}/><div><b>Preflight sin escrituras</b><p>Un archivo con estructura válida puede quedar en HOLD si su SHA-256 aún no está aprobado. El análisis no registra el hash automáticamente.</p></div></div>
+          <div className="governance-note"><ShieldCheck size={19}/><div><b>Preflight sin escrituras</b><p>Un archivo nuevo puede analizarse aunque cambie su nombre. Si estructura, nombre o SHA-256 no están aprobados, queda en HOLD y no aparece la acción de publicación.</p></div></div>
           <div className="governance-note"><ShieldCheck size={19}/><div><b>Promoción bloqueada</b><p>Publicar después del preflight sólo crea staging canónico. No crea recepciones, movimientos de inventario, ventas, liquidaciones ni pagos.</p></div></div>
           <div className="import-contract"><Database/><div><b>Hash + hoja + fila</b><p>La evidencia es idempotente y conserva el valor original en cada registro para auditoría posterior.</p></div></div>
         </aside>
@@ -203,13 +202,13 @@ export function Imports(){
       <article className="panel import-upload">
         <div className="import-step"><span>01</span><div><h2>Snapshot operacional</h2><p>Este flujo permanece separado para planillas de estado por planta. Valida estructura y publica el estado compartido actual.</p></div></div>
         <button className="file-drop" onClick={()=>setOpen(true)}><Upload size={28}/><b>Seleccionar planilla operacional</b><small>La vista previa valida la estructura antes de publicar</small></button>
-        <div className="governance-note"><ShieldCheck size={19}/><div><b>Canonical Intake separado</b><p>Los tres libros 2026 usan hash, hoja y fila como linaje. Su publicación ocurre primero en staging y nunca crea recepciones, ventas, inventario o liquidaciones por inferencia.</p></div></div>
+        <div className="governance-note"><ShieldCheck size={19}/><div><b>Canonical Intake separado</b><p>Los libros canónicos usan hash, hoja y fila como linaje. Su publicación ocurre primero en staging y nunca crea recepciones, ventas, inventario o liquidaciones por inferencia.</p></div></div>
       </article>
 
       <aside className="panel import-assignment">
         <div className="import-step"><span>02</span><div><h2>Publicación compartida</h2><p>Los snapshots de planta continúan guardándose en Neon con trazabilidad y reversión administrativa.</p></div></div>
         <div className="import-contract"><Database/><div><b>{plants.filter(plant=>plant.sourceStatus==='linked').length} de {configuredPlants.length} plantas con fuente</b><p>La publicación conserva el lote anterior para trazabilidad y reversión administrativa.</p></div></div>
-        <div className="import-contract"><CheckCircle2/><div><b>Idempotencia canónica</b><p>Los libros canónicos se deduplican por hash + hoja + fila; volver a publicar el mismo origen actualiza la misma evidencia.</p></div></div>
+        <div className="import-contract"><CheckCircle2/><div><b>Idempotencia canónica</b><p>Un replay exacto conserva la evidencia existente y sólo puede agregar linaje faltante; nunca sobrescribe filas fuente ya registradas.</p></div></div>
       </aside>
     </section>
 
