@@ -1,5 +1,4 @@
 import {requireOperator} from './_auth.js'
-import {hasPlantAccess} from './_plants.js'
 import {getSql} from './_db.js'
 
 type Request={method?:string;headers?:Record<string,string|string[]|undefined>;query?:Record<string,string|string[]|undefined>}
