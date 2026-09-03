@@ -1,0 +1,120 @@
+/* Operational module polish — hierarchy, density and tablet shell convergence. */
+
+/* Recepciones: continuity explains provenance; it must not read as another primary card. */
+.data-continuity-banner.compact{
+  padding:10px 0 12px;
+  border:0;
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+}
+
+/* Production: current work first, analytical context second. */
+.main-content:has(> .production-workspace){
+  display:flex;
+  flex-direction:column;
+}
+.main-content:has(> .production-workspace) > .page-header{order:0}
+.main-content:has(> .production-workspace) > .production-workspace{order:1;margin-top:0}
+.main-content:has(> .production-workspace) > .balance-panel{order:2;margin-top:24px}
+.main-content:has(> .production-workspace) > .insight-pair{order:3}
+.main-content:has(> .production-workspace) > .panel-header{order:4;margin-top:28px}
+.main-content:has(> .production-workspace) > .system-banner{order:5}
+.main-content:has(> .production-workspace) > .production-line-list{order:6}
+
+/* Balance KPIs form one analytical strip, not cards nested inside a panel. */
+.balance-panel .balance-summary{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:0;
+  margin:0 0 16px;
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+}
+.balance-panel .balance-summary>div{
+  min-width:0;
+  padding:12px 16px 12px 0;
+  margin-right:16px;
+  border:0!important;
+  border-right:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.balance-panel .balance-summary>div:last-child{
+  margin-right:0;
+  border-right:0!important;
+}
+
+/* Inventory: physical availability and location precede documentary evidence. */
+.main-content:has(> .inventory-workspace){
+  display:flex;
+  flex-direction:column;
+}
+.main-content:has(> .inventory-workspace) > .inventory-workspace{order:1}
+.main-content:has(> .inventory-workspace) > .inventory-ledger{order:2}
+.main-content:has(> .inventory-workspace) > .canonical-inventory-evidence{order:3;margin-top:24px}
+
+/* Credits: actual requests and recovery policy precede documentary CUENTA2 evidence. */
+.main-content:has(> .credit-layout){
+  display:flex;
+  flex-direction:column;
+}
+.main-content:has(> .credit-layout) > .credit-layout{order:1}
+.main-content:has(> .credit-layout) > .credit-policy{order:2;margin-top:16px}
+.main-content:has(> .credit-layout) > [aria-label="Evidencia canónica CUENTA2"]{order:3;margin-top:24px}
+
+/* Tablet / compact desktop: use the existing accessible drawer instead of an icon-only rail. */
+@media(max-width:900px){
+  html,body,#root{width:100%;max-width:100%;overflow-x:hidden}
+  .app-shell{display:block;min-height:100dvh}
+  .workspace{width:100%;min-width:0}
+  .sidebar{
+    position:fixed;
+    inset:0 auto 0 0;
+    width:min(82vw,320px)!important;
+    height:100dvh;
+    transform:translateX(-104%);
+    transition:transform .22s ease;
+    z-index:80;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    padding-bottom:max(22px,env(safe-area-inset-bottom));
+    box-shadow:24px 0 60px rgba(0,0,0,.25);
+  }
+  .sidebar.is-open{transform:translateX(0)}
+  .sidebar.is-open .mobile-close{display:grid!important}
+  .sidebar.is-open .brand-copy,
+  .sidebar.is-open .plant-chip,
+  .sidebar.is-open .grouped-nav section>small,
+  .sidebar.is-open .side-nav a span,
+  .sidebar.is-open .nav-more summary span,
+  .sidebar.is-open .settings-link span{display:block}
+  .sidebar.is-open .side-nav a,
+  .sidebar.is-open .settings-link,
+  .sidebar.is-open .nav-more summary{justify-content:flex-start}
+  .mobile-nav-backdrop{
+    display:block;
+    position:fixed;
+    inset:0;
+    border:0;
+    background:rgba(8,12,12,.46);
+    backdrop-filter:blur(2px);
+    z-index:70;
+    padding:0;
+  }
+  .menu-btn{display:grid!important;min-width:40px;min-height:40px;margin-left:-6px}
+}
+
+@media(max-width:620px){
+  .balance-panel .balance-summary{grid-template-columns:1fr}
+  .balance-panel .balance-summary>div{
+    margin-right:0;
+    padding:10px 0;
+    border-right:0!important;
+    border-bottom:1px solid var(--line)!important;
+  }
+  .balance-panel .balance-summary>div:last-child{border-bottom:0!important}
+}
