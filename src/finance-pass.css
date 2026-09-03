@@ -1,0 +1,251 @@
+/* Finance UI pass — ledgers and calculations read as continuous operating surfaces. */
+
+/* Sales orders: demand table is the primary workspace, not a card inside the page. */
+.main-content:has(>.signal-grid+.panel .data-table)>.signal-grid+.panel{
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.main-content:has(>.signal-grid+.panel .data-table)>.signal-grid+.panel>.section-heading{
+  margin:0 0 12px;
+}
+.main-content:has(>.signal-grid+.panel .data-table)>.signal-grid+.panel>.empty-state{
+  min-height:240px;
+  border:0;
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+  border-radius:0;
+  background:transparent;
+}
+
+/* Credits: headline financial state becomes one rail. */
+.credit-summary,
+.settlement-summary{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:0!important;
+  margin:0 0 26px;
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+}
+.credit-summary>article,
+.settlement-summary>article{
+  min-width:0;
+  padding:15px 18px!important;
+  border:0!important;
+  border-right:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.credit-summary>article:last-child,
+.settlement-summary>article:last-child{border-right:0!important}
+.credit-summary>article>span{
+  width:auto!important;
+  height:auto!important;
+  margin:0 0 8px!important;
+  padding:0!important;
+  border:0!important;
+  background:transparent!important;
+}
+.credit-summary>article b,
+.settlement-summary>article b{letter-spacing:-.025em}
+
+.credit-accounts{
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.credit-accounts>.panel-header{margin:0 0 12px}
+.credit-accounts>.empty-state{
+  min-height:220px;
+  border:0;
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+  border-radius:0;
+  background:transparent;
+}
+.credit-policy{
+  padding:18px 0!important;
+  border:0!important;
+  border-top:1px solid var(--line)!important;
+  border-bottom:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.credit-policy>div{
+  gap:0!important;
+  border-top:1px solid var(--line);
+}
+.credit-policy>div>span{
+  min-width:0;
+  padding:12px 18px 4px 0;
+  border-right:1px solid var(--line);
+}
+.credit-policy>div>span:last-child{border-right:0}
+
+/* Settlements: keep the builder as a deliberate task, flatten history and calculation sub-cards. */
+.settlement-builder,
+.settlement-history{
+  box-shadow:none!important;
+  border-radius:9px!important;
+}
+.settlement-calculation{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:0!important;
+  margin:18px 0;
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+}
+.settlement-calculation>div{
+  min-width:0;
+  padding:12px 14px!important;
+  border:0!important;
+  border-right:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.settlement-calculation>div:last-child{border-right:0!important}
+.settlement-history .settlement-list{
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+}
+.settlement-history .settlement-list>div{
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+.settlement-next{
+  margin-top:22px;
+  padding:14px 0!important;
+  border:0!important;
+  border-top:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+
+/* Transformation cost: lot selector is a control bar and ledger is a section. */
+.main-content:has(>.panel+.signal-grid)>.panel:has(.inline-field){
+  display:flex;
+  flex-wrap:wrap;
+  align-items:flex-end;
+  gap:14px 18px;
+  padding:14px 0 18px!important;
+  border:0!important;
+  border-bottom:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.main-content:has(>.panel+.signal-grid)>.panel:has(.inline-field)>.section-heading{
+  flex:1 1 320px;
+  margin:0;
+}
+.main-content:has(>.panel+.signal-grid)>.panel:has(.inline-field)>.inline-field{
+  flex:0 1 380px;
+  margin:0;
+}
+.main-content:has(>.panel+.signal-grid)>.signal-grid+.panel{
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.main-content:has(>.panel+.signal-grid)>.signal-grid+.panel>.section-heading{margin-bottom:12px}
+
+/* Profitability: history/live/reading are report sections, not stacked cards. */
+.main-content:has(>.event-kind-tabs)>.event-kind-tabs~.panel{
+  padding:22px 0!important;
+  border:0!important;
+  border-top:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  margin-top:0!important;
+}
+.main-content:has(>.event-kind-tabs)>.event-kind-tabs~.panel:last-child{
+  border-bottom:1px solid var(--line)!important;
+}
+.main-content:has(>.event-kind-tabs)>.event-kind-tabs~.panel>.signal-grid{
+  margin-top:16px;
+}
+.event-kind-tabs{
+  margin:2px 0 0!important;
+  padding:0!important;
+  border-bottom:1px solid var(--line);
+  background:transparent!important;
+}
+.event-kind-tabs button{
+  border-radius:0!important;
+  border:0!important;
+  border-bottom:2px solid transparent!important;
+  background:transparent!important;
+}
+.event-kind-tabs button.active{border-bottom-color:var(--teal)!important}
+
+/* Decisions: cards represent real decisions, but should not float like marketing cards. */
+.decision-toolbar{
+  margin:0 0 18px;
+  padding:11px 0!important;
+  border:0!important;
+  border-top:1px solid var(--line)!important;
+  border-bottom:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.approval-list{gap:10px!important}
+.approval-card-v2{
+  border-radius:9px!important;
+  box-shadow:none!important;
+}
+.approval-list>.empty-state{
+  min-height:260px;
+  border:0!important;
+  border-top:1px solid var(--line)!important;
+  border-bottom:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+
+@media(max-width:1050px){
+  .credit-summary,.settlement-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .credit-summary>article:nth-child(2n),.settlement-summary>article:nth-child(2n){border-right:0!important}
+  .credit-summary>article:nth-child(n+3),.settlement-summary>article:nth-child(n+3){border-top:1px solid var(--line)!important}
+  .settlement-calculation{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .settlement-calculation>div:nth-child(2n){border-right:0!important}
+  .settlement-calculation>div:nth-child(n+3){border-top:1px solid var(--line)!important}
+  .settlement-calculation>div:last-child:nth-child(odd){grid-column:1/-1;border-right:0!important}
+}
+
+@media(max-width:620px){
+  .credit-summary,.settlement-summary{grid-template-columns:1fr}
+  .credit-summary>article,.settlement-summary>article{
+    padding:13px 0!important;
+    border-right:0!important;
+    border-top:1px solid var(--line)!important;
+  }
+  .credit-summary>article:first-child,.settlement-summary>article:first-child{border-top:0!important}
+  .credit-policy>div{display:grid!important;grid-template-columns:1fr!important}
+  .credit-policy>div>span{padding:11px 0;border-right:0;border-bottom:1px solid var(--line)}
+  .credit-policy>div>span:last-child{border-bottom:0}
+  .settlement-calculation{grid-template-columns:1fr}
+  .settlement-calculation>div{
+    padding:11px 0!important;
+    border-right:0!important;
+    border-top:1px solid var(--line)!important;
+  }
+  .settlement-calculation>div:first-child{border-top:0!important}
+  .settlement-calculation>div:last-child:nth-child(odd){grid-column:auto}
+  .main-content:has(>.panel+.signal-grid)>.panel:has(.inline-field){display:grid;grid-template-columns:1fr}
+  .main-content:has(>.panel+.signal-grid)>.panel:has(.inline-field)>.inline-field{width:100%}
+}
