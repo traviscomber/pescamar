@@ -21,7 +21,8 @@ assert(reception.includes('setEvidence([])')&&reception.includes('setSupplier(""
 assert(reception.includes('aria-labelledby="reception-modal-title"')&&reception.includes('event.key==="Escape"'),'reception capture must remain keyboard-safe')
 
 assert(!credits.includes('requestedBy'),'credit requester must come from authenticated server context')
-assert(credits.includes('setFisher(\'\')')&&credits.includes('setRecoveryValue(0)'),'credit capture must reset between openings')
+assert(credits.includes("setSupplier('')")&&credits.includes('setRecoveryValue(0)'),'credit capture must reset between openings')
+assert(credits.includes("party.kind==='supplier'&&party.active")&&credits.includes("fetch('/api/partners'"),'credit capture must select active mastered suppliers')
 assert(credits.includes('aria-labelledby="credit-modal-title"')&&credits.includes("event.key==='Escape'"),'credit capture must remain keyboard-safe')
 assert(creditsApi.includes('requested_by_operator_id')&&creditsApi.includes('${operator.id}::uuid'),'credit requests must persist stable operator identity')
 
@@ -57,4 +58,4 @@ if(failures.length){
   for(const failure of failures)console.error(`- ${failure}`)
   process.exit(1)
 }
-console.log('Operational form safety PASS: real-data defaults, stable authenticated identity, bounded financial inputs, UUID dual control, reset behavior and keyboard-safe modals verified')
+console.log('Operational form safety PASS: real-data defaults, stable authenticated identity, mastered counterparties, bounded financial inputs, UUID dual control, reset behavior and keyboard-safe modals verified')
