@@ -11,4 +11,5 @@
 @import './readability.css' layer(brand);
 @import './mobile.css' layer(responsive);
 @import './design-system.css' layer(system);
+@import './module-polish.css' layer(system);
 @import './a11y.css' layer(accessibility);
