@@ -1,0 +1,203 @@
+/* Second UI pass — task first, evidence and analysis second. */
+
+/* Recepciones: one continuous working surface instead of a panel wrapping two tables. */
+.receptions-workspace{
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.receptions-workspace>.toolbar{
+  margin:0 0 22px;
+  padding:10px 0;
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+  border-radius:0;
+  background:transparent!important;
+}
+.receptions-workspace>.panel-header{
+  margin:0 0 10px;
+  padding:0;
+}
+.receptions-workspace>.canonical-table-heading{
+  margin-top:30px;
+  padding-top:22px;
+  border-top:1px solid var(--line);
+}
+.receptions-workspace>.empty-inline{
+  margin:0 0 26px;
+  padding:15px 0;
+  border:0;
+  border-bottom:1px solid var(--line);
+  border-radius:0;
+  background:transparent;
+}
+.receptions-workspace>.table-scroll,
+.production-workspace>.table-scroll,
+.commercial-lots>.table-scroll{
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+}
+.reception-context{
+  margin:14px 0 22px;
+}
+
+/* Producción: current lots are the primary task; the wrapper should disappear. */
+.production-workspace{
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.production-workspace>.panel-header{
+  margin:0 0 12px;
+  padding:0;
+}
+.production-workspace>.empty-state{
+  min-height:220px;
+  padding:34px 0;
+  border:0;
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+  border-radius:0;
+  background:transparent;
+}
+.production-line-list{
+  gap:9px!important;
+}
+.production-line-card{
+  border-radius:9px!important;
+  box-shadow:none!important;
+}
+.production-line-card .line-summary{
+  min-height:72px;
+}
+
+/* Comercial: the four executive numbers form one balance rail, not four cards. */
+.commercial-summary{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:0!important;
+  margin:0 0 26px;
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+}
+.commercial-summary>article{
+  min-width:0;
+  padding:15px 18px!important;
+  border:0!important;
+  border-right:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.commercial-summary>article:last-child{border-right:0!important}
+.commercial-summary>article>span{
+  width:auto!important;
+  height:auto!important;
+  min-height:0!important;
+  padding:0!important;
+  margin-bottom:9px;
+  border:0!important;
+  background:transparent!important;
+}
+.commercial-summary>article>b{
+  letter-spacing:-.025em;
+}
+.commercial-summary>article>em{
+  line-height:1.35;
+}
+.commercial-lots{
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.commercial-lots>.section-heading{
+  margin-bottom:12px;
+}
+.commercial-lots>.empty-state{
+  min-height:240px;
+  border:0;
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+  border-radius:0;
+  background:transparent;
+}
+.commercial-history{
+  gap:16px!important;
+}
+.commercial-history>.panel{
+  border-radius:9px!important;
+  box-shadow:none!important;
+}
+
+/* Erizo / quality: the lot selector is a control bar, not another dashboard card. */
+.main-content:has(>.signal-grid+.panel .inline-field)>.signal-grid+.panel{
+  display:flex;
+  align-items:flex-end;
+  flex-wrap:wrap;
+  gap:14px 18px;
+  padding:14px 0 18px!important;
+  border:0!important;
+  border-bottom:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.main-content:has(>.signal-grid+.panel .inline-field)>.signal-grid+.panel>.section-heading{
+  flex:1 1 280px;
+  margin:0;
+}
+.main-content:has(>.signal-grid+.panel .inline-field)>.signal-grid+.panel>.inline-field{
+  flex:0 1 360px;
+  margin:0;
+}
+.main-content:has(>.signal-grid+.panel .inline-field) .planning-list{
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+}
+.main-content:has(>.signal-grid+.panel .inline-field) .planning-order{
+  margin:0!important;
+  padding:16px 0!important;
+  border:0!important;
+  border-bottom:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.main-content:has(>.signal-grid+.panel .inline-field) .planning-order:last-child{
+  border-bottom:0!important;
+}
+
+@media(max-width:1000px){
+  .commercial-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .commercial-summary>article:nth-child(2n){border-right:0!important}
+  .commercial-summary>article:nth-child(n+3){border-top:1px solid var(--line)!important}
+}
+
+@media(max-width:620px){
+  .receptions-workspace>.toolbar{margin-bottom:18px}
+  .reception-context{margin-bottom:18px}
+  .commercial-summary{grid-template-columns:1fr}
+  .commercial-summary>article{
+    padding:13px 0!important;
+    border-right:0!important;
+    border-top:1px solid var(--line)!important;
+  }
+  .commercial-summary>article:first-child{border-top:0!important}
+  .main-content:has(>.signal-grid+.panel .inline-field)>.signal-grid+.panel{
+    display:grid;
+    grid-template-columns:1fr;
+    align-items:stretch;
+  }
+  .main-content:has(>.signal-grid+.panel .inline-field)>.signal-grid+.panel>.inline-field{
+    width:100%;
+  }
+  .main-content:has(>.signal-grid+.panel .inline-field)>.signal-grid+.panel>.button{
+    width:100%;
+  }
+}
