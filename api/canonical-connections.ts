@@ -59,12 +59,15 @@ export default async function handler(req:Request,res:Response){
         select t.source_file_hash,t.sheet_name,t.source_row,t.event_date,t.bank,t.sender,t.amount_clp,count(a.source_row)::int direct_candidates
         from canonical_transfers_received t left join canonical_account_entries a on a.event_date=t.event_date and a.inflow_clp=t.amount_clp
         group by t.source_file_hash,t.sheet_name,t.source_row,t.event_date,t.bank,t.sender,t.amount_clp
+      ), direct_exact_keys as (
+        select distinct event_date,amount_clp from direct where direct_candidates=1
       ), unmatched_groups as (
         select event_date,bank,sender,count(*)::int transfer_rows,sum(amount_clp)::numeric group_amount
         from direct where direct_candidates=0 group by event_date,bank,sender
       ), group_candidates as (
         select g.event_date,g.bank,g.sender,g.transfer_rows,g.group_amount,count(a.source_row)::int group_candidates
         from unmatched_groups g left join canonical_account_entries a on a.event_date=g.event_date and a.inflow_clp=g.group_amount
+          and not exists(select 1 from direct_exact_keys d where d.event_date=g.event_date and d.amount_clp=g.group_amount)
         group by g.event_date,g.bank,g.sender,g.transfer_rows,g.group_amount
       ) select
         (select count(*) from direct)::int transfers,
@@ -83,10 +86,10 @@ export default async function handler(req:Request,res:Response){
         production:{...first(productionRaw),target:'Recepciones / Calidad / Producción',mode:'eligible_evidence'},
         parties:{...first(partiesRaw),target:'Proveedores y clientes',mode:'exact_identity_only'},
         packing:{...first(packingRaw),target:'Lotes / Inventario',mode:'exact_lot_only'},
-        finance:{...first(financeRaw),target:'Finanzas',mode:'unique_date_amount_or_group_total',grouping_rule:'same_date_bank_sender_to_unique_inflow_total'},
+        finance:{...first(financeRaw),target:'Finanzas',mode:'unique_date_amount_or_group_total',grouping_rule:'same_date_bank_sender_to_unique_unclaimed_inflow_total'},
         stock:{...first(stockRaw),target:'Inventario',mode:'staging_only'}
       },
-      governance:{promotion:'blocked',writesLive:false,rule:'Las conexiones se calculan desde evidencia canónica. Revisión significa contradicción o ambigüedad real. Ausencias de maestro se mantienen como alta pendiente; faltas de cobertura permanecen como gaps de fuente. En finanzas, un grupo sólo se concilia cuando transferencias no emparejadas de la misma fecha, banco y remitente suman exactamente una única entrada contable de ese día. Este endpoint no crea transacciones live.'}
+      governance:{promotion:'blocked',writesLive:false,rule:'Las conexiones se calculan desde evidencia canónica. Revisión significa contradicción o ambigüedad real. Ausencias de maestro se mantienen como alta pendiente; faltas de cobertura permanecen como gaps de fuente. En finanzas, un grupo sólo se concilia cuando transferencias no emparejadas de la misma fecha, banco y remitente suman exactamente una única entrada contable de ese día que no esté ya reclamada por un match 1:1. Este endpoint no crea transacciones live.'}
     })
   }catch(error){
     const message=error instanceof Error?error.message:''
