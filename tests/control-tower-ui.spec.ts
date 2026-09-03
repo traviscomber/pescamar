@@ -25,7 +25,6 @@ async function mockControlTower(page:Page){
 
 async function stable(page:Page){expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)}
 async function noShadow(locator:ReturnType<Page['locator']>){expect(await locator.evaluate(el=>getComputedStyle(el).boxShadow)).toBe('none')}
-async function sameRowOnDesktop(locator:ReturnType<Page['locator']>,project:string){if(project!=='desktop-chromium')return;const tops=await locator.evaluateAll(items=>items.map(item=>Math.round(item.getBoundingClientRect().top)));expect(new Set(tops).size).toBe(1)}
 
 test('plants keep entities explicit without floating-card shadow',async({page},testInfo)=>{
   await mockControlTower(page);await page.goto('/plantas')
@@ -44,7 +43,11 @@ test('partners directory reads as a master-data ledger',async({page},testInfo)=>
 test('communications use an instrumentation matrix and continuous source surfaces',async({page},testInfo)=>{
   await mockControlTower(page);await page.goto('/comunicaciones')
   await expect(page.getByRole('heading',{name:'Comunicaciones',exact:true})).toBeVisible()
-  const signals=page.locator('.communication-overview>.signal-card');await expect(signals).toHaveCount(6);await sameRowOnDesktop(signals.nth(0).locator('xpath=..').locator('> .signal-card').filter({visible:true}).nth(0),testInfo.project.name).catch(()=>{})
+  const signals=page.locator('.communication-overview>.signal-card');await expect(signals).toHaveCount(6)
+  if(testInfo.project.name==='desktop-chromium'){
+    const tops=await signals.evaluateAll(items=>items.map(item=>Math.round(item.getBoundingClientRect().top)))
+    expect(new Set(tops.slice(0,3)).size).toBe(1);expect(new Set(tops.slice(3,6)).size).toBe(1);expect(tops[0]).not.toBe(tops[3])
+  }
   const channels=page.locator('.communications-channels'),inbox=page.locator('.communications-inbox');await expect(channels).toBeVisible();await expect(inbox).toBeVisible();await noShadow(channels);await noShadow(inbox)
   await stable(page);await page.screenshot({path:testInfo.outputPath('communications-control-tower.png'),fullPage:true})
 })
