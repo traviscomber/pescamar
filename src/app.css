@@ -15,4 +15,5 @@
 @import './module-polish.css' layer(system);
 @import './operational-pass.css' layer(system);
 @import './finance-pass.css' layer(system);
+@import './plant-execution-pass.css' layer(system);
 @import './a11y.css' layer(accessibility);
