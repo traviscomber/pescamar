@@ -54,7 +54,7 @@ export function triageReviewRow(row:ReviewTriageInput){
   else if(hasChronology){
     const processMatch=lotDateMatches.includes('process')
     if(lotDate&&!processMatch&&(lotDateMatches.includes('production')||lotDateMatches.includes('reception')))focus='process_date_review'
-    else if(processMatch&&(flags.has('process_before_reception')||flags.has('production_before_reception')||dateKey(row.reception_date)>lotDate))focus='reception_date_review'
+    else if(lotDate&&processMatch&&(flags.has('process_before_reception')||flags.has('production_before_reception')||dateKey(row.reception_date)>lotDate))focus='reception_date_review'
     else if(processMatch&&flags.has('production_before_process'))focus='production_date_review'
     else focus='chronology_review'
   }else if(Number(row.context_rows??1)>1)focus='context_review'
