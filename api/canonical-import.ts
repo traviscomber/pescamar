@@ -5,7 +5,8 @@ type Request={method?:string;body?:unknown;headers?:Record<string,string|string[
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void}
 type Kind='production'|'ledger'|'stock'|'transfers'|'packing'
 type Payload={kind?:unknown;fileName?:unknown;fileHash?:unknown;rows?:unknown[]}
-type SourceRow={file_name?:unknown;source_kind?:unknown;canonical?:unknown}
+type SourceRow={file_name?:unknown;source_kind?:unknown;canonical?:unknown;record_count?:unknown}
+type CountRow={count?:unknown}
 const text=(v:unknown,max=240)=>String(v??'').trim().slice(0,max)
 const hash=/^[a-f0-9]{64}$/
 const allowed=new Set<Kind>(['production','ledger','stock','transfers','packing'])
@@ -18,6 +19,13 @@ const sourceKinds:Record<Kind,ReadonlySet<string>>={
 }
 const rowsOf=(v:unknown)=>Array.isArray(v)?v:[]
 const sourceSupports=(kind:Kind,sourceKind:unknown)=>sourceKinds[kind].has(text(sourceKind,80).toLowerCase())
+const countOf=(value:unknown)=>Number(Array.isArray(value)&&value[0]?(value[0] as CountRow).count??0:0)
+async function publishedRows(sql:ReturnType<typeof getSql>,sourceKind:string,fileHash:string){
+  if(sourceKind==='production_2026')return countOf(await sql`select count(*)::int count from historical_production_records where source_file_hash=${fileHash}`)
+  if(sourceKind==='finance_stock')return countOf(await sql`select ((select count(*) from canonical_account_entries where source_file_hash=${fileHash})+(select count(*) from canonical_stock_records where source_file_hash=${fileHash})+(select count(*) from canonical_transfers_received where source_file_hash=${fileHash}))::int count`)
+  if(sourceKind==='packing_octopus_2026')return countOf(await sql`select count(*)::int count from canonical_packing_boxes where source_file_hash=${fileHash}`)
+  return 0
+}
 
 export default async function handler(req:Request,res:Response){
   res.setHeader('Cache-Control','no-store')
@@ -30,11 +38,12 @@ export default async function handler(req:Request,res:Response){
     if(!allowed.has(kind)||!fileName||!hash.test(fileHash)||!rows.length)return res.status(400).json({ok:false,error:'Fuente canónica inválida'})
     if(rows.length>10000)return res.status(413).json({ok:false,error:'La importación supera 10.000 filas'})
     const sql=getSql()
-    const source=await sql`select file_hash,file_name,source_kind,canonical from canonical_source_files where file_hash=${fileHash} limit 1`
+    const source=await sql`select file_hash,file_name,source_kind,canonical,record_count from canonical_source_files where file_hash=${fileHash} limit 1`
     const src=Array.isArray(source)?source[0] as SourceRow|undefined:undefined
     if(!src||String(src.file_name??'')!==fileName||src.canonical!==true)return res.status(409).json({ok:false,error:'El archivo no coincide con una fuente canónica aprobada'})
     if(!sourceSupports(kind,src.source_kind))return res.status(409).json({ok:false,error:'La clase de importación no corresponde al tipo de fuente canónica aprobada'})
-    const sourceKind=text(src.source_kind,80).toLowerCase()
+    const sourceKind=text(src.source_kind,80).toLowerCase(),expectedRows=Number(src.record_count??0),observedRows=await publishedRows(sql,sourceKind,fileHash)
+    if(expectedRows>0&&observedRows>=expectedRows)return res.status(200).json({ok:true,kind,fileName,fileHash,sourceKind,rows:0,submittedRows:rows.length,expectedRows,observedRows,sourceComplete:true,replay:true,idempotent:true,immutable:true})
 
     if(kind==='production'){
       const clean=rows.filter(r=>Number.isInteger(Number((r as Record<string,unknown>).sourceRow))&&text((r as Record<string,unknown>).lotCode,120)).slice(0,10000)
