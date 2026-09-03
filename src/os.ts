@@ -34,7 +34,8 @@ export const osStages:readonly OsStage[]=[
   {path:'/rentabilidad',label:'Rentabilidad',description:'Contribución y cobertura'},
  ]},
  {id:'control',order:6,label:'Inteligencia y control',owner:'Gerencia',description:'Decisiones, memoria, auditoría y configuración transversal.',entry:'/',modules:[
-  {path:'/',label:'Hoy',description:'Prioridades y cierre diario'},
+ {path:'/',label:'Hoy',description:'Prioridades y cierre diario'},
+  {path:'/pescamar-ia',label:'Pescamar IA',description:'Copiloto canónico y operacional'},
   {path:'/aprobaciones',label:'Decisiones',description:'Excepciones que requieren persona'},
   {path:'/timeline',label:'Línea de tiempo',description:'Continuidad histórica y viva'},
   {path:'/auditoria',label:'Auditoría operacional',description:'Actor, acción, fecha y planta'},

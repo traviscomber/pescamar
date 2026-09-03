@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
+    "ai": "^7.0.91",
     "exceljs": "^4.4.0",
     "lucide-react": "1.33.0",
     "react": "19.2.8",

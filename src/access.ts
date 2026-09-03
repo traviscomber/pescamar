@@ -3,6 +3,7 @@ export type AppRole="admin"|"operations"|"finance"|"quality"|"viewer";
 const access:Record<string,AppRole[]|"all">={
   "/":"all",
   "/timeline":"all",
+  "/pescamar-ia":"all",
   "/comunicaciones":["admin","operations","finance","quality","viewer"],
   "/auditoria":["admin","operations"],
   "/observabilidad":["admin","operations","quality"],

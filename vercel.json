@@ -5,6 +5,7 @@
   ],
   "rewrites": [
     { "source": "/timeline", "destination": "/index.html" },
+    { "source": "/pescamar-ia", "destination": "/index.html" },
     { "source": "/comunicaciones", "destination": "/index.html" },
     { "source": "/auditoria", "destination": "/index.html" },
     { "source": "/observabilidad", "destination": "/index.html" },

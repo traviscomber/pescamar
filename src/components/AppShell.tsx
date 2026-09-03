@@ -1,4 +1,4 @@
-import {Activity,Blocks,Boxes,CheckCheck,CircleDollarSign,ClipboardList,Factory,FileSpreadsheet,FlaskConical,History,Landmark,LayoutDashboard,LogOut,Menu,MessageCircleMore,Moon,PackageSearch,ReceiptText,Settings2,ShoppingCart,Sun,Tag,Target,X} from "lucide-react";
+import {Activity,Blocks,Boxes,CheckCheck,CircleDollarSign,ClipboardList,Factory,FileSpreadsheet,FlaskConical,History,Landmark,LayoutDashboard,LogOut,Menu,MessageCircleMore,Moon,PackageSearch,ReceiptText,Settings2,ShoppingCart,Sparkles,Sun,Tag,Target,X} from "lucide-react";
 import {NavLink,useLocation} from "react-router-dom";
 import {useEffect,useRef,useState,type ReactNode} from "react";
 import {canAccessPath,canCreateReception} from "../access";
@@ -8,6 +8,7 @@ import {getOsModule} from "../os";
 
 const primaryNavigation=[
  {to:"/",label:"Hoy",icon:LayoutDashboard},
+ {to:"/pescamar-ia",label:"Pescamar IA",icon:Sparkles},
  {to:"/plantas",label:"Plantas",icon:Factory},
  {to:"/recepciones",label:"Recepciones",icon:Boxes},
  {to:"/inventario",label:"Inventario",icon:PackageSearch},
