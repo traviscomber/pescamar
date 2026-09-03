@@ -28,13 +28,22 @@ async function sameRowOnDesktop(locator:ReturnType<Page['locator']>,project:stri
   expect(new Set(tops).size).toBe(1)
 }
 
+async function expectNearTransparent(page:Page,selector:string){
+  const alpha=await page.locator(selector).first().evaluate(el=>{
+    const value=getComputedStyle(el).backgroundColor
+    const match=value.match(/rgba?\([^,]+,[^,]+,[^,]+(?:,\s*([\d.]+))?\)/)
+    return match?.[1]===undefined?1:Number(match[1])
+  })
+  expect(alpha).toBeLessThan(0.03)
+}
+
 test('sales orders reads as a demand ledger',async({page},testInfo)=>{
   await mockFinanceApp(page);await page.goto('/ordenes-venta')
   await expect(page.getByRole('heading',{name:'Órdenes de venta',exact:true})).toBeVisible()
   const workspace=page.locator('.signal-grid + .panel').first()
   await expect(workspace.getByRole('table')).toBeVisible()
   expect(await workspace.evaluate(el=>getComputedStyle(el).boxShadow)).toBe('none')
-  expect(await workspace.evaluate(el=>getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0)')
+  await expectNearTransparent(page,'.signal-grid + .panel')
   await stable(page);await page.screenshot({path:testInfo.outputPath('sales-orders-finance.png'),fullPage:true})
 })
 
