@@ -10,9 +10,9 @@ type Source={id:string;label:string;path:string;rows:number;freshness:string|nul
 type Scope={plantId:string|null;plantIds:string[];role:string}
 type Turn={id:string;question:string;answer:string;sources:Source[];generatedAt:string;scope:Scope}
 type Payload={answer?:string;generatedAt?:string;scope?:Scope;sources?:Source[];error?:string}
-const examples=['¿Qué requiere atención hoy y por qué?','Resume producción, inventario y calidad por planta.','¿Qué pedidos están menos cubiertos?','¿Qué sabemos con evidencia canónica y qué falta?']
+const examples=['¿Qué requiere atención hoy y por qué?','Resume producción, inventario y calidad por planta.','¿La data canónica está completa y qué requiere revisión?','¿Qué sabemos con evidencia canónica y qué falta?']
 
-function Answer({text,sources}:{text:string;sources:Source[]}){const lookup=new Map(sources.map(source=>[source.id,source])),parts=text.split(/(\[(?:receptions|production|quality|inventory|orders|canonical_sources|finance)\])/g);return <div className="copilot-answer">{parts.map((part,index)=>{const match=/^\[([^\]]+)\]$/.exec(part),source=match?lookup.get(match[1]):null;return source?<Link className="copilot-citation" to={source.path} title={`Abrir ${source.label}`} key={`${part}-${index}`}>{part}</Link>:<span key={index}>{part}</span>})}</div>}
+function Answer({text,sources}:{text:string;sources:Source[]}){const lookup=new Map(sources.map(source=>[source.id,source])),parts=text.split(/(\[(?:receptions|production|quality|inventory|orders|canonical_sources|canonical_inventory|canonical_health|finance)\])/g);return <div className="copilot-answer">{parts.map((part,index)=>{const match=/^\[([^\]]+)\]$/.exec(part),source=match?lookup.get(match[1]):null;return source?<Link className="copilot-citation" to={source.path} title={`Abrir ${source.label}`} key={`${part}-${index}`}>{part}</Link>:<span key={index}>{part}</span>})}</div>}
 
 export function Copilot(){
  const {operator}=useAuth(),available=useMemo(()=>operator?.role==='admin'?plants:plants.filter(plant=>operator?.plantIds.includes(plant.id)),[operator])
