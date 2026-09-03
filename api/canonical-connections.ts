@@ -30,7 +30,24 @@ export default async function handler(req:Request,res:Response){
       sql`with suppliers as (select distinct supplier_name from historical_production_records where record_status='operational' and nullif(trim(coalesce(supplier_name,'')),'') is not null), matches as (
         select s.supplier_name,count(p.id)::int party_matches from suppliers s left join parties p on p.kind='supplier'::party_kind and lower(trim(p.legal_name))=lower(trim(s.supplier_name)) group by s.supplier_name
       ) select count(*)::int suppliers,count(*) filter(where party_matches=1)::int exact,count(*) filter(where party_matches=0)::int missing,count(*) filter(where party_matches>1)::int ambiguous from matches`,
-      sql`with packed as (select lot_code,count(*)::int boxes,coalesce(sum(total_kg),0)::numeric kg from canonical_packing_boxes where lot_code is not null group by lot_code), produced as (select distinct lot_code from historical_production_records where record_status='operational' and lot_code is not null) select count(*)::int lots,count(*) filter(where p.lot_code is not null)::int exact_lots,count(*) filter(where p.lot_code is null)::int unmatched_lots,coalesce(sum(x.boxes),0)::int boxes,coalesce(sum(x.kg),0)::numeric kg from packed x left join produced p on p.lot_code=x.lot_code`,
+      sql`with packed as (
+        select lot_code,min(production_date) first_date,max(production_date) last_date from canonical_packing_boxes where lot_code is not null group by lot_code
+      ), produced as (
+        select distinct lot_code from historical_production_records where record_status='operational' and lot_code is not null
+      ), coverage as (
+        select max(event_date) last_date from historical_production_records where record_status='operational'
+      ), totals as (
+        select count(*)::int boxes,count(*) filter(where lot_code is not null)::int lot_referenced_boxes,count(*) filter(where lot_code is null)::int unreferenced_boxes,coalesce(sum(total_kg),0)::numeric kg,coalesce(sum(total_kg) filter(where lot_code is null),0)::numeric unreferenced_kg,min(production_date) packing_first_date,max(production_date) packing_last_date from canonical_packing_boxes
+      ), source as (
+        select case when bool_or(lower(s.source_kind) like '%octopus%') then 'pulpo' when bool_or(lower(s.source_kind) like '%urchin%') then 'erizo' else null end product_family
+        from canonical_source_files s join canonical_packing_boxes b on b.source_file_hash=s.file_hash where s.canonical
+      )
+      select count(*)::int lots,count(*) filter(where p.lot_code is not null)::int exact_lots,count(*) filter(where p.lot_code is null)::int unmatched_lots,
+        count(*) filter(where p.lot_code is null and (c.last_date is null or x.last_date>c.last_date))::int outside_coverage_lots,
+        count(*) filter(where p.lot_code is null and c.last_date is not null and x.last_date<=c.last_date)::int unresolved_within_coverage_lots,
+        t.boxes,t.lot_referenced_boxes,t.unreferenced_boxes,t.kg,t.unreferenced_kg,c.last_date upstream_last_date,t.packing_first_date,t.packing_last_date,s.product_family
+      from packed x cross join coverage c cross join totals t cross join source s left join produced p on p.lot_code=x.lot_code
+      group by c.last_date,t.boxes,t.lot_referenced_boxes,t.unreferenced_boxes,t.kg,t.unreferenced_kg,t.packing_first_date,t.packing_last_date,s.product_family`,
       sql`with candidates as (select t.source_file_hash,t.sheet_name,t.source_row,count(a.source_row)::int candidate_count from canonical_transfers_received t left join canonical_account_entries a on a.event_date=t.event_date and a.inflow_clp=t.amount_clp group by t.source_file_hash,t.sheet_name,t.source_row) select count(*)::int transfers,count(*) filter(where candidate_count=1)::int exact,count(*) filter(where candidate_count=0)::int unmatched,count(*) filter(where candidate_count>1)::int ambiguous from candidates`,
       sql`select count(*)::int rows,count(*) filter(where cardinality(coalesce(data_quality_flags,array[]::text[]))>0)::int flagged,coalesce(sum(total_kg),0)::numeric kg from canonical_stock_records`
     ])
@@ -43,7 +60,7 @@ export default async function handler(req:Request,res:Response){
         finance:{...first(financeRaw),target:'Finanzas',mode:'unique_date_amount_only'},
         stock:{...first(stockRaw),target:'Inventario',mode:'staging_only'}
       },
-      governance:{promotion:'blocked',writesLive:false,rule:'Las conexiones se calculan desde evidencia canónica. Coincidencias ambiguas o con flags permanecen en revisión; este endpoint no crea transacciones live.'}
+      governance:{promotion:'blocked',writesLive:false,rule:'Las conexiones se calculan desde evidencia canónica. Sólo coincidencias ambiguas o no resueltas dentro de cobertura requieren revisión. Faltas de cobertura upstream y filas sin identificador de lote permanecen como gaps de fuente; no se convierten en matches ni crean transacciones live.'}
     })
   }catch(error){
     const message=error instanceof Error?error.message:''
