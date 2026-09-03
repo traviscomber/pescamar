@@ -6,7 +6,11 @@ type PackingRow={pack_format:string;boxes:number|string;flagged:number|string;kg
 type LotLink={lot_code:string;boxes:number|string;packing_kg:number|string;production_rows:number|string;exact_lot_match:boolean;first_packing_date:string|null;last_packing_date:string|null;first_reception_date:string|null;last_reception_date:string|null}
 type Payload={ok?:boolean;stock?:StockRow[];packing?:PackingRow[];lotLinks?:LotLink[];summary?:{stockRows:number;packingBoxes:number;packingKg:number;packingLots:number;matchedLots:number;unmatchedLots:number};governance?:{rule?:string};error?:string}
 const nf=new Intl.NumberFormat('es-CL',{maximumFractionDigits:1})
-const date=(value:string|null)=>value?new Intl.DateTimeFormat('es-CL',{day:'2-digit',month:'short',year:'numeric'}).format(new Date(`${value}T12:00:00`)):'—'
+const date=(value:string|null)=>{
+ if(!value)return '—'
+ const parsed=new Date(/^\d{4}-\d{2}-\d{2}$/.test(value)?`${value}T12:00:00`:value)
+ return Number.isNaN(parsed.getTime())?'—':new Intl.DateTimeFormat('es-CL',{day:'2-digit',month:'short',year:'numeric'}).format(parsed)
+}
 
 export function CanonicalInventoryEvidence(){
  const [data,setData]=useState<Payload|null>(null),[error,setError]=useState('')
