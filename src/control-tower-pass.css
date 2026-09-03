@@ -34,6 +34,15 @@
   border-top:1px solid var(--line);
   border-bottom:1px solid var(--line);
 }
+.main-content:has(>.event-kind-tabs+.signal-grid)>.panel:has(.compact-ledger) .compact-ledger button{
+  grid-template-columns:30px minmax(0,1fr) minmax(0,max-content);
+}
+.main-content:has(>.event-kind-tabs+.signal-grid)>.panel:has(.compact-ledger) .compact-ledger button>strong{
+  min-width:0;
+  max-width:100%;
+  overflow-wrap:anywhere;
+  text-align:right;
+}
 
 /* Communications: six signals read as a 3x2 instrumentation matrix with real row boundaries. */
 .communication-overview{
