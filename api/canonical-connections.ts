@@ -25,7 +25,14 @@ export default async function handler(req:Request,res:Response){
         count(*) filter(where not duplicate_context and received_kg is not null)::int reception_ready,
         count(*) filter(where not duplicate_context and not flagged and received_kg is not null and reception_date is not null and process_date is not null and production_date is not null)::int timing_ready,
         count(*) filter(where not duplicate_context and received_kg is not null and grade_breakdown is not null and grade_breakdown<>'{}'::jsonb)::int quality_ready,
-        count(*) filter(where duplicate_context or flagged)::int review_required
+        count(*) filter(where duplicate_context or flagged)::int review_required,
+        count(*) filter(where duplicate_context)::int duplicate_context,
+        count(*) filter(where flagged)::int flagged,
+        count(*) filter(where received_kg is null)::int missing_received_kg,
+        count(*) filter(where reception_date is null)::int missing_reception_date,
+        count(*) filter(where process_date is null)::int missing_process_date,
+        count(*) filter(where production_date is null)::int missing_production_date,
+        count(*) filter(where grade_breakdown is null or grade_breakdown='{}'::jsonb)::int missing_grade_breakdown
       from scored`,
       sql`with suppliers as (select distinct supplier_name from historical_production_records where record_status='operational' and nullif(trim(coalesce(supplier_name,'')),'') is not null), matches as (
         select s.supplier_name,count(p.id)::int party_matches from suppliers s left join parties p on p.kind='supplier'::party_kind and lower(trim(p.legal_name))=lower(trim(s.supplier_name)) group by s.supplier_name
@@ -48,7 +55,26 @@ export default async function handler(req:Request,res:Response){
         t.boxes,t.lot_referenced_boxes,t.unreferenced_boxes,t.kg,t.unreferenced_kg,c.last_date upstream_last_date,t.packing_first_date,t.packing_last_date,s.product_family
       from packed x cross join coverage c cross join totals t cross join source s left join produced p on p.lot_code=x.lot_code
       group by c.last_date,t.boxes,t.lot_referenced_boxes,t.unreferenced_boxes,t.kg,t.unreferenced_kg,t.packing_first_date,t.packing_last_date,s.product_family`,
-      sql`with candidates as (select t.source_file_hash,t.sheet_name,t.source_row,count(a.source_row)::int candidate_count from canonical_transfers_received t left join canonical_account_entries a on a.event_date=t.event_date and a.inflow_clp=t.amount_clp group by t.source_file_hash,t.sheet_name,t.source_row) select count(*)::int transfers,count(*) filter(where candidate_count=1)::int exact,count(*) filter(where candidate_count=0)::int unmatched,count(*) filter(where candidate_count>1)::int ambiguous from candidates`,
+      sql`with direct as (
+        select t.source_file_hash,t.sheet_name,t.source_row,t.event_date,t.bank,t.sender,t.amount_clp,count(a.source_row)::int direct_candidates
+        from canonical_transfers_received t left join canonical_account_entries a on a.event_date=t.event_date and a.inflow_clp=t.amount_clp
+        group by t.source_file_hash,t.sheet_name,t.source_row,t.event_date,t.bank,t.sender,t.amount_clp
+      ), unmatched_groups as (
+        select event_date,bank,sender,count(*)::int transfer_rows,sum(amount_clp)::numeric group_amount
+        from direct where direct_candidates=0 group by event_date,bank,sender
+      ), group_candidates as (
+        select g.event_date,g.bank,g.sender,g.transfer_rows,g.group_amount,count(a.source_row)::int group_candidates
+        from unmatched_groups g left join canonical_account_entries a on a.event_date=g.event_date and a.inflow_clp=g.group_amount
+        group by g.event_date,g.bank,g.sender,g.transfer_rows,g.group_amount
+      ) select
+        (select count(*) from direct)::int transfers,
+        (select count(*) from direct where direct_candidates=1)::int direct_exact_transfers,
+        coalesce(sum(transfer_rows) filter(where group_candidates=1),0)::int grouped_exact_transfers,
+        count(*) filter(where group_candidates=1)::int grouped_exact_groups,
+        ((select count(*) from direct where direct_candidates=1)+coalesce(sum(transfer_rows) filter(where group_candidates=1),0))::int matched_transfers,
+        coalesce(sum(transfer_rows) filter(where group_candidates=0),0)::int unmatched,
+        ((select count(*) from direct where direct_candidates>1)+coalesce(sum(transfer_rows) filter(where group_candidates>1),0))::int ambiguous
+      from group_candidates`,
       sql`select count(*)::int rows,count(*) filter(where cardinality(coalesce(data_quality_flags,array[]::text[]))>0)::int flagged,coalesce(sum(total_kg),0)::numeric kg from canonical_stock_records`
     ])
     return res.status(200).json({
@@ -57,10 +83,10 @@ export default async function handler(req:Request,res:Response){
         production:{...first(productionRaw),target:'Recepciones / Calidad / Producción',mode:'eligible_evidence'},
         parties:{...first(partiesRaw),target:'Proveedores y clientes',mode:'exact_identity_only'},
         packing:{...first(packingRaw),target:'Lotes / Inventario',mode:'exact_lot_only'},
-        finance:{...first(financeRaw),target:'Finanzas',mode:'unique_date_amount_only'},
+        finance:{...first(financeRaw),target:'Finanzas',mode:'unique_date_amount_or_group_total',grouping_rule:'same_date_bank_sender_to_unique_inflow_total'},
         stock:{...first(stockRaw),target:'Inventario',mode:'staging_only'}
       },
-      governance:{promotion:'blocked',writesLive:false,rule:'Las conexiones se calculan desde evidencia canónica. Sólo coincidencias ambiguas o no resueltas dentro de cobertura requieren revisión. Faltas de cobertura upstream y filas sin identificador de lote permanecen como gaps de fuente; no se convierten en matches ni crean transacciones live.'}
+      governance:{promotion:'blocked',writesLive:false,rule:'Las conexiones se calculan desde evidencia canónica. Revisión significa contradicción o ambigüedad real. Ausencias de maestro se mantienen como alta pendiente; faltas de cobertura permanecen como gaps de fuente. En finanzas, un grupo sólo se concilia cuando transferencias no emparejadas de la misma fecha, banco y remitente suman exactamente una única entrada contable de ese día. Este endpoint no crea transacciones live.'}
     })
   }catch(error){
     const message=error instanceof Error?error.message:''
