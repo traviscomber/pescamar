@@ -127,10 +127,12 @@
 }
 .signal-grid>.signal-card>span{letter-spacing:.025em}
 .signal-grid>.signal-card>b{font-size:25px!important;letter-spacing:-.025em}
+.inventory-signals{grid-template-columns:repeat(4,minmax(0,1fr))!important}
 
 /* Tablet / compact desktop: use the existing accessible drawer instead of an icon-only rail. */
 @media(max-width:1180px){
   .system-state small{display:none!important}
+  .inventory-signals{grid-template-columns:repeat(2,minmax(0,1fr))!important}
   .signal-grid>.signal-card:nth-child(2n){border-right:0!important}
   .signal-grid>.signal-card:nth-child(n+3){border-top:1px solid var(--line)!important}
   .signal-grid>.signal-card:last-child:nth-child(odd){grid-column:1/-1;border-right:0!important}
@@ -176,6 +178,16 @@
   }
   .menu-btn{display:grid!important;min-width:40px;min-height:40px;margin-left:-6px}
   .topbar-actions{gap:2px!important}
+  .floating-action{
+    left:auto!important;
+    right:16px!important;
+    width:auto!important;
+    min-width:184px;
+    max-width:calc(100vw - 32px);
+    min-height:48px!important;
+    padding:0 18px;
+    border-radius:9px!important;
+  }
 }
 
 @media(max-width:620px){
@@ -187,6 +199,7 @@
     border-bottom:1px solid var(--line)!important;
   }
   .balance-panel .balance-summary>div:last-child{border-bottom:0!important}
+  .inventory-signals{grid-template-columns:1fr!important}
   .signal-grid>.signal-card{
     grid-column:auto!important;
     border-right:0!important;
