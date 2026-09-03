@@ -36,7 +36,8 @@ export const expectedMigrations=[
   '037_regulatory_holds.sql',
   '038_regulatory_pallet_membership_freeze.sql',
   '039_cold_asset_active_run_exclusion.sql',
-  '040_cold_sensor_station_scope.sql'
+  '040_cold_sensor_station_scope.sql',
+  '041_schema_migration_baseline.sql'
 ] as const
 
 export const migrationLandmarks=[

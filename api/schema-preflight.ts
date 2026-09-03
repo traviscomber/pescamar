@@ -6,6 +6,7 @@ type Request={method?:string;headers?:Record<string,string|string[]|undefined>}
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void}
 type LandmarkRow=Record<string,boolean>
 type TrackerRow={schemaname:string;tablename:string}
+type MigrationRow={migration_name:string;evidence_kind:string;applied_at:unknown}
 
 export default async function handler(req:Request,res:Response){
   res.setHeader('Cache-Control','no-store')
@@ -34,14 +35,44 @@ export default async function handler(req:Request,res:Response){
     const presentLandmarks=landmarks.filter(item=>item.present).length
     const trackers=(Array.isArray(trackerRaw)?trackerRaw:[]) as TrackerRow[]
     const runtimeCompatible=presentLandmarks===landmarks.length
-    const executionTracked=trackers.length>0
+    const registryPresent=trackers.some(row=>row.schemaname==='public'&&row.tablename==='schema_migrations')
+    const migrationRaw=registryPresent?await sql`select migration_name,evidence_kind,applied_at from schema_migrations order by migration_name`:[]
+    const migrationRows=(Array.isArray(migrationRaw)?migrationRaw:[]) as MigrationRow[]
+    const byName=new Map(migrationRows.map(row=>[row.migration_name,row]))
+    const expectedSet=new Set<string>(expectedMigrations)
+    const missing=expectedMigrations.filter(name=>!byName.has(name))
+    const unexpected=migrationRows.map(row=>row.migration_name).filter(name=>!expectedSet.has(name))
+    const invalid=migrationRows.filter(row=>row.evidence_kind!=='baseline'&&row.evidence_kind!=='applied').map(row=>row.migration_name)
+    const latest=expectedMigrations.at(-1)!
+    const latestRow=byName.get(latest)
+    const latestApplied=latestRow?.evidence_kind==='applied'&&Boolean(latestRow.applied_at)
+    const baselineRows=migrationRows.filter(row=>row.evidence_kind==='baseline').length
+    const appliedRows=migrationRows.filter(row=>row.evidence_kind==='applied'&&Boolean(row.applied_at)).length
+    const trackerVerified=runtimeCompatible&&registryPresent&&missing.length===0&&unexpected.length===0&&invalid.length===0&&latestApplied
+    const trackerTables=trackers.map(row=>`${row.schemaname}.${row.tablename}`)
     return res.status(200).json({
       ok:true,
-      expected:{count:expectedMigrations.length,first:expectedMigrations[0],latest:expectedMigrations.at(-1),migrations:expectedMigrations},
+      expected:{count:expectedMigrations.length,first:expectedMigrations[0],latest,migrations:expectedMigrations},
       runtimeCompatibility:{status:runtimeCompatible?'compatible':'incomplete',present:presentLandmarks,total:landmarks.length,landmarks},
-      executionEvidence:{status:executionTracked?'tracker_present_unverified':'missing',tracked:false,trackerTables:trackers.map(row=>`${row.schemaname}.${row.tablename}`)},
-      pilotGate:{status:'hold',reason:executionTracked?'Existe una tabla candidata de tracking, pero este preflight no puede demostrar todavía que contiene exactamente todas las migraciones canónicas en orden.':'El entorno no conserva una bitácora de migraciones aplicada que permita demostrar qué archivos se ejecutaron y en qué orden.'},
-      governance:{writesDatabase:false,rule:'Compatibilidad estructural no equivale a evidencia de ejecución. El PASS del piloto requiere reconciliar el Neon objetivo contra todos los archivos versionados en db/migrations. Este endpoint sólo inspecciona; no aplica ni registra migraciones.'}
+      executionEvidence:{
+        status:trackerVerified?'baseline_verified':registryPresent?'tracker_present_unverified':'missing',
+        tracked:trackerVerified,
+        trackerTables,
+        baselineRows,
+        appliedRows,
+        missing,
+        unexpected,
+        invalid
+      },
+      pilotGate:{
+        status:trackerVerified?'pass':'hold',
+        reason:trackerVerified
+          ?'Neon tiene un baseline estructural explícito para 001–040 y 041 está registrada como aplicada. No se reconstruyeron timestamps históricos por archivo; desde este baseline, toda migración nueva debe quedar registrada individualmente como aplicada.'
+          :registryPresent
+            ?'Existe schema_migrations, pero todavía no reconcilia exactamente el inventario versionado o la última migración no consta como aplicada.'
+            :'El entorno no conserva una bitácora de migraciones aplicada que permita demostrar qué archivos se ejecutaron y en qué orden.'
+      },
+      governance:{writesDatabase:false,rule:'Un baseline estructural explícito puede cerrar el gap histórico sin inventar fechas de ejecución. PASS requiere compatibilidad runtime, cobertura exacta del manifiesto y la migración más reciente registrada como applied. Este endpoint sólo inspecciona; no aplica ni registra migraciones.'}
     })
   }catch(error){
     const message=error instanceof Error?error.message:''

@@ -1,6 +1,6 @@
 import {expect,test} from '@playwright/test'
 
-test('rollout separates structural compatibility from migration execution evidence',async({page})=>{
+test('rollout accepts an explicit structural migration baseline without fabricating historical timestamps',async({page})=>{
   const schemaMethods:string[]=[]
   const consoleErrors:string[]=[]
   page.on('console',message=>{if(message.type()==='error')consoleErrors.push(message.text())})
@@ -12,7 +12,7 @@ test('rollout separates structural compatibility from migration execution eviden
     if(path==='/api/plant-execution-readiness')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,plants:[],rule:'Evidencia física separada.'})})
     if(path==='/api/schema-preflight'){
       schemaMethods.push(request.method())
-      return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,expected:{count:38,first:'001_core.sql',latest:'040_cold_sensor_station_scope.sql',migrations:[]},runtimeCompatibility:{status:'compatible',present:11,total:11,landmarks:[{name:'receptions',present:true}]},executionEvidence:{status:'missing',tracked:false,trackerTables:[]},pilotGate:{status:'hold',reason:'El entorno no conserva una bitácora de migraciones aplicada que permita demostrar qué archivos se ejecutaron y en qué orden.'},governance:{writesDatabase:false,rule:'Compatibilidad estructural no equivale a evidencia de ejecución. Este endpoint sólo inspecciona; no aplica ni registra migraciones.'}})})
+      return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,expected:{count:39,first:'001_core.sql',latest:'041_schema_migration_baseline.sql',migrations:[]},runtimeCompatibility:{status:'compatible',present:11,total:11,landmarks:[{name:'receptions',present:true}]},executionEvidence:{status:'baseline_verified',tracked:true,trackerTables:['public.schema_migrations'],baselineRows:38,appliedRows:1,missing:[],unexpected:[],invalid:[]},pilotGate:{status:'pass',reason:'Baseline estructural explícito verificado; fechas históricas no reconstruidas.'},governance:{writesDatabase:false,rule:'El baseline no inventa fechas históricas y las migraciones nuevas se registran individualmente.'}})})
     }
     return route.fulfill({status:200,contentType:'application/json',body:'{}'})
   })
@@ -23,13 +23,12 @@ test('rollout separates structural compatibility from migration execution eviden
   await expect(preflight).toBeVisible()
   await expect(preflight).toContainText('Compatibilidad estructural')
   await expect(preflight).toContainText('11/11 objetos críticos presentes')
-  await expect(preflight).toContainText('38 migraciones')
-  await expect(preflight).toContainText('040_cold_sensor_station_scope.sql')
-  await expect(preflight).toContainText('PASS')
-  await expect(preflight).toContainText('Evidencia de ejecución de migraciones')
-  await expect(preflight).toContainText('HOLD')
-  await expect(preflight).toContainText('no contiene una bitácora de migraciones aplicada')
-  await expect(preflight).toContainText('no aplica ni registra migraciones')
+  await expect(preflight).toContainText('39 migraciones')
+  await expect(preflight).toContainText('041_schema_migration_baseline.sql')
+  await expect(preflight).toContainText('Baseline explícito reconciliado')
+  await expect(preflight).toContainText('38 migraciones históricas verificadas')
+  await expect(preflight).toContainText('Gate formal del piloto · PASS')
+  await expect(preflight).toContainText('fechas históricas')
   expect(schemaMethods).toEqual(['GET'])
   expect(consoleErrors).toEqual([])
 })
