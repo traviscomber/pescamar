@@ -6,7 +6,7 @@ const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
 const runtimeDdl=/\b(create table|alter table|create index|drop table|drop index)\b/i
 
-const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaSource,evidenceFileSource,bootstrapSource,visionSource,receptionsSource,inventorySource,commercialSource,settlementsSource,approvalsSource,timelineSource,creditsSource,costsSource,dailyCloseSource,productionLinesSource,overviewSource,lot360Source,lotContinuitySource,dashboardSource,liveLotDrawerSource,receptionModalSource,creditsPageSource,commercialPageSource,inventoryPageSource]=await Promise.all([
+const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaSource,evidenceFileSource,bootstrapSource,visionSource,receptionsSource,inventorySource,commercialSource,settlementsSource,approvalsSource,timelineSource,creditsSource,costsSource,dailyCloseSource,productionLinesSource,overviewSource,lot360Source,lotContinuitySource,appSource,operationalHealthSource,liveLotDrawerSource,receptionModalSource,creditsPageSource,commercialPageSource,inventoryPageSource]=await Promise.all([
   fetch(base,{redirect:'manual'}).then(async response=>({status:response.status,text:await response.text()})),
   readFile(new URL('../src/main.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/app.css',import.meta.url),'utf8'),
@@ -30,7 +30,8 @@ const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaS
   readFile(new URL('../api/operations-overview.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/lot-360.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/lot-continuity.ts',import.meta.url),'utf8'),
-  readFile(new URL('../src/pages/Dashboard.tsx',import.meta.url),'utf8'),
+  readFile(new URL('../src/App.tsx',import.meta.url),'utf8'),
+  readFile(new URL('../src/components/OperationalHealthPanel.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/components/LiveLotDrawer.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/components/ReceptionModal.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/Credits.tsx',import.meta.url),'utf8'),
@@ -90,9 +91,10 @@ assert(overviewSource.includes('(${admin} or r.plant_id=any(${plantIds}::text[])
 assert(overviewSource.match(/left join lateral/g)?.length>=3,'operations overview must resolve repeated per-lot state through lateral aggregation')
 assert(overviewSource.includes('generatedAt:new Date().toISOString()'),'operations overview must expose response freshness')
 assert(overviewSource.includes('financialRole&&canSeeCorporateHistory?sql'),'operations overview must avoid historical economy queries for unauthorized roles')
-assert(dashboardSource.includes('window.setInterval(refresh,60_000)'),'dashboard must refresh operational state on an interval')
-assert(dashboardSource.includes("document.addEventListener('visibilitychange',refresh)"),'dashboard must refresh after returning to the tab')
-assert(dashboardSource.includes('loading&&!overview'),'dashboard must not claim an idle operation before the first overview response')
+assert(appSource.includes('<Route path="/" element={<><DailyClose/><ExecutiveDecisionBrief/><OperationalHealthPanel/><CanonicalIntelligencePanel/><CanonicalCategoryMix/><RollforwardReconciliation/><RollforwardResolutionQueue/></>}'),'home route must compose the current operational control surfaces')
+assert(operationalHealthSource.includes("window.setInterval(()=>{if(document.visibilityState==='visible')refresh()},30000)"),'operational health must refresh visible state on an interval')
+assert(operationalHealthSource.includes("window.addEventListener('focus',refresh)"),'operational health must refresh after returning to the app')
+assert(operationalHealthSource.includes('loading&&!data'),'operational health must not claim state before the first response')
 assert(liveLotDrawerSource.includes("event.key==='Escape'"),'live lot drawer must close with Escape')
 assert(liveLotDrawerSource.includes("event.key!=='Tab'"),'live lot drawer must trap keyboard focus')
 assert(liveLotDrawerSource.includes("document.body.style.overflow='hidden'"),'live lot drawer must lock background scroll')
@@ -123,4 +125,4 @@ if(failures.length){
   for(const failure of failures)console.error(`- ${failure}`)
   process.exit(1)
 }
-console.log('Release smoke PASS: shell, canonical layered CSS, mobile, accessibility, auth, clean reception capture, authenticated credit identity, migration-only schema, SQL role/plant isolation, overview performance/freshness, modal keyboard safety, lot financial boundaries, daily close boundaries and evidence ownership contracts verified')
+console.log('Release smoke PASS: shell, canonical layered CSS, mobile, accessibility, auth, clean reception capture, authenticated credit identity, migration-only schema, SQL role/plant isolation, home composition/freshness, modal keyboard safety, lot financial boundaries, daily close boundaries and evidence ownership contracts verified')
