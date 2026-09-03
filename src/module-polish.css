@@ -57,6 +57,15 @@
 .main-content:has(> .inventory-workspace) > .inventory-ledger{order:2}
 .main-content:has(> .inventory-workspace) > .canonical-inventory-evidence{order:3;margin-top:24px}
 
+/* Credits: actual requests and recovery policy precede documentary CUENTA2 evidence. */
+.main-content:has(> .credit-layout){
+  display:flex;
+  flex-direction:column;
+}
+.main-content:has(> .credit-layout) > .credit-layout{order:1}
+.main-content:has(> .credit-layout) > .credit-policy{order:2;margin-top:16px}
+.main-content:has(> .credit-layout) > [aria-label="Evidencia canónica CUENTA2"]{order:3;margin-top:24px}
+
 /* Tablet / compact desktop: use the existing accessible drawer instead of an icon-only rail. */
 @media(max-width:900px){
   html,body,#root{width:100%;max-width:100%;overflow-x:hidden}
