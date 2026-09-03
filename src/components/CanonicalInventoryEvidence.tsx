@@ -8,7 +8,9 @@ type Payload={ok?:boolean;stock?:StockRow[];packing?:PackingRow[];lotLinks?:LotL
 const nf=new Intl.NumberFormat('es-CL',{maximumFractionDigits:1})
 const date=(value:string|null)=>{
  if(!value)return '—'
- const parsed=new Date(/^\d{4}-\d{2}-\d{2}$/.test(value)?`${value}T12:00:00`:value)
+ const calendarDate=value.match(/^(\d{4}-\d{2}-\d{2})/)?.[1]
+ if(!calendarDate)return '—'
+ const parsed=new Date(`${calendarDate}T12:00:00`)
  return Number.isNaN(parsed.getTime())?'—':new Intl.DateTimeFormat('es-CL',{day:'2-digit',month:'short',year:'numeric'}).format(parsed)
 }
 

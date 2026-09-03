@@ -1,6 +1,6 @@
 import {expect,test} from '@playwright/test'
 
-test('inventory renders canonical evidence with ISO timestamps without crashing',async({page})=>{
+test('inventory renders canonical ISO evidence without shifting the source calendar date',async({page})=>{
   const consoleErrors:string[]=[]
   page.on('console',message=>{if(message.type()==='error')consoleErrors.push(message.text())})
   await page.route('**/api/**',async route=>{
@@ -14,6 +14,8 @@ test('inventory renders canonical evidence with ISO timestamps without crashing'
   await page.goto('/inventario')
   await expect(page.getByRole('heading',{name:'Inventario',exact:true})).toBeVisible()
   await expect(page.getByRole('region',{name:'Evidencia canónica de inventario'})).toBeVisible()
-  await expect(page.getByText('I04-260824')).toBeVisible()
+  const canonicalRow=page.getByRole('row').filter({hasText:'I04-260824'})
+  await expect(canonicalRow).toBeVisible()
+  await expect(canonicalRow.getByRole('cell').nth(4)).toHaveText('24 ago 2026')
   expect(consoleErrors).toEqual([])
 })
