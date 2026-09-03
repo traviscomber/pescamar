@@ -5,10 +5,19 @@ type Request={method?:string;body?:unknown;headers?:Record<string,string|string[
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void}
 type Kind='production'|'ledger'|'stock'|'transfers'|'packing'
 type Payload={kind?:unknown;fileName?:unknown;fileHash?:unknown;rows?:unknown[]}
+type SourceRow={file_name?:unknown;source_kind?:unknown;canonical?:unknown}
 const text=(v:unknown,max=240)=>String(v??'').trim().slice(0,max)
 const hash=/^[a-f0-9]{64}$/
 const allowed=new Set<Kind>(['production','ledger','stock','transfers','packing'])
+const sourceKinds:Record<Kind,ReadonlySet<string>>={
+  production:new Set(['production_2026']),
+  ledger:new Set(['finance_stock']),
+  stock:new Set(['finance_stock']),
+  transfers:new Set(['finance_stock']),
+  packing:new Set(['packing_octopus_2026'])
+}
 const rowsOf=(v:unknown)=>Array.isArray(v)?v:[]
+const sourceSupports=(kind:Kind,sourceKind:unknown)=>sourceKinds[kind].has(text(sourceKind,80).toLowerCase())
 
 export default async function handler(req:Request,res:Response){
   res.setHeader('Cache-Control','no-store')
@@ -22,8 +31,10 @@ export default async function handler(req:Request,res:Response){
     if(rows.length>10000)return res.status(413).json({ok:false,error:'La importación supera 10.000 filas'})
     const sql=getSql()
     const source=await sql`select file_hash,file_name,source_kind,canonical from canonical_source_files where file_hash=${fileHash} limit 1`
-    const src=Array.isArray(source)?source[0] as {file_name?:string;canonical?:boolean}|undefined:undefined
-    if(!src||src.file_name!==fileName||src.canonical!==true)return res.status(409).json({ok:false,error:'El archivo no coincide con una fuente canónica aprobada'})
+    const src=Array.isArray(source)?source[0] as SourceRow|undefined:undefined
+    if(!src||String(src.file_name??'')!==fileName||src.canonical!==true)return res.status(409).json({ok:false,error:'El archivo no coincide con una fuente canónica aprobada'})
+    if(!sourceSupports(kind,src.source_kind))return res.status(409).json({ok:false,error:'La clase de importación no corresponde al tipo de fuente canónica aprobada'})
+    const sourceKind=text(src.source_kind,80).toLowerCase()
 
     if(kind==='production'){
       const clean=rows.filter(r=>Number.isInteger(Number((r as Record<string,unknown>).sourceRow))&&text((r as Record<string,unknown>).lotCode,120)).slice(0,10000)
@@ -52,7 +63,7 @@ export default async function handler(req:Request,res:Response){
       from jsonb_to_recordset(${JSON.stringify(rows)}::jsonb) as x(sheet_name text,source_row integer,pack_format text,box_number integer,lot_code text,production_date text,weight_breakdown jsonb,total_kg numeric,notes text,data_quality_flags text[],raw_record jsonb)
       on conflict(source_file_hash,sheet_name,source_row) do nothing`
     }
-    return res.status(200).json({ok:true,kind,fileName,fileHash,rows:rows.length,idempotent:true,immutable:true})
+    return res.status(200).json({ok:true,kind,fileName,fileHash,sourceKind,rows:rows.length,idempotent:true,immutable:true})
   }catch(error){
     const message=error instanceof Error?error.message:''
     return res.status(message.includes('canonical_')||message.includes('historical_production')?503:500).json({ok:false,error:message.includes('canonical_')||message.includes('historical_production')?'Falta aplicar la capa canónica':'No fue posible publicar la fuente canónica'})
