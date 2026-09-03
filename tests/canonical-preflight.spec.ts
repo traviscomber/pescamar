@@ -2,6 +2,7 @@ import {expect,test} from '@playwright/test'
 import {readFile} from 'node:fs/promises'
 
 const preflightUrl=new URL('../api/canonical-preflight.ts',import.meta.url)
+const importsUrl=new URL('../src/pages/Imports.tsx',import.meta.url)
 
 test('canonical preflight is read-only and requires explicit canonical registration',async()=>{
   const source=await readFile(preflightUrl,'utf8')
@@ -27,4 +28,14 @@ test('canonical preflight validates the three current workbook contracts',async(
   expect(source).toContain("'packing pulpo pescamar 2026-2.xlsx'")
   expect(source).toContain("'BLOQUE'")
   expect(source).toContain("'IQF'")
+})
+
+test('imports requires preflight pass before canonical staging publication',async()=>{
+  const source=await readFile(importsUrl,'utf8')
+  expect(source).toContain("fetch('/api/canonical-preflight'")
+  expect(source).toContain("!canonicalPreflight?.structureOk||!canonicalPreflight.registeredCanonical")
+  expect(source).toContain('La publicación requiere preflight estructural PASS y un hash canónico previamente aprobado.')
+  expect(source).toContain('Seleccionar y analizar XLSX')
+  expect(source).toContain('Publicar staging canónico')
+  expect(source).toContain("canonicalPreflight.registeredCanonical&&canonicalPreflight.structureOk&&canonicalFile")
 })
