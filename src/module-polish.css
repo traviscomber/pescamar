@@ -66,7 +66,76 @@
 .main-content:has(> .credit-layout) > .credit-policy{order:2;margin-top:16px}
 .main-content:has(> .credit-layout) > [aria-label="Evidencia canónica CUENTA2"]{order:3;margin-top:24px}
 
+/* System hierarchy pass: the shell is infrastructure, not another collection of cards. */
+.plant-chip{
+  margin:14px 4px 12px;
+  padding:11px 8px 12px;
+  border:0!important;
+  border-bottom:1px solid rgba(255,255,255,.07)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.plant-chip .live-dot{box-shadow:0 0 0 3px rgba(118,166,199,.08)}
+
+.topbar{
+  background:color-mix(in srgb,var(--page) 96%,transparent)!important;
+  backdrop-filter:blur(12px)!important;
+}
+.topbar-context span{color:color-mix(in srgb,var(--muted) 88%,var(--text))!important}
+.topbar-context b{font-size:14px!important;letter-spacing:-.01em}
+.topbar-actions{gap:4px!important}
+.theme-toggle{
+  width:38px;
+  min-width:38px;
+  padding:0!important;
+  border-color:transparent!important;
+  background:transparent!important;
+}
+.theme-toggle span{display:none!important}
+.theme-toggle:hover,.system-state:hover{background:var(--surface-2)!important}
+.system-state{
+  min-height:36px!important;
+  padding:6px 9px!important;
+  border-color:transparent!important;
+  background:transparent!important;
+}
+.system-state small{display:none!important}
+.operator-state{margin-left:2px}
+
+/* Primary KPI groups read as one operational rail instead of a wall of cards. */
+.signal-grid{
+  gap:0!important;
+  margin-bottom:18px;
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+}
+.signal-grid>.signal-card{
+  min-width:0;
+  border:0!important;
+  border-right:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  padding:15px 18px!important;
+}
+.signal-grid>.signal-card:last-child{border-right:0!important}
+.signal-grid>.signal-card:hover{background:color-mix(in srgb,var(--surface-2) 74%,transparent)!important}
+.signal-grid>.signal-card.attention{
+  background:color-mix(in srgb,var(--warning) 5%,transparent)!important;
+  box-shadow:inset 2px 0 color-mix(in srgb,var(--warning) 78%,transparent)!important;
+}
+.signal-grid>.signal-card>span{letter-spacing:.025em}
+.signal-grid>.signal-card>b{font-size:25px!important;letter-spacing:-.025em}
+
 /* Tablet / compact desktop: use the existing accessible drawer instead of an icon-only rail. */
+@media(max-width:1180px){
+  .system-state small{display:none!important}
+  .signal-grid>.signal-card:nth-child(2n){border-right:0!important}
+  .signal-grid>.signal-card:nth-child(n+3){border-top:1px solid var(--line)!important}
+  .signal-grid>.signal-card:last-child:nth-child(odd){grid-column:1/-1;border-right:0!important}
+}
+
 @media(max-width:900px){
   html,body,#root{width:100%;max-width:100%;overflow-x:hidden}
   .app-shell{display:block;min-height:100dvh}
@@ -106,6 +175,7 @@
     padding:0;
   }
   .menu-btn{display:grid!important;min-width:40px;min-height:40px;margin-left:-6px}
+  .topbar-actions{gap:2px!important}
 }
 
 @media(max-width:620px){
@@ -117,4 +187,11 @@
     border-bottom:1px solid var(--line)!important;
   }
   .balance-panel .balance-summary>div:last-child{border-bottom:0!important}
+  .signal-grid>.signal-card{
+    grid-column:auto!important;
+    border-right:0!important;
+    border-top:1px solid var(--line)!important;
+    padding:13px 2px!important;
+  }
+  .signal-grid>.signal-card:first-child{border-top:0!important}
 }
