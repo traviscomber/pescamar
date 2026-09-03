@@ -73,7 +73,7 @@ const contracts:SourceContract[]=[
   },
   {
     canonicalFileName:'CUENTA2.xlsx',
-    sourceKind:'account_2026',
+    sourceKind:'finance_stock',
     requiredSheets:['CUENTA CORRIENTE','STOCK FISICO ERIZOS','STOCK PULPO','TRANSF RECIBIDAS'],
     countRows:accountRows,
     validate:wb=>{
