@@ -1,14 +1,12 @@
 import {AlertTriangle,ArrowRight,Database,PackageCheck,RefreshCw,Scale,WalletCards} from 'lucide-react'
 import {useCallback,useEffect,useState} from 'react'
 import {Link} from 'react-router-dom'
-import {useAuth} from '../auth'
 
 type Intel={production?:{rows:number;guideKg:number;receivedKg:number;differenceKg:number;receptionPct:number|null;flagged:number};packing?:Array<{format:string;boxes:number;kg:number;lots:number;flagged:number}>;stock?:Array<{productFamily:string;rows:number;accumulatedKg:number;lastDate:string|null;flagged:number}>;finance?:null|{transfers:{rows:number;amountClp:number};ledger:{rows:number;inflowClp:number;outflowClp:number;balanceClp:number;flagged:number}};exceptions?:Array<{severity:'warning'|'info';kind:string;title:string;detail:string}>;generatedAt?:string;error?:string}
 const nf=new Intl.NumberFormat('es-CL',{maximumFractionDigits:1})
 const clp=new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0})
 
 export function PescamarDatabaseSnapshot(){
-  const {operator}=useAuth()
   const [data,setData]=useState<Intel|null>(null),[error,setError]=useState(''),[loading,setLoading]=useState(true)
   const load=useCallback(async()=>{setLoading(true);try{const response=await fetch('/api/pescamar-intelligence',{cache:'no-store'});const payload=await response.json() as Intel;if(!response.ok)throw new Error(payload.error??'No fue posible cargar la Base de Datos Pescamar');setData(payload);setError('')}catch(cause){setError(cause instanceof Error?cause.message:'No fue posible cargar la Base de Datos Pescamar')}finally{setLoading(false)}},[])
   useEffect(()=>{void load()},[load])
