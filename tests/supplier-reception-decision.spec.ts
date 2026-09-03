@@ -26,6 +26,7 @@ async function mockReception(page:Page,support:unknown,role:Role='operations',ec
   if(path==='/api/status')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,platform:'vercel-functions',environment:'test',persistence:{database:true,files:true},metrics:{pendingDecisions:0,pendingCredits:0,activeOperators:1,receptions:0},commit:'qa',checkedAt:new Date().toISOString()})})
   if(path==='/api/receptions')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({receptions:[]})})
   if(path==='/api/history')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({records:[],summary:null})})
+  if(path==='/api/partners')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,parties:[{id:'supplier-qa',kind:'supplier',legal_name:'Proveedor QA',active:true}]})})
   if(path==='/api/supplier-intelligence')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,suppliers:[baseSupplier]})})
   if(path==='/api/supplier-price-context')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(price)})
   if(path==='/api/supplier-economic-intelligence')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(economics)})
@@ -37,7 +38,7 @@ async function mockReception(page:Page,support:unknown,role:Role='operations',ec
 async function openSupplierDecision(page:Page){
  await page.goto('/recepciones')
  await page.getByRole('button',{name:/Nueva recepción/}).first().click()
- await page.getByLabel('Proveedor').fill('Proveedor QA')
+ await page.getByLabel('Proveedor').selectOption('Proveedor QA')
  await page.getByLabel('Zona de extracción').fill('Quellón')
 }
 
