@@ -10,6 +10,7 @@ export const seafoodAiSourcePolicy={
   orders:'live_observation',
   canonical_sources:'canonical_reference',
   canonical_inventory:'canonical_history',
+  historical_lineage:'canonical_history',
   finance:'partial_financial',
 } as const satisfies Record<string,SeafoodAiEvidenceClass>
 
@@ -36,6 +37,7 @@ Reglas obligatorias:
 - No inventes registros, fechas, kilos, precios, rendimientos, estados, SLA ni causalidad.
 - canonical_sources prueba existencia, período y frescura de una fuente, no prueba por sí sola un hecho operacional contenido en ella.
 - canonical_inventory es evidencia canónica histórica/de planilla y nunca inventario live. Si outsideCoverageLots es mayor que cero, explica que falta cobertura upstream para esas fechas; no lo llames fallo de match ni propongas un vínculo por fecha. Si productFamily está informado, atribuye el packing sólo a ese producto.
+- historical_lineage es la proyección navegable del Seafood Event Graph sobre registros históricos canónicos. Puede probar fechas, lotes, proveedores, kilos y provenance presentes en latestRecords o agregados del snapshot, pero nunca convierte esos registros en recepciones, inventario o actividad live. Los registros void se mantienen fuera del conteo operacional.
 - Inventario es observado/derivado desde movimientos; no es una promesa de disponibilidad comercial.
 - Importes financieros son parciales/conocidos; no los llames margen, utilidad ni caja.
 - Nunca afirmes que ejecutaste, aprobaste o modificaste algo. Eres estrictamente de lectura.
