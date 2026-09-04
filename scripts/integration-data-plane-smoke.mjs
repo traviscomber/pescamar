@@ -30,7 +30,7 @@ assert(page.includes("'x-seafood-organization-id':organizationId"),'integration 
 assert(page.includes("writeEnabled?'ON':'OFF'"),'integration UI must expose writer state instead of implying connectivity')
 assert(app.includes('path="/integrations"'),'integration data plane page must be routed')
 assert(access.includes('"/integrations":["admin","operations"]'),'integration data plane route must be restricted')
-assert(os.includes("{path:'/integrations',label:'Integration Data Plane'"),'OS map must expose integration data plane')
+assert(os.includes("{path:'/integrations'")&&os.includes("Adapters, protocolos y contratos de interoperabilidad"),'OS map must retain integration data plane capability even when the user-facing label is simplified')
 assert(vercel.includes('"source": "/integrations"'),'Vercel must deep-link the integration data plane route')
 
 if(failures.length){
