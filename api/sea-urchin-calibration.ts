@@ -1,7 +1,7 @@
 import {requireOperator,type SessionOperator} from './_auth.js'
 import {getSql} from './_db.js'
 
-type Request={method?:string;query?:Record<string,string|string[]|undefined>}
+type Request={method?:string;headers?:Record<string,string|string[]|undefined>;query?:Record<string,string|string[]|undefined>}
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void}
 
 function plantScope(operator:SessionOperator,requested:string){
