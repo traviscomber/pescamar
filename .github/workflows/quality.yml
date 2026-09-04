@@ -2,7 +2,10 @@ name: Quality
 
 on:
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - 'feat/**'
+      - 'docs/**'
   push:
     branches: [main]
 
