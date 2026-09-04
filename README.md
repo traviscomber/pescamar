@@ -102,6 +102,8 @@ The current Pescamar instance already exercises the core pattern across:
 
 Pescamar remains a named tenant/implementation inside the broader Seafood Intelligence OS. Client-specific language, data, users and workflows remain isolated from the reusable product core.
 
+The first productization slice now introduces a centralized product/implementation context in `src/product.ts`, presents **Seafood Intelligence OS** as the global shell and keeps **Implementation 01 · Pescamar** visible as the active operational tenant. Existing Pescamar routes, IDs, database contracts and canonical sources remain unchanged.
+
 The rollout and productization plan is maintained in [`ROADMAP.md`](./ROADMAP.md). Pilot acceptance remains governed by [`PILOT_ACCEPTANCE.md`](./PILOT_ACCEPTANCE.md).
 
 ---
@@ -118,13 +120,3 @@ The rollout and productization plan is maintained in [`ROADMAP.md`](./ROADMAP.md
 8. **Configuration before forks.** Plant, species and process differences should be represented as reusable configuration wherever possible.
 9. **Cross-species by design.** The core should support wild catch, aquaculture and processing across seafood categories.
 10. **Control by exception.** Normal operations should flow; people should be pulled in when risk, uncertainty or policy requires a decision.
-
----
-
-## Product direction
-
-The long-term system is:
-
-**physical product → canonical event graph → measured evidence → operational decision → commercial outcome → traceability → AI intelligence**
-
-The objective is not to become another isolated ERP, camera product or dashboard. The objective is to make the entire seafood operation behave as one intelligent system.
