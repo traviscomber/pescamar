@@ -1,13 +1,24 @@
 import {expect,test,type Page} from '@playwright/test'
 
 const receptionId='11111111-1111-4111-8111-111111111111'
+const historicalId='22222222-2222-4222-8222-222222222222'
 
 async function mockLineage(page:Page){
   await page.route('**/api/**',async route=>{
     const url=new URL(route.request().url()),path=url.pathname
-    if(path==='/api/auth')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,operator:{id:'qa-operations',fullName:'QA Operations',email:'ops@example.test',role:'operations',plantIds:['ancud']}})})
+    if(path==='/api/auth')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,operator:{id:'qa-operations',fullName:'QA Operations',email:'ops@example.test',role:'operations',plantIds:['ancud'],organizationId:'pescamar'}})})
     if(path==='/api/status')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,persistence:{database:true,files:true},metrics:{}})})
     if(path==='/api/receptions')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({receptions:[{id:receptionId,reception_number:2401,plant_id:'ancud',plant_name:'Ancud',supplier_id:'supplier-1',supplier:'Proveedor QA',species:'Erizo',gross_kg:100,tare_kg:5,net_kg:95,guide_kg:100,received_at:'2026-09-03T12:00:00.000Z',status:'production',source:'manual',source_reference:null,evidence_kind:'Guía',evidence_label:'Guía QA',evidence_url:null,evidence_note:null,evidence_created_at:null}]})})
+    if(path==='/api/historical-lineage'){
+      expect(route.request().headers()['x-seafood-organization-id']).toBe('pescamar')
+      if(url.searchParams.get('recordId'))return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,schemaVersion:'seafood.historical-lineage.v1',organizationId:'pescamar',organization:{id:'pescamar',implementationId:'pescamar',implementationName:'Pescamar',isolationMode:'single_organization_legacy'},siteId:'Pescamar',lotId:'mdn149220526',recordId:historicalId,mode:'canonical_historical',events:[
+        {id:`historical-reception:${historicalId}`,schemaVersion:'seafood.event.v1',organizationId:'pescamar',siteId:'Pescamar',lotId:'mdn149220526',type:'reception',occurredAt:'2026-05-21T00:00:00.000Z',title:'Recepción histórica · guía 90',detail:'Patricio Diaz',actor:null,metrics:{historical:true,canonical:true,supplier:'Patricio Diaz',guideKg:64.8,receivedKg:63},source:{system:'pescamar',entityType:'historical_production_record',entityId:historicalId}},
+        {id:`historical-process:${historicalId}`,schemaVersion:'seafood.event.v1',organizationId:'pescamar',siteId:'Pescamar',lotId:'mdn149220526',type:'production',occurredAt:'2026-05-22T00:00:00.000Z',title:'Proceso histórico',detail:'Pescamar',actor:null,metrics:{historical:true,canonical:true,processSite:'Pescamar'},source:{system:'pescamar',entityType:'historical_production_record',entityId:historicalId}},
+        {id:`historical-production:${historicalId}`,schemaVersion:'seafood.event.v1',organizationId:'pescamar',siteId:'Pescamar',lotId:'mdn149220526',type:'production',occurredAt:'2026-06-25T00:00:00.000Z',title:'Producción histórica',detail:null,actor:null,metrics:{historical:true,canonical:true,gradeBreakdown:{A1:{kg:3.3,boxes:1}}},source:{system:'pescamar',entityType:'historical_production_record',entityId:historicalId}},
+        {id:`historical-evidence:${historicalId}`,schemaVersion:'seafood.event.v1',organizationId:'pescamar',siteId:'Pescamar',lotId:'mdn149220526',type:'evidence',occurredAt:'2026-08-20T00:00:00.000Z',title:'Fuente canónica · planilla de produccion 2026.xlsx',detail:'Fila 153 · evidencia histórica de solo lectura',actor:null,metrics:{historical:true,canonical:true,sourceFile:'planilla de produccion 2026.xlsx',sourceRow:153},source:{system:'pescamar',entityType:'historical_production_record',entityId:historicalId}},
+      ],coverage:{reception:true,evidence:true,quality:false,production:true,vision:false,inventory:false,commercialCommitment:false,dispatch:false,sale:null},permissions:{canSeeCommercial:true},boundary:{readOnly:true,canonicalHistorical:true,liveInventory:false,organizationScoped:false}})})
+      return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,schemaVersion:'seafood.historical-lineage.index.v1',organizationId:'pescamar',year:2026,count:1,records:[{id:historicalId,lotCode:'mdn149220526',sourceFile:'planilla de produccion 2026.xlsx',sourceRow:153,eventDate:'2026-06-25T00:00:00.000Z',receptionDate:'2026-05-21T00:00:00.000Z',processDate:'2026-05-22T00:00:00.000Z',productionDate:'2026-06-25T00:00:00.000Z',guideNumber:'90',supplier:'Patricio Diaz',extractionZone:'quellon',processSite:'Pescamar',plantId:null,guideKg:64.8,receivedKg:63,differenceKg:1.8,qualityFlags:[]}],boundary:{readOnly:true,canonicalHistorical:true,liveInventory:false}})})
+    }
     if(path==='/api/lot-lineage'){
       expect(route.request().headers()['x-seafood-organization-id']).toBe('pescamar')
       return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,schemaVersion:'seafood.lineage.v1',organizationId:'pescamar',organization:{id:'pescamar',implementationId:'pescamar',implementationName:'Pescamar',isolationMode:'single_organization_legacy'},siteId:'ancud',lotId:receptionId,events:[
@@ -36,4 +47,19 @@ test('Seafood Event Graph shows attributed lineage without inventing missing sta
   await expect(page.getByText('Cliente QA',{exact:false}).first()).toBeVisible()
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
   await page.screenshot({path:testInfo.outputPath('seafood-lineage.png'),fullPage:true})
+})
+
+test('Seafood Event Graph exposes canonical historical lineage without presenting it as live',async({page},testInfo)=>{
+  await mockLineage(page)
+  await page.goto('/lineage?mode=historical&year=2026')
+  await expect(page.getByRole('heading',{name:'Lineage histórico canónico'})).toBeVisible()
+  await expect(page.getByText('Histórico canónico · solo lectura. 1 registros operacionales en 2026.',{exact:false})).toBeVisible()
+  await expect(page.getByRole('combobox',{name:'Registro'})).toContainText('mdn149220526')
+  await expect(page.getByText('CANONICAL HISTORICAL · READ ONLY')).toBeVisible()
+  await expect(page.getByText('Recepción histórica · guía 90')).toBeVisible()
+  await expect(page.getByText('Fuente canónica · planilla de produccion 2026.xlsx')).toBeVisible()
+  await expect(page.getByText('Sin evento')).toHaveCount(5)
+  await expect(page.getByText('inventario live',{exact:false})).toBeVisible()
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
+  await page.screenshot({path:testInfo.outputPath('seafood-historical-lineage.png'),fullPage:true})
 })
