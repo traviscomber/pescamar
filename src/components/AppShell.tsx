@@ -1,4 +1,4 @@
-import {Activity,Blocks,Boxes,CheckCheck,CircleDollarSign,ClipboardList,Factory,FileSpreadsheet,FlaskConical,GitBranch,History,Landmark,LayoutDashboard,LogOut,Menu,MessageCircleMore,Moon,PackageSearch,ReceiptText,ScanLine,Settings2,ShoppingCart,Sparkles,Sun,Tag,Target,X} from "lucide-react";
+import {Activity,Blocks,Boxes,Building2,CheckCheck,CircleDollarSign,ClipboardList,Factory,FileSpreadsheet,FlaskConical,GitBranch,History,Landmark,LayoutDashboard,LogOut,Menu,MessageCircleMore,Moon,PackageSearch,ReceiptText,ScanLine,Settings2,ShoppingCart,Sparkles,Sun,Tag,Target,X} from "lucide-react";
 import {NavLink,useLocation} from "react-router-dom";
 import {useEffect,useRef,useState,type ReactNode} from "react";
 import {canAccessPath,canCreateReception} from "../access";
@@ -40,6 +40,7 @@ const workflowGroups=[
  ]},
  {label:"Trazabilidad y gestión",icon:Settings2,items:[
   {to:"/lineage",label:"Seafood Event Graph",icon:GitBranch},
+  {to:"/organization",label:"Organization Context",icon:Building2},
   {to:"/comunicaciones",label:"Comunicaciones",icon:MessageCircleMore},
   {to:"/timeline",label:"Línea de tiempo",icon:History},
   {to:"/auditoria",label:"Auditoría operacional",icon:ClipboardList},
