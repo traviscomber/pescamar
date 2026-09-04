@@ -1,92 +1,170 @@
-# Pescamar — ROADMAP de activación y despliegue
+# Seafood Intelligence OS — ROADMAP
 
-**Ventana:** 24 agosto – 22 noviembre 2026  
-**Estado actual:** CORE LISTO PARA POBLAR / ROLLOUT CONTROLADO  
-**Fecha objetivo de cierre:** 22 noviembre 2026  
-**North Star:** seis plantas operando sobre un solo core, con datos reales, trazabilidad completa, control por rol/planta y operación diaria sin dependencia del equipo de desarrollo.
+**Producto:** Seafood Intelligence OS  
+**Implementación 01:** Pescamar  
+**Ventana operacional Pescamar:** 24 agosto – 22 noviembre 2026  
+**Estado actual:** core productivo desplegado; productización del OS y UAT real en progreso  
+**North Star:** convertir operaciones seafood fragmentadas en un único grafo operacional trazable, enriquecido por EdgeVision y una capa de inteligencia capaz de explicar qué ocurrió, por qué importa y qué hacer después.
 
-> **Operación compleja, control sereno.** Datos reales primero. Un solo core. Una planta a la vez, sin perder la visión multiplanta.
+> **One seafood operation. One evidence graph. One intelligence layer.**
 
 ---
 
-## 1. Punto de partida — lo que ya está construido
+## 1. Tesis del producto
 
-La plataforma ya no está en etapa de prototipo. El core productivo cuenta con:
+Seafood Intelligence OS no se limita a un ERP de plantas ni a un sistema de acuicultura.
 
-### Operación
+Es un sistema operativo transversal para:
 
-- Recepciones operacionales sin datos sintéticos precargados.
-- Evidencia documental asociada a recepción.
-- Pipeline Vision para extracción asistida desde documentos.
-- Calidad y Producción por lote.
-- Ficha 360 como detalle único de trazabilidad.
-- Inventario, ubicaciones y movimientos.
-- Costos de transformación.
-- Órdenes de venta y reservas por lote.
+**origen / cultivo / captura → recepción → lotes → producción → calidad → packing → inventario → frío → despacho → comercial → trazabilidad → inteligencia**
+
+La oportunidad competitiva no está en fabricar cada cámara, sensor, PLC o ERP. Está en ser la capa neutral que conecta esos sistemas con el producto físico, su evidencia, su resultado comercial y la decisión operacional.
+
+### Qué debe poder responder el OS
+
+1. ¿Qué entró y de dónde provino?
+2. ¿Qué lote representa cada kilo y qué transformaciones sufrió?
+3. ¿Qué calidad tuvo y qué evidencia la respalda?
+4. ¿Qué vio EdgeVision y con qué modelo/confianza?
+5. ¿Qué rendimiento, merma y costo generó?
+6. ¿Dónde está físicamente ahora?
+7. ¿Qué está comprometido, despachado o vendido?
+8. ¿Qué cliente recibió qué producto y desde qué lote?
+9. ¿Qué excepción requiere atención ahora?
+10. ¿Qué decisión produce mayor impacto operacional o comercial?
+
+---
+
+## 2. Arquitectura objetivo
+
+### Capa A — Operational Core
+
+- Recepciones.
+- Lotes.
+- Producción y transformación.
+- Calidad y laboratorio.
+- Packing, cajas y pallets.
+- Inventario y ubicaciones.
+- Cadena de frío.
+- Órdenes comerciales.
 - Despachos y ventas.
-- Créditos y anticipos.
-- Liquidaciones con doble control.
-- Cierre diario operacional.
-- Línea temporal continua entre histórico 2025 y operación viva 2026+.
+- Proveedores y clientes.
+- Costos, liquidaciones y settlement cuando corresponda.
 
-### Gestión y control
+### Capa B — Seafood Event Graph
 
-- Dashboard operacional y vista de red multiplanta.
-- Roles: Administrador, Gerencia de Operaciones, Finanzas, Calidad y Lectura.
-- Scope de datos por planta aplicado en backend/SQL.
-- Auditoría Operacional por fecha, planta, operador y módulo.
-- Identidad estable de operador mediante UUID en los flujos críticos.
-- Trazabilidad de quién hizo qué, cuándo y dónde.
-- Separación de eventos financieros para roles autorizados.
+Objeto físico central: **lot / batch**.
 
-### Plataforma
+Cada evento debe poder vincular:
 
-- Neon PostgreSQL como fuente operacional canónica.
-- Vercel producción sobre `main`.
-- Autenticación server-side, sesiones seguras y rate limiting.
-- Sin bypass de autenticación en producción.
-- Headers de seguridad y APIs `no-store`.
-- CI con lint, TypeScript, build, release smoke y Chromium desktop/mobile.
-- Gates de seguridad, formularios, identidad, aislamiento por planta y auditoría.
-- Experiencia responsive/mobile-ready.
-- Tema claro y oscuro bajo un único sistema visual.
+`organization → site → station → source → lot → event → evidence → actor → timestamp → downstream object`
 
-### Estado de datos
+El grafo debe soportar:
 
-- Histórico 2025 se conserva como fuente histórica, sin forzar equivalencias no confirmadas con las seis plantas actuales.
-- Operación 2026+ parte desde estado cero real.
-- No existen mocks presentados como producción.
-- El siguiente riesgo relevante ya no es técnico: es **calidad, disponibilidad y adopción de datos reales**.
+- split y merge de lotes;
+- transformación de materia prima a producto terminado;
+- lineage entre cajas/pallets y lote origen;
+- evidencia documental;
+- evidencia visual;
+- estados de inventario;
+- eventos de frío;
+- decisiones humanas;
+- outcomes comerciales.
+
+### Capa C — EdgeVision
+
+EdgeVision será una capacidad nativa del OS para:
+
+- conteo;
+- calibre;
+- tamaño;
+- color;
+- defectos;
+- clasificación / grading;
+- biomasa;
+- control visual de proceso;
+- anomalías.
+
+Contrato objetivo de evidencia:
+
+`lotId + stationId + capturedAt + media/hash + model + modelVersion + measurement + confidence + review/override + decision`
+
+### Capa D — Operational Intelligence
+
+- Yield real y esperado.
+- Merma.
+- Calidad por proveedor/origen/especie.
+- Productividad por línea/planta.
+- Desviaciones operacionales.
+- Costo por transformación.
+- Margen por producto/cliente/lote.
+- Riesgo de inventario/frío.
+- Forecast de producción e inventario cuando exista historia suficiente.
+- Recomendaciones de compra, producción y comercialización basadas en evidencia.
+
+### Capa E — Seafood AI + Control Tower
+
+Patrón de decisión:
+
+**qué pasó → por qué → impacto → evidencia → recomendación → acción**
+
+Seafood AI no debe responder desde texto libre aislado. Debe priorizar:
+
+1. datos canónicos;
+2. operación viva;
+3. eventos del grafo;
+4. evidencia documental/visual;
+5. reglas de acceso del usuario.
 
 ---
 
-## 2. Objetivo comercial y operacional
+## 3. Principios no negociables
 
-El despliegue busca convertir Pescamar en una operación gestionada desde una sola plataforma capaz de responder en segundos:
-
-1. ¿Qué entró a cada planta?
-2. ¿Qué se produjo y con qué rendimiento?
-3. ¿Dónde está físicamente cada kilo?
-4. ¿Qué está comprometido, despachado o vendido?
-5. ¿Qué falta liquidar o aprobar?
-6. ¿Qué excepciones requieren atención?
-7. ¿Quién ejecutó cada acción y cuándo?
-8. ¿Qué ocurrió históricamente y cómo continúa en la operación viva?
-
-El producto se considera exitoso cuando estas respuestas salen del sistema y no de múltiples planillas, mensajes o reconstrucciones manuales.
+1. **El lote es el objeto físico canónico.**
+2. **Unknown is not zero.** Datos ausentes siguen ausentes.
+3. **Evidence first.** Ninguna conclusión crítica sin fuente rastreable.
+4. **Mass balance reconciliable.** Entradas, salidas, merma y yield deben cerrar.
+5. **Open integrations.** Integrar antes de reemplazar hardware/software existente.
+6. **Configuration before forks.** Nada de forks por planta, especie o cliente salvo imposibilidad justificada.
+7. **Cross-species.** El core debe servir pesca extractiva y acuicultura.
+8. **AI is accountable.** Modelo, versión, confianza y override deben quedar trazados cuando aplique.
+9. **Human authority remains explicit.** Automatización no inventa aprobación regulatoria, calidad ni decisión financiera.
+10. **Control by exception.** El sistema debe reducir ruido y aumentar foco.
 
 ---
 
-## 3. Principio de rollout
+# IMPLEMENTACIÓN 01 — PESCAMAR
 
-**Un solo producto, un solo core, seis plantas configuradas.**
+## 4. Rol de Pescamar dentro del producto
 
-No se crean forks por planta. Toda diferencia operacional se resuelve en este orden:
+Pescamar deja de ser el nombre del producto global.
 
-1. configuración existente;
-2. nueva configuración reutilizable;
-3. regla de negocio reutilizable;
-4. código específico sólo como último recurso.
+Pasa a ser la **primera implementación / tenant operacional de Seafood Intelligence OS**, usada para validar el modelo reusable en seis plantas y múltiples modalidades de operación.
+
+La implementación actual ya aporta al core reusable:
+
+- recepción y lotes;
+- calidad y producción;
+- inventario y ubicación;
+- packing, pallets y frío;
+- comercial, despacho y ventas;
+- costos, créditos y liquidaciones;
+- auditoría operacional;
+- identidad estable de operador;
+- historial canónico + operación viva;
+- Control Tower;
+- Pescamar IA;
+- gates de release desktop/mobile.
+
+Pescamar mantiene su identidad propia dentro del OS: usuarios, plantas, datos, branding cliente, catálogos y reglas particulares. El producto reusable se denomina **Seafood Intelligence OS**.
+
+---
+
+## 5. Rollout Pescamar
+
+### Estado actual
+
+El core técnico está desplegado y no debe confundirse con aceptación operacional final. El gate de piloto continúa requiriendo usuarios reales, datos reales, flujo E2E por lote y UAT humano según `PILOT_ACCEPTANCE.md`.
 
 ### Plantas objetivo
 
@@ -99,339 +177,437 @@ No se crean forks por planta. Toda diferencia operacional se resuelve en este or
 | 3 | Aqua Austral | Producto terminado | Inventario PT + trazabilidad + despacho |
 | 3 | Natales | Producto terminado / multiespecie | PT + inventario + despacho |
 
----
+### Gate Core LIVE
 
-# FASE 0 — ACTIVACIÓN DEL CORE
-## 24–31 agosto
+- [ ] Usuarios reales por rol/planta.
+- [ ] Catálogos operacionales confirmados.
+- [ ] 2–3 recepciones reales controladas.
+- [ ] Evidencia real vinculada.
+- [ ] Calidad real.
+- [ ] Producción del mismo lote.
+- [ ] Inventario físico del mismo lote.
+- [ ] Señal comercial vigente del mismo lote.
+- [ ] Cierre diario.
+- [ ] Auditoría correcta de actores.
+- [ ] Cero P0/P1.
+- [ ] Aceptación humana del responsable.
 
-### Objetivo
+### Ola 1 — Ancud + Quellón
 
-Pasar de plataforma vacía a primeras operaciones reales controladas, sin introducir datos contaminados.
+- [ ] Configurar usuarios y scopes.
+- [ ] Confirmar especies/productos/procesos.
+- [ ] Reconciliar histórico donde exista evidencia suficiente.
+- [ ] Ejecutar operación real E2E.
+- [ ] Validar yield y merma.
+- [ ] Validar Ficha 360 y Timeline.
+- [ ] Validar Pescamar IA contra datos canónicos/live.
+- [ ] Validar Control Tower por excepción.
+- [ ] Tres días consecutivos de operación con cierres registrados.
+- [ ] Aceptación humana.
 
-### Ya cerrado
+**Gate:** 2/6 plantas LIVE.
 
-- [x] Persistencia Neon y migraciones canónicas.
-- [x] Auth server-side y sesiones seguras.
-- [x] Scope por rol y planta en módulos críticos.
-- [x] Identidad estable de operador.
-- [x] Auditoría Operacional.
-- [x] Trazabilidad recepción → producción → inventario → comercial → cierre.
-- [x] Formularios críticos sin valores sintéticos.
-- [x] Mobile-ready.
-- [x] CI, build y deploy productivo.
-- [x] Producción limpia sin errores runtime conocidos en la última verificación.
+### Ola 2 — Iquique/Sotomayor + Piedra Azul
 
-### Por completar para cerrar la fase
+- [ ] Convertir aprendizajes de Ola 1 en configuración reusable.
+- [ ] Modelar maquila sin fork de código.
+- [ ] Conciliar kilos enviados/procesados/merma/PT.
+- [ ] Validar owner y fuente de cada dato externo.
+- [ ] Validar PT e inventario.
+- [ ] Validar despacho y lineage.
+- [ ] Tres días consecutivos de operación con cierres registrados.
 
-- [ ] Crear/confirmar usuarios reales por rol y planta.
-- [ ] Confirmar catálogos operacionales: proveedores, especies, productos, procesos y unidades.
-- [ ] Ingresar 2–3 recepciones reales controladas.
-- [ ] Validar evidencia y Vision con documentos reales.
-- [ ] Ejecutar primer flujo real completo hasta inventario.
-- [ ] Ejecutar al menos un flujo comercial/liquidación controlado.
-- [ ] Confirmar que Auditoría registre correctamente los actores.
-- [ ] Revisar datos resultantes con Gerencia de Operaciones.
-- [ ] Corregir cualquier P0/P1 antes de ampliar volumen.
+**Gate:** 4/6 plantas LIVE + Control Tower multiplanta usado por Gerencia.
 
-### Gate
+### Ola 3 — Aqua Austral + Natales
 
-**CORE LIVE:** primeras operaciones reales completas, trazables y aceptadas.
+- [ ] Configurar PT y multiespecie.
+- [ ] Reconciliar fuentes disponibles.
+- [ ] Validar inventario, movimientos, trazabilidad y despacho.
+- [ ] Tres días consecutivos de operación con cierres registrados.
+- [ ] Aceptación humana.
 
----
-
-# FASE 1 — PLANTAS PROPIAS
-## 1–22 septiembre
-
-## Ancud
-
-### Activación
-
-- [ ] Configurar responsables y usuarios.
-- [ ] Confirmar catálogo real de especies/productos/procesos.
-- [ ] Reconciliar histórico disponible sin reinterpretar identidades no confirmadas.
-- [ ] Cargar primeras recepciones reales.
-- [ ] Validar Vision contra documentos reales de terreno.
-- [ ] Validar Calidad y Producción sin recaptura innecesaria.
-- [ ] Confirmar rendimiento y merma.
-- [ ] Confirmar Inventario por lote y ubicación.
-- [ ] Confirmar Ficha 360 y Auditoría.
-- [ ] Confirmar comercial / despacho cuando exista operación real.
-- [ ] Operar tres días consecutivos sin soporte técnico manual.
-
-**Gate Ancud:** LIVE.
-
-## Quellón
-
-### Activación
-
-- [ ] Configurar responsables y usuarios.
-- [ ] Confirmar catálogo multiespecie.
-- [ ] Reconciliar histórico disponible.
-- [ ] Cargar primeras recepciones reales.
-- [ ] Validar desconche/procesamiento cuando corresponda.
-- [ ] Validar producto terminado.
-- [ ] Validar rendimiento y merma.
-- [ ] Validar inventario y movimientos.
-- [ ] Validar liquidación y doble control financiero.
-- [ ] Operar tres días consecutivos sin soporte técnico manual.
-
-**Gate Quellón:** LIVE.
-
-### Gate Fase 1
-
-**2/6 plantas LIVE + core estable con operación diaria real.**
+**Gate:** 6/6 plantas LIVE o formalmente aceptadas según modalidad real.
 
 ---
 
-# FASE 2 — MAQUILAS Y CONTROL MULTIPLANTA
-## 23 septiembre – 22 octubre
+# PRODUCTIZACIÓN — SEAFOOD INTELLIGENCE OS
 
-## Estandarización posterior a las plantas propias
+## 6. Fase P0 — Separar producto de implementación
 
-- [ ] Convertir aprendizajes Ancud/Quellón en configuración reusable.
-- [ ] Checklist único de alta de planta.
-- [ ] Normalizar catálogos compartidos.
-- [ ] Reducir cualquier recaptura manual detectada.
-- [ ] Crear excepciones operacionales sólo donde exista señal real.
-- [ ] Confirmar comparabilidad de KPIs entre modalidades distintas.
+**Objetivo:** que el código pueda representar N organizaciones sin hardcodear Pescamar como frontera de producto.
 
-## Iquique / Sotomayor
+- [ ] Definir `organization/tenant` como primer contexto del OS.
+- [x] Separar branding global del branding cliente.
+- [x] Mantener Pescamar como tenant inicial.
+- [ ] Inventariar literales Pescamar que son branding vs contratos de datos reales.
+- [ ] Definir configuración por organización, planta, especie, proceso y rol.
+- [x] Evitar cambios destructivos de IDs históricos o fuentes canónicas durante el rename.
+- [x] Renombrar metadata, documentación y UI global a Seafood Intelligence OS.
 
-- [ ] Configurar modalidad maquila.
-- [ ] Definir fuente y owner de cada dato.
-- [ ] Validar recepción y envío a proceso.
-- [ ] Conciliar kilos enviados / procesados / merma / producto resultante.
-- [ ] Validar documentos y evidencia.
-- [ ] Validar inventario resultante.
-- [ ] Operar tres días consecutivos sin soporte técnico manual.
-
-**Gate Iquique:** LIVE.
-
-## Piedra Azul
-
-- [ ] Configurar maquila + producto terminado.
-- [ ] Validar especies/productos con cobertura real.
-- [ ] Validar inventario PT.
-- [ ] Conciliar origen → procesamiento → PT → despacho.
-- [ ] Confirmar trazabilidad y Auditoría.
-- [ ] Operar tres días consecutivos sin soporte técnico manual.
-
-**Gate Piedra Azul:** LIVE.
-
-## Centro de control multiplanta
-
-Con cuatro plantas activas se valida que el modelo corporativo sea útil para gestión diaria:
-
-- [ ] recepción por planta;
-- [ ] producción y rendimiento;
-- [ ] merma;
-- [ ] inventario y disponibilidad;
-- [ ] órdenes y compromisos;
-- [ ] excepciones y decisiones pendientes;
-- [ ] antigüedad/frescura de datos;
-- [ ] drill-down planta → lote → evidencia;
-- [ ] cierre diario consolidado con procedencia visible.
-
-### Gate Fase 2
-
-**4/6 plantas LIVE + control multiplanta usado por Gerencia.**
+**Gate:** nueva organización puede configurarse sin fork del core.
 
 ---
 
-# FASE 3 — PRODUCTO TERMINADO Y CIERRE
-## 23 octubre – 22 noviembre
+## 7. Fase P1 — Seafood Event Graph v1
 
-## Aqua Austral
+**Objetivo:** pasar de módulos conectados a lineage explícito end-to-end.
 
-- [ ] Configurar ingreso de producto terminado.
-- [ ] Definir responsable y fuente de datos.
-- [ ] Reconciliar información disponible.
-- [ ] Validar inventario PT.
-- [ ] Validar movimientos y trazabilidad.
-- [ ] Validar despacho.
-- [ ] Operar tres días consecutivos sin soporte técnico manual.
+### Entidades mínimas
 
-**Gate Aqua Austral:** LIVE.
+- Organization.
+- Site / plant / farm / vessel cuando aplique.
+- Station.
+- Supplier / source.
+- Species.
+- Lot / batch.
+- Transformation event.
+- Quality event.
+- Vision event.
+- Inventory event.
+- Cold-chain event.
+- Packing unit.
+- Pallet.
+- Commercial commitment.
+- Shipment.
+- Customer outcome.
+- Evidence artifact.
 
-## Natales
+### Trabajo
 
-- [ ] Configurar flujo PT multiespecie.
-- [ ] Reconciliar información disponible.
-- [ ] Validar especies/productos según operación real.
-- [ ] Validar inventario y movimientos.
-- [ ] Validar despacho.
-- [ ] Operar tres días consecutivos sin soporte técnico manual.
+- [ ] Definir IDs canónicos y relaciones split/merge.
+- [ ] Definir event envelope reusable.
+- [ ] Definir source/evidence provenance.
+- [ ] Definir schema versioning.
+- [ ] Definir idempotency keys para fuentes externas.
+- [ ] Crear API de lineage por lot.
+- [ ] Crear visualización `source → lot → transformation → shipment`.
+- [ ] Añadir test de integridad de grafo.
 
-**Gate Natales:** LIVE.
-
----
-
-## 4. Hardening global
-
-Con las seis plantas activadas:
-
-- [ ] E2E real por cada modalidad operacional.
-- [ ] Matriz completa de permisos y aislamiento por planta.
-- [ ] Concurrencia, duplicados e idempotencia.
-- [ ] Recovery / backup / restore / rollback ensayados.
-- [ ] Degradación segura cuando Vision/OpenAI no esté disponible.
-- [ ] Performance con volumen real.
-- [ ] Navegación y tareas críticas en móvil real.
-- [ ] Observabilidad de API, DB, importaciones y Vision.
-- [ ] Revisión final de secretos, sesiones y autorizaciones.
-- [ ] Auditoría de acciones críticas por operador.
-- [ ] Cero P0/P1 abiertos.
+**Gate:** cualquier kilo representado por el sistema puede explicar su lineage hasta el máximo nivel soportado por la evidencia disponible.
 
 ---
 
-## 5. UAT y transferencia
+## 8. Fase P2 — EdgeVision Foundation
 
-- [ ] UAT Administración.
-- [ ] UAT Gerencia de Operaciones.
-- [ ] UAT Calidad.
-- [ ] UAT Finanzas.
-- [ ] UAT Lectura/Gerencia.
-- [ ] UAT por planta.
-- [ ] Manual operacional breve.
-- [ ] Runbook técnico: GitHub, Vercel, Neon, OpenAI, variables y recuperación.
-- [ ] Integraciones y responsables documentados.
-- [ ] Checklist `PILOT_ACCEPTANCE.md` completo.
-- [ ] Transferencia de operación sin dependencia de N3uralia para tareas rutinarias.
+**Objetivo:** convertir visión computacional en evidencia operacional reusable.
 
----
+### Casos iniciales
 
-## 6. Definition of Done por planta
-
-Una planta sólo se declara **LIVE** cuando cumple:
-
-1. Responsable funcional identificado.
-2. Usuarios y permisos reales configurados.
-3. Catálogos operacionales confirmados.
-4. Fuentes reales identificadas.
-5. Histórico reconciliado cuando corresponda.
-6. Flujo operacional principal E2E funcionando.
-7. Inventario/trazabilidad consistentes.
-8. Evidencia y Auditoría visibles.
-9. KPIs derivados exclusivamente de datos reales.
-10. Excepciones accionables y no decorativas.
-11. Tres días consecutivos de operación sin soporte técnico manual.
-12. Cero P0/P1 y aceptación del responsable.
-
----
-
-## 7. KPIs de éxito del programa
-
-### Datos
-
-- 0 mocks presentados como producción.
-- 100% operaciones críticas con fuente identificable.
-- 100% acciones críticas con identidad estable de operador cuando aplique.
-- 100% usuarios limitados al rol/planta autorizado.
-
-### Operación
-
-- 6/6 plantas LIVE o formalmente aceptadas según modalidad real.
-- Flujo recepción → producción → inventario → comercial trazable.
-- Operación diaria sin equipo de desarrollo para tareas rutinarias.
-
-### Vision documental
-
-- >=95% de precisión en campos críticos sobre documentos reales antes de automatizar confianza alta.
-- 0 campos críticos inventados aceptados silenciosamente.
-- Siempre debe existir revisión humana cuando la confianza o evidencia sea insuficiente.
+1. Erizo — color/calidad/clasificación.
+2. Producto en línea — conteo/calibre/tamaño.
+3. Defectos visibles.
+4. Biomasa estimada donde el escenario lo permita.
 
 ### Plataforma
 
-- Cero P0/P1 al cierre.
-- Build, CI y deploy productivo estables.
-- Runtime sin errores recurrentes no explicados.
-- Mobile operativo para tareas de terreno.
+- [ ] Registro de cámaras/estaciones.
+- [ ] RTSP/ONVIF gateway cuando corresponda.
+- [ ] Cola de inferencia edge/cloud.
+- [ ] Registro de modelo y versión.
+- [ ] Confidence + human review.
+- [ ] Media hash / evidence retention policy.
+- [ ] Vinculación obligatoria a lote/proceso cuando sea posible.
+- [ ] Dataset registry y labeling workflow.
+- [ ] Métricas de precisión por caso de uso.
+- [ ] Degradación segura si inferencia no está disponible.
+
+### Gate por modelo
+
+No promover un modelo a decisión automática sin:
+
+- dataset real representativo;
+- métrica definida;
+- threshold documentado;
+- revisión de false positives/negatives;
+- fallback humano;
+- versionado y trazabilidad.
 
 ---
 
-## 8. Score de rollout
+## 9. Fase P3 — Integration/Data Plane
 
-Cada planta y el core se puntúan semanalmente:
+**Objetivo:** ganar por interoperabilidad, no por lock-in.
 
-| Área | Peso |
-| --- | ---: |
-| Integridad y calidad de datos | 25 |
-| Flujo operacional E2E | 25 |
-| Trazabilidad y evidencia | 15 |
-| Seguridad y permisos | 15 |
-| Estabilidad / observabilidad | 10 |
-| Adopción | 10 |
+### Southbound
 
-### Interpretación
+- [ ] REST/webhooks.
+- [ ] CSV/XLSX import contract con lineage explícito.
+- [ ] MQTT.
+- [ ] OPC-UA / Modbus gateways según hardware real.
+- [ ] RTSP/ONVIF para visión.
+- [ ] Adaptadores para equipos/sistemas existentes sólo donde exista cliente/fuente real.
 
-- **95–100:** estable / listo.
-- **90–94:** operable; cerrar detalles.
-- **80–89:** piloto; continuar controlado.
-- **<80:** bloqueado para ampliar rollout.
+### Northbound
 
-### Gate global
+- [ ] API operacional documentada.
+- [ ] Webhooks de eventos canónicos.
+- [ ] Export de trazabilidad.
+- [ ] Contratos interoperables para clientes/partners.
+- [ ] Evaluar e implementar estándares GS1/EPCIS/GDST según mercados y requisitos comerciales concretos.
 
-- Score global >=95.
-- Ninguna planta <90.
-- Cero P0/P1.
+**Gate:** una integración externa puede entrar y salir sin alterar el core de negocio.
 
 ---
 
-## 9. Priorización de defectos
+## 10. Fase P4 — Seafood AI v1
 
-**P0 — seguridad, pérdida/corrupción de datos o imposibilidad de operar.**  
-Se corrige antes de continuar rollout.
+**Objetivo:** asistente operacional evidence-native, no chatbot genérico.
 
-**P1 — rompe el flujo principal o genera decisión incorrecta.**  
-Se corrige dentro de la ola activa antes de declarar LIVE.
+### Capacidades
 
-**P2 — fricción operacional o claridad insuficiente.**  
-Se corrige si afecta adopción, calidad de dato o score.
+- [ ] Preguntas sobre datos canónicos y live.
+- [ ] Scope por organización/rol/planta.
+- [ ] Respuesta con provenance.
+- [ ] Drill-down a lot/evidence/event.
+- [ ] Detección de excepciones.
+- [ ] Resumen de cierre diario.
+- [ ] Explicación de yield/merma/calidad.
+- [ ] Comparación por proveedor/planta/especie.
+- [ ] Impacto comercial cuando existan datos autorizados.
+- [ ] Recomendaciones separadas de hechos.
 
-**P3 — refinamiento.**  
-No pone en riesgo rollout ni desplaza P0/P1.
+### Regla
 
----
+Toda respuesta debe distinguir claramente:
 
-## 10. Fuera de alcance antes del cierre
+- **hecho observado**;
+- **cálculo derivado**;
+- **inferencia/recomendación**;
+- **dato faltante**.
 
-No entra antes de estabilizar las seis plantas salvo requisito directo de aceptación:
-
-- forecasting o ML predictivo sin historia real suficiente;
-- computer vision avanzada de calibre/color sin caso operacional validado;
-- dashboards redundantes;
-- integraciones sin fuente, owner y contrato de datos;
-- forks de código por planta;
-- personalizaciones cosméticas que rompan el core común;
-- features que no reduzcan riesgo, trabajo manual o tiempo de decisión.
-
----
-
-## 11. Secuencia inmediata
-
-1. Confirmar usuarios reales y permisos de la primera planta.
-2. Confirmar catálogos operacionales comunes.
-3. Ingresar las primeras 2–3 recepciones reales controladas.
-4. Validar Vision con documentos reales.
-5. Ejecutar recepción → producción → inventario de punta a punta.
-6. Revisar Ficha 360, Timeline y Auditoría contra la operación real.
-7. Ejecutar un ciclo comercial/liquidación controlado.
-8. Corregir cualquier P0/P1 detectado.
-9. Declarar Core LIVE.
-10. Activar Ancud.
-11. Activar Quellón.
-12. Convertir diferencias en configuración reusable.
-13. Activar Iquique / Sotomayor y Piedra Azul.
-14. Validar centro de control multiplanta.
-15. Activar Aqua Austral y Natales.
-16. Hardening, UAT y transferencia.
+**Gate:** ninguna respuesta ejecutiva crítica depende de una afirmación sin evidencia o sin clasificación de certeza.
 
 ---
 
-# DONE
+## 11. Fase P5 — Control Tower predictivo
 
-Pescamar se considera terminado cuando:
+Sólo después de tener historia real suficiente.
 
-**las seis plantas operan o están formalmente aceptadas bajo su modalidad real; el score global es >=95; ninguna planta está bajo 90; no existen P0/P1; los datos productivos son reales; roles y plantas están validados; trazabilidad y Auditoría están activas; recuperación está probada; y la operación diaria puede continuar sin depender del equipo de desarrollo.**
+- [ ] Forecast de recepción/producción.
+- [ ] Forecast de inventario.
+- [ ] Riesgo de quiebre/cold-chain.
+- [ ] Predicción de yield.
+- [ ] Calidad esperada por origen/proveedor.
+- [ ] Priorización de lotes para órdenes comerciales.
+- [ ] Recomendaciones de cosecha/compra cuando corresponda a la vertical.
+- [ ] Análisis de margen por decisión.
 
-**Fecha objetivo: 22 noviembre 2026.**
+No construir ML predictivo para llenar dashboards. Cada modelo debe tener una decisión operacional asociada.
+
+---
+
+## 12. Fase P6 — Verticales de producto
+
+Un solo core, configuraciones especializadas:
+
+### Processing Plants
+
+Pescamar es la referencia inicial.
+
+### Aquaculture
+
+- farm/site;
+- biomasa;
+- alimentación;
+- salud/bienestar cuando exista fuente;
+- cosecha;
+- integración con procesamiento.
+
+### Fisheries
+
+- vessel/catch/landing;
+- zonas/origen;
+- recepción;
+- quota/regulatory evidence sólo mediante fuentes autorizadas;
+- procesamiento y comercial.
+
+### Cold Chain
+
+- cámaras;
+- pallets;
+- temperatura;
+- dwell time;
+- alertas;
+- despacho.
+
+### Quality & Vision
+
+- EdgeVision;
+- laboratorio;
+- defectos;
+- grading;
+- buyer specification;
+- evidence packs.
+
+---
+
+## 13. Competitive moat
+
+Seafood Intelligence OS debe ganar por combinación, no por feature aislada.
+
+### Moat 1 — Canonical Seafood Graph
+
+Competidores pueden dominar cámaras, feeding, MES o ERP. Nosotros debemos dominar el contexto que une esos eventos.
+
+### Moat 2 — Vision → economics
+
+No basta detectar color/calibre/defecto. El OS debe conectar esa evidencia con:
+
+`provider → lot → yield → grade → product → customer → price → margin`
+
+### Moat 3 — Evidence-native AI
+
+La IA debe explicar exactamente de dónde viene una respuesta y permitir abrir el lote/evento/evidencia.
+
+### Moat 4 — Hardware neutrality
+
+Integrar equipos existentes reduce fricción comercial y evita competir frontalmente con incumbentes de hardware.
+
+### Moat 5 — Cross-species core
+
+Evitar quedar atrapados en una única especie o modalidad productiva.
+
+---
+
+## 14. Equipos / workstreams
+
+### Product + Operations
+
+- workflows reales;
+- definition of done;
+- UAT;
+- adoption;
+- ROI operacional.
+
+### Data + Architecture
+
+- event graph;
+- schemas;
+- lineage;
+- integrations;
+- observability.
+
+### EdgeVision / AI
+
+- datasets;
+- models;
+- evidence contracts;
+- evaluation;
+- Seafood AI.
+
+### Frontend / UX
+
+- Control Tower;
+- lot 360;
+- event graph UI;
+- mobile/plant-floor workflows;
+- organization/tenant context.
+
+### Security / QA
+
+- RBAC;
+- tenant isolation;
+- audit;
+- release gates;
+- model/evidence integrity;
+- disaster recovery.
+
+### Commercial / Partnerships
+
+- target ICP;
+- integration partners;
+- hardware partners;
+- buyer/traceability requirements;
+- implementation playbook;
+- measurable ROI case studies.
+
+---
+
+## 15. KPIs del producto
+
+### Operación
+
+- Tiempo desde recepción a estado reconciliado.
+- % lotes con lineage completo.
+- % masa reconciliada.
+- reducción de recaptura manual.
+- tiempo de resolución de excepciones.
+
+### Calidad / Vision
+
+- precisión/recall por modelo y clase.
+- % resultados con evidencia visual atribuible.
+- override humano por modelo/versión.
+- relación entre visual grade y outcome real.
+
+### Inteligencia
+
+- % respuestas con provenance navegable.
+- tiempo para explicar una desviación.
+- recomendaciones aceptadas/rechazadas y outcome.
+- reducción de decisiones basadas en reconciliación manual.
+
+### Plataforma
+
+- aislamiento tenant/planta/rol.
+- uptime y error budget.
+- latencia de eventos.
+- idempotencia de integraciones.
+- recovery probado.
+
+### Comercial
+
+- tiempo de implementación de un nuevo tenant.
+- número de integraciones reutilizables.
+- expansión plantas/especies por cliente.
+- ROI documentado por caso de uso.
+
+---
+
+## 16. Secuencia de ejecución
+
+### Ahora — P0 + Pescamar rollout
+
+1. Separar producto global de tenant Pescamar.
+2. Inventariar hardcodes de tenant.
+3. Definir organization context sin migrar destructivamente datos existentes.
+4. Mantener rollout real Pescamar en paralelo.
+5. Documentar el contrato del Seafood Event Graph.
+
+### Después — P1 + EdgeVision foundation
+
+6. Implementar event envelope y lineage API.
+7. Visualización de lineage en Lot 360.
+8. Definir VisionEvent reusable.
+9. Conectar primer caso EdgeVision real sobre erizo.
+10. Medir calidad y human override.
+
+### Luego — Integration plane + Seafood AI
+
+11. Formalizar conectores northbound/southbound.
+12. Añadir provenance de eventos a Seafood AI.
+13. Convertir Control Tower en consumidor del event graph.
+14. Integrar señales externas según clientes reales.
+15. Preparar Implementation 02 sin fork.
+
+---
+
+# DONE — PESCAMAR
+
+Pescamar se considera operacionalmente aceptado cuando cumple `PILOT_ACCEPTANCE.md`: usuarios y datos reales, flujo E2E enlazado por lote, continuidad requerida, UAT humano, cero P0/P1 y release estable.
+
+# DONE — SEAFOOD INTELLIGENCE OS v1
+
+El producto v1 se considera productizado cuando:
+
+1. Pescamar funciona como tenant y no como frontera hardcodeada del producto.
+2. Puede configurarse una segunda organización sin fork.
+3. Existe Seafood Event Graph con lineage navegable.
+4. EdgeVision puede registrar evidencia versionada ligada a lot/proceso.
+5. Seafood AI responde con provenance y scope correcto.
+6. Control Tower consume eventos canónicos y prioriza excepciones.
+7. Integraciones externas usan contratos versionados/idempotentes.
+8. Seguridad demuestra aislamiento organization → site → role.
+9. Cero P0/P1 en gates de producto.
+10. Existe al menos un caso operativo real que demuestre Vision → quality/yield → commercial outcome.

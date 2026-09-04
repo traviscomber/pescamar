@@ -2,7 +2,10 @@ name: Quality
 
 on:
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - 'feat/**'
+      - 'docs/**'
   push:
     branches: [main]
 
@@ -45,6 +48,16 @@ jobs:
           exit 1
       - name: Release smoke
         run: node scripts/release-smoke.mjs
+      - name: Seafood lineage contract
+        run: node scripts/seafood-lineage-smoke.mjs
+      - name: EdgeVision foundation contract
+        run: node scripts/edgevision-foundation-smoke.mjs
+      - name: Organization context contract
+        run: node scripts/organization-context-smoke.mjs
+      - name: Integration data plane contract
+        run: node scripts/integration-data-plane-smoke.mjs
+      - name: Seafood AI foundation contract
+        run: node scripts/seafood-ai-smoke.mjs
       - name: Operational form safety
         run: node scripts/form-safety-smoke.mjs
       - name: Stable operator identity

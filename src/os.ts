@@ -17,6 +17,7 @@ export const osStages:readonly OsStage[]=[
   {path:'/pallets',label:'Pallets',description:'Consolidación física'},
  ]},
  {id:'quality',order:3,label:'Calidad y cumplimiento',owner:'Encargado de calidad',description:'Liberación, inocuidad, temperatura y evidencia.',entry:'/control-regulatorio',modules:[
+  {path:'/edgevision',label:'EdgeVision',description:'Evidencia visual atribuible a lote y proceso'},
   {path:'/control-regulatorio',label:'Control regulatorio',description:'Holds y liberaciones'},
   {path:'/frio',label:'Cadena de frío',description:'Temperatura y continuidad'},
   {path:'/observabilidad',label:'Observabilidad',description:'Salud operacional y alertas'},
@@ -35,7 +36,10 @@ export const osStages:readonly OsStage[]=[
  ]},
  {id:'control',order:6,label:'Inteligencia y control',owner:'Gerencia',description:'Decisiones, memoria, auditoría y configuración transversal.',entry:'/',modules:[
  {path:'/',label:'Hoy',description:'Prioridades y cierre diario'},
-  {path:'/pescamar-ia',label:'Pescamar IA',description:'Copiloto canónico y operacional'},
+  {path:'/pescamar-ia',label:'Pescamar IA',description:'Copiloto canónico y operacional de la implementación'},
+  {path:'/lineage',label:'Seafood Event Graph',description:'Lineage canónico y evidencia por lote'},
+  {path:'/organization',label:'Organization Context',description:'Frontera producto, tenant y aislamiento'},
+  {path:'/integrations',label:'Integration Data Plane',description:'Adapters, protocolos y contratos de interoperabilidad'},
   {path:'/aprobaciones',label:'Decisiones',description:'Excepciones que requieren persona'},
   {path:'/timeline',label:'Línea de tiempo',description:'Continuidad histórica y viva'},
   {path:'/auditoria',label:'Auditoría operacional',description:'Actor, acción, fecha y planta'},
@@ -44,8 +48,8 @@ export const osStages:readonly OsStage[]=[
   {path:'/identidades-plantas',label:'Identidades históricas',description:'Resolución de continuidad'},
   {path:'/estaciones',label:'Estaciones y dispositivos',description:'Infraestructura física'},
   {path:'/operadores',label:'Operadores',description:'Responsables y alcance'},
-  {path:'/rollout',label:'Rollout',description:'Activación por planta'},
-  {path:'/modulos',label:'Pescamar OS',description:'Mapa del sistema'},
+  {path:'/rollout',label:'Rollout Pescamar',description:'Activación por planta de la implementación 01'},
+  {path:'/modulos',label:'Seafood Intelligence OS',description:'Mapa del producto y sus sistemas'},
  ]},
 ] as const
 

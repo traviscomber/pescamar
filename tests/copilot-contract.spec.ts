@@ -4,15 +4,20 @@ import {readFile} from 'node:fs/promises'
 
 const read=(path:string)=>readFile(path,'utf8')
 
-test('Pescamar IA is an authenticated read-only gateway endpoint',async()=>{
- const [handler,context]=await Promise.all([read('api/copilot.ts'),read('api/_copilot-context.ts')])
+test('Pescamar IA is an authenticated read-only implementation of Seafood AI',async()=>{
+ const [handler,context,policy,auth]=await Promise.all([read('api/copilot.ts'),read('api/_copilot-context.ts'),read('api/_seafood-ai-policy.ts'),read('api/_auth.ts')])
  assert.match(handler,/requireOperator\(req\)/)
+ assert.match(handler,/operator\.organizationId!==activeOrganization\.organizationId/)
  assert.match(handler,/req\.method!==['"]POST['"]/)
  assert.match(handler,/gateway\(MODEL\)/)
  assert.match(handler,/AI_GATEWAY_API_KEY/)
  assert.match(handler,/VERCEL_OIDC_TOKEN/)
  assert.match(handler,/resolveCopilotPlant\(operator,body\.plantId\)/)
- assert.doesNotMatch(`${handler}\n${context}`,/\b(insert|update|delete)\s+(into|from|[a-z_]+\s+set)\b/i)
+ assert.match(handler,/seafoodAiSystemPrompt\(activeOrganization\.implementationName\)/)
+ assert.match(handler,/engine:'Seafood AI'/)
+ assert.match(handler,/policyVersion:SEAFOOD_AI_POLICY_VERSION/)
+ assert.match(auth,/organizationId: activeOrganization\.organizationId/)
+ assert.doesNotMatch(`${handler}\n${context}\n${policy}`,/\b(insert|update|delete)\s+(into|from|[a-z_]+\s+set)\b/i)
  assert.doesNotMatch(handler,/OPENAI_API_KEY|api\.openai\.com/)
 })
 
@@ -27,21 +32,41 @@ test('canonical context is role and plant scoped before model invocation',async(
  assert.match(context,/corporateHistory=admin\|\|allowed\.length>=6/)
 })
 
-test('Pescamar IA distinguishes canonical packing evidence from live inventory',async()=>{
- const [handler,context]=await Promise.all([read('api/copilot.ts'),read('api/_copilot-context.ts')])
- assert.match(handler,/\[canonical_inventory\]/)
- assert.match(handler,/outsideCoverageLots/)
- assert.match(handler,/no lo llames fallo de match/)
+test('Seafood AI policy classifies evidence and separates fact, calculation and inference',async()=>{
+ const [handler,policy]=await Promise.all([read('api/copilot.ts'),read('api/_seafood-ai-policy.ts')])
+ assert.match(policy,/SEAFOOD_AI_POLICY_VERSION='seafood\.ai\.evidence\.v1'/)
+ assert.match(policy,/receptions:'live_observation'/)
+ assert.match(policy,/production:'derived_live'/)
+ assert.match(policy,/canonical_sources:'canonical_reference'/)
+ assert.match(policy,/canonical_inventory:'canonical_history'/)
+ assert.match(policy,/finance:'partial_financial'/)
+ assert.match(policy,/Cálculo:/)
+ assert.match(policy,/Inferencia:/)
+ assert.match(policy,/Dato faltante:/)
+ assert.match(handler,/evidenceClassForSource\(source\.id\)/)
+ assert.match(handler,/unclassified_source:/)
+ assert.match(handler,/invalidSourceTags\(answer,new Set\(sources\.map\(source=>source\.id\)\)\)/)
+ assert.match(handler,/invalid_source_tags:/)
+})
+
+test('Seafood AI distinguishes canonical packing evidence from live inventory',async()=>{
+ const [policy,context]=await Promise.all([read('api/_seafood-ai-policy.ts'),read('api/_copilot-context.ts')])
+ assert.match(policy,/canonical_inventory/)
+ assert.match(policy,/outsideCoverageLots/)
+ assert.match(policy,/no lo llames fallo de match/)
  assert.match(context,/canonical_inventory/)
  assert.match(context,/outsideCoverageLots/)
  assert.match(context,/writesLiveInventory:false/)
  assert.match(context,/exact_lot_only; outside upstream coverage is not a failed match/)
 })
 
-test('assistant UI exposes evidence, scope and read-only boundaries',async()=>{
+test('assistant UI exposes evidence classes, scope, canonical inventory citations and read-only boundaries',async()=>{
  const [page,app,access,os,vercel]=await Promise.all([read('src/pages/Copilot.tsx'),read('src/App.tsx'),read('src/access.ts'),read('src/os.ts'),read('vercel.json')])
+ assert.match(page,/Seafood AI · evidence-native/)
  assert.match(page,/Evidencia consultada/)
  assert.match(page,/Sin escrituras ni acciones/)
+ assert.match(page,/canonical_inventory/)
+ assert.match(page,/evidenceLabels/)
  assert.match(page,/plantId:plantId\|\|null/)
  assert.match(app,/path="\/pescamar-ia"/)
  assert.match(access,/"\/pescamar-ia":"all"/)
