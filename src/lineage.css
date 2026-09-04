@@ -18,7 +18,7 @@
 .lineage-events li{display:grid;grid-template-columns:32px minmax(0,1fr);gap:11px;position:relative;padding:0 0 18px}
 .lineage-events li:not(:last-child)::before{content:'';position:absolute;left:15px;top:28px;bottom:0;width:1px;background:var(--line)}
 .lineage-event-marker{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:#f3f3f1;color:var(--muted);border:1px solid var(--line);z-index:1}
-.lineage-event-marker.reception,.lineage-event-marker.quality,.lineage-event-marker.production,.lineage-event-marker.inventory,.lineage-event-marker.dispatch,.lineage-event-marker.sale{background:var(--mint);color:var(--teal);border-color:rgba(240,90,24,.18)}
+.lineage-event-marker.reception,.lineage-event-marker.quality,.lineage-event-marker.production,.lineage-event-marker.vision,.lineage-event-marker.inventory,.lineage-event-marker.dispatch,.lineage-event-marker.sale{background:var(--mint);color:var(--teal);border-color:rgba(240,90,24,.18)}
 .lineage-event-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .lineage-event-head b{font-size:11px}
 .lineage-event-head span{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700}
