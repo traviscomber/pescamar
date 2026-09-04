@@ -12,7 +12,7 @@ async function mockAdmin(page:Page){
  })
 }
 
-test('Pescamar OS registry has six ordered systems and unique module routes',async()=>{
+test('Seafood Intelligence OS registry has six ordered systems and unique module routes',async()=>{
  expect(osStages.map(stage=>stage.order)).toEqual([1,2,3,4,5,6])
  expect(new Set(osStages.map(stage=>stage.id)).size).toBe(6)
  const paths=osModules.map(module=>module.path)
@@ -30,8 +30,8 @@ test('every canonical OS module is routed and governed by an access contract',as
 test('admin can navigate the complete OS map without horizontal overflow',async({page})=>{
  await mockAdmin(page)
  await page.goto('/modulos')
- await expect(page.getByRole('heading',{name:'Una operación. Seis sistemas conectados.'})).toBeVisible()
- const map=page.getByRole('region',{name:'Mapa operativo de Pescamar OS'})
+ await expect(page.getByRole('heading',{name:'Un core operacional. Múltiples implementaciones.'})).toBeVisible()
+ const map=page.getByRole('region',{name:'Mapa operativo de Seafood Intelligence OS'})
  for(const stage of osStages)await expect(map.getByRole('heading',{name:stage.label})).toBeVisible()
  for(const module of osModules)await expect(map.getByRole('link',{name:new RegExp(module.label)}).first()).toBeVisible()
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true)
