@@ -15,6 +15,10 @@ export const seafoodAiSourcePolicy={
 
 export type SeafoodAiSourceId=keyof typeof seafoodAiSourcePolicy
 
+export function evidenceClassForSource(id:string):SeafoodAiEvidenceClass|null{
+  return Object.prototype.hasOwnProperty.call(seafoodAiSourcePolicy,id)?seafoodAiSourcePolicy[id as SeafoodAiSourceId]:null
+}
+
 export function invalidSourceTags(answer:string,allowed:ReadonlySet<string>){
   const tags=[...answer.matchAll(/\[([a-z_]+)\]/g)].map(match=>match[1])
   return [...new Set(tags.filter(tag=>!allowed.has(tag)))]
