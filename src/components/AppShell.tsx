@@ -1,4 +1,4 @@
-import {Activity,Blocks,Boxes,CheckCheck,CircleDollarSign,ClipboardList,Factory,FileSpreadsheet,FlaskConical,GitBranch,History,Landmark,LayoutDashboard,LogOut,Menu,MessageCircleMore,Moon,PackageSearch,ReceiptText,Settings2,ShoppingCart,Sparkles,Sun,Tag,Target,X} from "lucide-react";
+import {Activity,Blocks,Boxes,CheckCheck,CircleDollarSign,ClipboardList,Factory,FileSpreadsheet,FlaskConical,GitBranch,History,Landmark,LayoutDashboard,LogOut,Menu,MessageCircleMore,Moon,PackageSearch,ReceiptText,ScanLine,Settings2,ShoppingCart,Sparkles,Sun,Tag,Target,X} from "lucide-react";
 import {NavLink,useLocation} from "react-router-dom";
 import {useEffect,useRef,useState,type ReactNode} from "react";
 import {canAccessPath,canCreateReception} from "../access";
@@ -20,6 +20,7 @@ const workflowGroups=[
   {to:"/planificacion",label:"Planificación",icon:Target},
   {to:"/lineas",label:"Producción",icon:Blocks},
   {to:"/proceso-erizo",label:"Proceso erizo",icon:FlaskConical},
+  {to:"/edgevision",label:"EdgeVision",icon:ScanLine},
   {to:"/floor",label:"Piso / packing",icon:Factory},
   {to:"/etiquetas",label:"Etiquetas",icon:Tag},
   {to:"/impresion-etiquetas",label:"Impresión etiquetas",icon:Tag},
