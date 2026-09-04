@@ -5,7 +5,8 @@ type Request={method?:string;headers?:Record<string,string|string[]|undefined>;q
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void}
 
 type LotEconomics={purchaseCostClp:number;transformationCostClp:number;soldKg:number;revenueClp:number;allocatedCostClp:number;contributionClp:number;contributionPct:number|null}
-type YieldLot={receptionId:string;receptionNumber:string;runId:string;supplier:string;grade:string|null;inputKg:number;outputKg:number;yieldPct:number;economics:LotEconomics|null}
+type StageEvidence={stage:string;status:string;targetTemperatureC:number|null;targetDurationSeconds:number|null;actualTemperatureC:number|null;actualDurationSeconds:number|null}
+type YieldLot={receptionId:string;receptionNumber:string;runId:string;supplier:string;grade:string|null;inputKg:number;outputKg:number;yieldPct:number;economics:LotEconomics|null;stages:StageEvidence[]}
 
 function plantScope(operator:SessionOperator,requested:string){
  if(operator.role==='admin')return requested||null
@@ -14,6 +15,7 @@ function plantScope(operator:SessionOperator,requested:string){
 }
 const finite=(value:unknown)=>{const number=Number(value);return Number.isFinite(number)?number:null}
 const grades=['A','B','C','D','E'] as const
+const criticalStages=['blanching','thermal_shock','dripping','draining','molding','freezing'] as const
 
 export default async function handler(req:Request,res:Response){
  res.setHeader('Cache-Control','no-store')
@@ -29,6 +31,7 @@ export default async function handler(req:Request,res:Response){
   const rows=await sql`
    select c.id,c.run_id,c.suggested_grade,c.operator_grade,c.decision,c.l_mean,c.a_mean,c.b_mean,c.l_std,c.a_std,c.b_std,c.delta_e,c.created_at,c.confirmed_at,
           u.grade run_grade,u.output_kg,u.color_status,u.xray_status,
+          coalesce((select jsonb_agg(jsonb_build_object('stage',s.stage,'status',s.status,'targetTemperatureC',s.target_temperature_c,'targetDurationSeconds',s.target_duration_seconds,'actualTemperatureC',s.actual_temperature_c,'actualDurationSeconds',s.actual_duration_seconds) order by s.sequence_no) from sea_urchin_stage_checks s where s.run_id=u.id and s.stage in ('blanching','thermal_shock','dripping','draining','molding','freezing')),'[]'::jsonb) stage_checks,
           r.id reception_id,r.reception_number,r.plant_id,r.received_at,coalesce(r.accepted_kg,greatest(0,r.gross_kg-r.tare_kg)) input_kg,p.legal_name supplier
    from sea_urchin_color_captures c
    join sea_urchin_process_runs u on u.id=c.run_id
@@ -79,7 +82,9 @@ export default async function handler(req:Request,res:Response){
     const econ=economicsByReception.get(receptionId),purchaseCost=econ?finite(econ.purchase_cost_clp):null,transformationCost=econ?finite(econ.transformation_cost_clp):null,transformationRecords=econ?Number(econ.transformation_records??0):0,soldKg=econ?Number(econ.sold_kg??0):0,revenue=econ?Number(econ.revenue_clp??0):0,saleRecords=econ?Number(econ.sale_records??0):0
     let economics:LotEconomics|null=null
     if(financialRole&&purchaseCost!=null&&transformationCost!=null&&transformationRecords>0&&saleRecords>0&&soldKg>0&&revenue>0){const soldRatio=Math.min(1,soldKg/outputKg),allocatedCost=purchaseCost*soldRatio+transformationCost*soldRatio,contribution=revenue-allocatedCost;economics={purchaseCostClp:purchaseCost,transformationCostClp:transformationCost,soldKg,revenueClp:revenue,allocatedCostClp:allocatedCost,contributionClp:contribution,contributionPct:revenue>0?contribution/revenue*100:null};supplier.economicLots++;supplier.revenueClp+=revenue;supplier.contributionClp+=contribution}
-    const yieldPct=outputKg/inputKg*100;yieldLots.set(receptionId,{receptionId,receptionNumber:String(row.reception_number??''),runId:String(row.run_id??''),supplier:key,grade:canonicalGrade,inputKg,outputKg,yieldPct,economics});supplier.yieldLots.add(receptionId);supplier.inputKg+=inputKg;supplier.outputKg+=outputKg
+    const rawStages=Array.isArray(row.stage_checks)?row.stage_checks as Array<Record<string,unknown>>:[]
+    const stages=rawStages.map(stage=>({stage:String(stage.stage??''),status:String(stage.status??''),targetTemperatureC:finite(stage.targetTemperatureC),targetDurationSeconds:finite(stage.targetDurationSeconds),actualTemperatureC:finite(stage.actualTemperatureC),actualDurationSeconds:finite(stage.actualDurationSeconds)})).filter(stage=>criticalStages.includes(stage.stage as typeof criticalStages[number]))
+    const yieldPct=outputKg/inputKg*100;yieldLots.set(receptionId,{receptionId,receptionNumber:String(row.reception_number??''),runId:String(row.run_id??''),supplier:key,grade:canonicalGrade,inputKg,outputKg,yieldPct,economics,stages});supplier.yieldLots.add(receptionId);supplier.inputKg+=inputKg;supplier.outputKg+=outputKg
    }
    suppliers.set(key,supplier)
   }
@@ -87,8 +92,15 @@ export default async function handler(req:Request,res:Response){
   const bySupplier=[...suppliers.values()].map(row=>({supplier:row.supplier,lots:row.lots.size,captures:row.captures,confirmed:row.confirmed,accepted:row.accepted,grades:row.grades,yieldLots:row.yieldLots.size,inputKg:row.inputKg,outputKg:row.outputKg,yieldPct:row.inputKg>0?row.outputKg/row.inputKg*100:null,economics:financialRole?{traceableLots:row.economicLots,revenueClp:row.revenueClp,contributionClp:row.contributionClp,contributionPct:row.revenueClp>0?row.contributionClp/row.revenueClp*100:null}:null})).sort((a,b)=>b.confirmed-a.confirmed||b.captures-a.captures).slice(0,50)
   const yieldRows=[...yieldLots.values()].sort((a,b)=>b.yieldPct-a.yieldPct)
   const gradePerformance=grades.map(grade=>{const lots=yieldRows.filter(row=>row.grade===grade),inputKg=lots.reduce((sum,row)=>sum+row.inputKg,0),outputKg=lots.reduce((sum,row)=>sum+row.outputKg,0),economicLots=lots.filter(row=>row.economics),revenueClp=economicLots.reduce((sum,row)=>sum+(row.economics?.revenueClp??0),0),contributionClp=economicLots.reduce((sum,row)=>sum+(row.economics?.contributionClp??0),0);return {grade,lots:lots.length,inputKg,outputKg,yieldPct:inputKg>0?outputKg/inputKg*100:null,economics:financialRole?{traceableLots:economicLots.length,revenueClp,contributionClp,contributionPct:revenueClp>0?contributionClp/revenueClp*100:null}:null}})
+  const processPerformance=criticalStages.map(stage=>{
+   const lots=yieldRows.filter(row=>row.stages.some(item=>item.stage===stage&&item.status!=='pending'))
+   const stageRows=lots.map(row=>({lot:row,evidence:row.stages.find(item=>item.stage===stage)!}))
+   const measuredTemp=stageRows.filter(row=>row.evidence.actualTemperatureC!=null),measuredDuration=stageRows.filter(row=>row.evidence.actualDurationSeconds!=null),ab=stageRows.filter(row=>row.lot.grade==='A'||row.lot.grade==='B'),other=stageRows.filter(row=>row.lot.grade&&row.lot.grade!=='A'&&row.lot.grade!=='B')
+   const cohort=(items:typeof stageRows)=>{const temps=items.filter(row=>row.evidence.actualTemperatureC!=null),durations=items.filter(row=>row.evidence.actualDurationSeconds!=null),inputKg=items.reduce((sum,row)=>sum+row.lot.inputKg,0),outputKg=items.reduce((sum,row)=>sum+row.lot.outputKg,0);return {lots:items.length,avgTemperatureC:temps.length?temps.reduce((sum,row)=>sum+(row.evidence.actualTemperatureC??0),0)/temps.length:null,avgDurationSeconds:durations.length?durations.reduce((sum,row)=>sum+(row.evidence.actualDurationSeconds??0),0)/durations.length:null,yieldPct:inputKg>0?outputKg/inputKg*100:null}}
+   return {stage,lots:stageRows.length,deviations:stageRows.filter(row=>['deviation','hold'].includes(row.evidence.status)).length,avgTemperatureC:measuredTemp.length?measuredTemp.reduce((sum,row)=>sum+(row.evidence.actualTemperatureC??0),0)/measuredTemp.length:null,avgDurationSeconds:measuredDuration.length?measuredDuration.reduce((sum,row)=>sum+(row.evidence.actualDurationSeconds??0),0)/measuredDuration.length:null,ab:cohort(ab),other:cohort(other)}
+  })
   const totalInputKg=yieldRows.reduce((sum,row)=>sum+row.inputKg,0),totalOutputKg=yieldRows.reduce((sum,row)=>sum+row.outputKg,0),economicRows=yieldRows.filter(row=>row.economics),revenueClp=economicRows.reduce((sum,row)=>sum+(row.economics?.revenueClp??0),0),contributionClp=economicRows.reduce((sum,row)=>sum+(row.economics?.contributionClp??0),0)
-  return res.status(200).json({ok:true,scope:{plantId:scope},summary:{captures:data.length,confirmed:confirmed.length,accepted:confirmed.filter(row=>(row as {decision?:unknown}).decision==='accepted').length,lots:new Set(data.map(row=>String((row as {reception_id?:unknown}).reception_id))).size,agreement:comparable.length?{matched,total:comparable.length,ratio:matched/comparable.length}:null,references:Array.isArray(references)?references:[],yield:{lots:yieldRows.length,inputKg:totalInputKg,outputKg:totalOutputKg,pct:totalInputKg>0?totalOutputKg/totalInputKg*100:null},economics:financialRole?{traceableLots:economicRows.length,revenueClp,contributionClp,contributionPct:revenueClp>0?contributionClp/revenueClp*100:null}:null},byGrade,gradePerformance,bySupplier,byLot:yieldRows})
+  return res.status(200).json({ok:true,scope:{plantId:scope},summary:{captures:data.length,confirmed:confirmed.length,accepted:confirmed.filter(row=>(row as {decision?:unknown}).decision==='accepted').length,lots:new Set(data.map(row=>String((row as {reception_id?:unknown}).reception_id))).size,agreement:comparable.length?{matched,total:comparable.length,ratio:matched/comparable.length}:null,references:Array.isArray(references)?references:[],yield:{lots:yieldRows.length,inputKg:totalInputKg,outputKg:totalOutputKg,pct:totalInputKg>0?totalOutputKg/totalInputKg*100:null},economics:financialRole?{traceableLots:economicRows.length,revenueClp,contributionClp,contributionPct:revenueClp>0?contributionClp/revenueClp*100:null}:null},byGrade,gradePerformance,processPerformance,bySupplier,byLot:yieldRows})
  }catch(error){
   const message=error instanceof Error?error.message:''
   return res.status(message.includes('sea_urchin_color_')?503:500).json({ok:false,error:message.includes('sea_urchin_color_')?'Falta aplicar la migración Uni Vision Station':'No fue posible construir dataset de calibración'})
