@@ -6,6 +6,7 @@ export type SeafoodEventType=
   |'evidence'
   |'quality'
   |'production'
+  |'vision'
   |'note'
   |'inventory'
   |'commercial_commitment'
