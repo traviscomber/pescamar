@@ -20,7 +20,7 @@ export default async function handler(request:Request,response:Response){
   try{
     const operator=await requireOperator(request)
     if(!operator)return response.status(401).json({ok:false,error:'Sesión requerida'})
-    const organization=resolveRequestOrganization(request.headers)
+    const organization=resolveRequestOrganization(request.headers,operator.organizationId)
     if(!organization)return response.status(409).json({ok:false,code:'ORGANIZATION_CONTEXT_UNSUPPORTED',error:'La organización solicitada no está habilitada en esta implementación'})
     const receptionId=String(one(request.query?.receptionId)??'').trim()
     if(!uuid.test(receptionId))return response.status(400).json({ok:false,error:'Recepción inválida'})
