@@ -1,5 +1,6 @@
 import {requireOperator,type SessionOperator} from './_auth.js'
 import {getSql} from './_db.js'
+import {activeOrganization,resolveRequestOrganization} from './_organization.js'
 import {seafoodEvent,sortSeafoodEvents,type SeafoodEvent} from './_seafood-event.js'
 
 type Request={method?:string;query?:Record<string,string|string[]|undefined>;headers?:Record<string,string|string[]|undefined>}
@@ -19,6 +20,8 @@ export default async function handler(request:Request,response:Response){
   try{
     const operator=await requireOperator(request)
     if(!operator)return response.status(401).json({ok:false,error:'Sesión requerida'})
+    const organization=resolveRequestOrganization(request.headers)
+    if(!organization)return response.status(409).json({ok:false,code:'ORGANIZATION_CONTEXT_UNSUPPORTED',error:'La organización solicitada no está habilitada en esta implementación'})
     const receptionId=String(one(request.query?.receptionId)??'').trim()
     if(!uuid.test(receptionId))return response.status(400).json({ok:false,error:'Recepción inválida'})
     const access=await accessibleReception(receptionId,operator)
@@ -77,7 +80,7 @@ export default async function handler(request:Request,response:Response){
     }
 
     const ordered=sortSeafoodEvents(events),has=(type:SeafoodEvent['type'])=>ordered.some(event=>event.type===type)
-    return response.status(200).json({ok:true,schemaVersion:'seafood.lineage.v1',organizationId:'pescamar',siteId,lotId:receptionId,events:ordered,coverage:{reception:has('reception'),evidence:has('evidence'),quality:has('quality'),production:has('production'),vision:has('vision'),inventory:has('inventory'),commercialCommitment:has('commercial_commitment'),dispatch:has('dispatch'),sale:commercialRole?has('sale'):null},permissions:{canSeeCommercial:commercialRole}})
+    return response.status(200).json({ok:true,schemaVersion:'seafood.lineage.v1',organizationId:organization.organizationId,organization:{id:organization.organizationId,implementationId:organization.implementationId,implementationName:organization.implementationName,isolationMode:organization.isolationMode},siteId,lotId:receptionId,events:ordered,coverage:{reception:has('reception'),evidence:has('evidence'),quality:has('quality'),production:has('production'),vision:has('vision'),inventory:has('inventory'),commercialCommitment:has('commercial_commitment'),dispatch:has('dispatch'),sale:commercialRole?has('sale'):null},permissions:{canSeeCommercial:commercialRole},boundary:{organizationScoped:activeOrganization.isolationMode==='organization_scoped'}})
   }catch(error){
     const message=error instanceof Error?error.message:''
     const migration=['lot_events','inventory_movements','sales_order_allocations','lot_dispatches','lot_sales'].some(table=>message.includes(table))
