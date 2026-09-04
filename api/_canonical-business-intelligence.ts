@@ -41,6 +41,7 @@ export async function buildCanonicalBusinessIntelligence(operator:SessionOperato
  const rel=new Map(rows(relationshipRaw).map(row=>[String(row.relationship_status??''),n(row.rows)]))
  const productionRows=n(production.rows),guideKg=n(production.guide_kg),receivedKg=n(production.received_kg),chronologyReview=n(production.chronology_review)
  const boxes=n(packing.boxes),packingKg=n(packing.kg),missingLotBoxes=n(packing.missing_lot),observedEnd=s(packing.observed_end),registeredEnd=s(packing.registered_end)
+ const stockKg=n(stock.kg)
  const transactionalRows=n(ledger?.transactional_rows),summaryRows=n(ledger?.summary_rows),importedRows=n(ledger?.imported_rows),inflowClp=n(ledger?.inflow_clp),outflowClp=n(ledger?.outflow_clp)
  const priorities=[] as CanonicalBusinessIntelligence['data']['priorities']
  if(missingLotBoxes)priorities.push({priority:1,kind:'packing-lineage',title:`Vincular ${missingLotBoxes} cajas IQF a lote`,detail:'El packing físico existe, pero esas cajas no tienen referencia de lote en la fuente. No deben asignarse por fecha ni por inferencia.'})
@@ -48,7 +49,7 @@ export async function buildCanonicalBusinessIntelligence(operator:SessionOperato
  if(financial&&summaryRows)priorities.push({priority:2,kind:'ledger-grain',title:`Separar ${summaryRows} filas resumen de CUENTA2`,detail:`El archivo contiene ${importedRows} filas importadas, pero ${transactionalRows} corresponden a movimientos con fecha o dinero. Las filas resumen no deben inflar el conteo transaccional.`})
  if(observedEnd&&registeredEnd&&observedEnd>registeredEnd)priorities.push({priority:2,kind:'source-coverage',title:'Actualizar cobertura del packing',detail:`La evidencia física llega hasta ${observedEnd}, mientras la metadata canónica declara cierre ${registeredEnd}. Corregir metadata sin alterar las cajas originales.`})
  const direct=rel.get('directa')??0,consolidated=rel.get('lote_consolidado')??0,review=rel.get('requiere_revision')??0
- const totalRows=productionRows+boxes+n(stock.kg>0?1:0)+(financial?transactionalRows:0)
+ const totalRows=productionRows+boxes+(stockKg>0?1:0)+(financial?transactionalRows:0)
  const latest=[s(production.latest_date),observedEnd].filter((value):value is string=>Boolean(value)).sort().at(-1)??null
  return {
   source:{id:'canonical_intelligence',label:'Inteligencia canónica auditada',path:'/importaciones',rows:totalRows,freshness:latest},
@@ -57,7 +58,7 @@ export async function buildCanonicalBusinessIntelligence(operator:SessionOperato
    reception:{rows:productionRows,guideKg,receivedKg,varianceKg:Number((guideKg-receivedKg).toFixed(1)),explainedPct:pct(receivedKg,guideKg)},
    lineage:{direct,consolidated,review,chronologyReview},
    packing:{boxes,kg:packingKg,missingLotBoxes,traceabilityPct:pct(boxes-missingLotBoxes,boxes),observedEnd,registeredEnd,metadataCoverageMismatch:Boolean(observedEnd&&registeredEnd&&observedEnd>registeredEnd)},
-   stockEvidence:{kg:n(stock.kg),historicalOnly:true},
+   stockEvidence:{kg:stockKg,historicalOnly:true},
    finance:financial?{importedRows,transactionalRows,summaryRows,inflowClp,outflowClp,balanceDeltaClp:Number((inflowClp-outflowClp).toFixed(0))}:null,
    priorities:priorities.slice(0,4)
   }
