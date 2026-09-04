@@ -41,6 +41,7 @@ const workflowGroups=[
  {label:"Trazabilidad y gestión",icon:Settings2,items:[
   {to:"/lineage",label:"Seafood Event Graph",icon:GitBranch},
   {to:"/organization",label:"Organization Context",icon:Building2},
+  {to:"/integrations",label:"Integration Data Plane",icon:Activity},
   {to:"/comunicaciones",label:"Comunicaciones",icon:MessageCircleMore},
   {to:"/timeline",label:"Línea de tiempo",icon:History},
   {to:"/auditoria",label:"Auditoría operacional",icon:ClipboardList},

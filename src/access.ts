@@ -6,6 +6,7 @@ const access:Record<string,AppRole[]|"all">={
   "/lineage":"all",
   "/edgevision":"all",
   "/organization":["admin","operations"],
+  "/integrations":["admin","operations"],
   "/pescamar-ia":"all",
   "/comunicaciones":["admin","operations","finance","quality","viewer"],
   "/auditoria":["admin","operations"],

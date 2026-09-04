@@ -39,6 +39,7 @@ export const osStages:readonly OsStage[]=[
   {path:'/pescamar-ia',label:'Pescamar IA',description:'Copiloto canónico y operacional de la implementación'},
   {path:'/lineage',label:'Seafood Event Graph',description:'Lineage canónico y evidencia por lote'},
   {path:'/organization',label:'Organization Context',description:'Frontera producto, tenant y aislamiento'},
+  {path:'/integrations',label:'Integration Data Plane',description:'Adapters, protocolos y contratos de interoperabilidad'},
   {path:'/aprobaciones',label:'Decisiones',description:'Excepciones que requieren persona'},
   {path:'/timeline',label:'Línea de tiempo',description:'Continuidad histórica y viva'},
   {path:'/auditoria',label:'Auditoría operacional',description:'Actor, acción, fecha y planta'},

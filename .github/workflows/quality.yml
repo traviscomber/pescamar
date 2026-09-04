@@ -54,6 +54,8 @@ jobs:
         run: node scripts/edgevision-foundation-smoke.mjs
       - name: Organization context contract
         run: node scripts/organization-context-smoke.mjs
+      - name: Integration data plane contract
+        run: node scripts/integration-data-plane-smoke.mjs
       - name: Operational form safety
         run: node scripts/form-safety-smoke.mjs
       - name: Stable operator identity
