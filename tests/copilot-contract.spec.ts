@@ -5,7 +5,7 @@ import {readFile} from 'node:fs/promises'
 const read=(path:string)=>readFile(path,'utf8')
 
 test('Pescamar IA is an authenticated read-only implementation of Seafood AI',async()=>{
- const [handler,context,policy,auth]=await Promise.all([read('api/copilot.ts'),read('api/_copilot-context.ts'),read('api/_seafood-ai-policy.ts'),read('api/_auth.ts')])
+ const [handler,context,policy,auth,historical]=await Promise.all([read('api/copilot.ts'),read('api/_copilot-context.ts'),read('api/_seafood-ai-policy.ts'),read('api/_auth.ts'),read('api/_copilot-historical-lineage.ts')])
  assert.match(handler,/requireOperator\(req\)/)
  assert.match(handler,/operator\.organizationId!==activeOrganization\.organizationId/)
  assert.match(handler,/req\.method!==['"]POST['"]/)
@@ -16,8 +16,9 @@ test('Pescamar IA is an authenticated read-only implementation of Seafood AI',as
  assert.match(handler,/seafoodAiSystemPrompt\(activeOrganization\.implementationName\)/)
  assert.match(handler,/engine:'Seafood AI'/)
  assert.match(handler,/policyVersion:SEAFOOD_AI_POLICY_VERSION/)
+ assert.match(handler,/buildHistoricalLineageEvidence\(operator\)/)
  assert.match(auth,/organizationId: activeOrganization\.organizationId/)
- assert.doesNotMatch(`${handler}\n${context}\n${policy}`,/\b(insert|update|delete)\s+(into|from|[a-z_]+\s+set)\b/i)
+ assert.doesNotMatch(`${handler}\n${context}\n${policy}\n${historical}`,/\b(insert|update|delete)\s+(into|from|[a-z_]+\s+set)\b/i)
  assert.doesNotMatch(handler,/OPENAI_API_KEY|api\.openai\.com/)
 })
 
@@ -39,6 +40,7 @@ test('Seafood AI policy classifies evidence and separates fact, calculation and 
  assert.match(policy,/production:'derived_live'/)
  assert.match(policy,/canonical_sources:'canonical_reference'/)
  assert.match(policy,/canonical_inventory:'canonical_history'/)
+ assert.match(policy,/historical_lineage:'canonical_history'/)
  assert.match(policy,/finance:'partial_financial'/)
  assert.match(policy,/Cálculo:/)
  assert.match(policy,/Inferencia:/)
@@ -60,12 +62,24 @@ test('Seafood AI distinguishes canonical packing evidence from live inventory',a
  assert.match(context,/exact_lot_only; outside upstream coverage is not a failed match/)
 })
 
+test('Seafood AI exposes historical Event Graph as canonical provenance without promoting it to live',async()=>{
+ const [handler,policy,historical,page]=await Promise.all([read('api/copilot.ts'),read('api/_seafood-ai-policy.ts'),read('api/_copilot-historical-lineage.ts'),read('src/pages/Copilot.tsx')])
+ assert.match(handler,/historical_lineage:historicalLineage\.data/)
+ assert.match(policy,/historical_lineage es la proyección navegable del Seafood Event Graph/)
+ assert.match(historical,/record_status='operational'/)
+ assert.match(historical,/void_rows/)
+ assert.match(historical,/liveInventory:false/)
+ assert.match(historical,/\/lineage\?mode=historical&year=2026/)
+ assert.match(page,/historical_lineage/)
+})
+
 test('assistant UI exposes evidence classes, scope, canonical inventory citations and read-only boundaries',async()=>{
  const [page,app,access,os,vercel]=await Promise.all([read('src/pages/Copilot.tsx'),read('src/App.tsx'),read('src/access.ts'),read('src/os.ts'),read('vercel.json')])
  assert.match(page,/Seafood AI · evidence-native/)
  assert.match(page,/Evidencia consultada/)
  assert.match(page,/Sin escrituras ni acciones/)
  assert.match(page,/canonical_inventory/)
+ assert.match(page,/historical_lineage/)
  assert.match(page,/evidenceLabels/)
  assert.match(page,/plantId:plantId\|\|null/)
  assert.match(app,/path="\/pescamar-ia"/)
