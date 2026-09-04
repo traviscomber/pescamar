@@ -11,10 +11,10 @@ type Source={id:string;label:string;path:string;rows:number;freshness:string|nul
 type Scope={plantId:string|null;plantIds:string[];role:string;organizationId?:string}
 type Turn={id:string;question:string;answer:string;sources:Source[];generatedAt:string;scope:Scope;engine:string;policyVersion:string}
 type Payload={answer?:string;engine?:string;policyVersion?:string;generatedAt?:string;scope?:Scope;sources?:Source[];error?:string}
-const examples=['¿Qué requiere atención hoy y por qué?','Resume producción, inventario y calidad por planta.','¿Qué pedidos están menos cubiertos?','¿Qué sabemos con evidencia canónica y qué falta?']
+const examples=['¿Qué requiere atención hoy y por qué?','Resume producción, inventario y calidad por planta.','¿Qué evidencia histórica puedo abrir en el Event Graph?','¿Qué sabemos con evidencia canónica y qué falta?']
 const evidenceLabels:Record<EvidenceClass,string>={live_observation:'live',derived_live:'derivado live',canonical_reference:'fuente canónica',canonical_history:'histórico canónico',partial_financial:'financiero parcial'}
 
-function Answer({text,sources}:{text:string;sources:Source[]}){const lookup=new Map(sources.map(source=>[source.id,source])),parts=text.split(/(\[(?:receptions|production|quality|inventory|orders|canonical_sources|canonical_inventory|finance)\])/g);return <div className="copilot-answer">{parts.map((part,index)=>{const match=/^\[([^\]]+)\]$/.exec(part),source=match?lookup.get(match[1]):null;return source?<Link className="copilot-citation" to={source.path} title={`Abrir ${source.label}`} key={`${part}-${index}`}>{part}</Link>:<span key={index}>{part}</span>})}</div>}
+function Answer({text,sources}:{text:string;sources:Source[]}){const lookup=new Map(sources.map(source=>[source.id,source])),parts=text.split(/(\[(?:receptions|production|quality|inventory|orders|canonical_sources|canonical_inventory|historical_lineage|finance)\])/g);return <div className="copilot-answer">{parts.map((part,index)=>{const match=/^\[([^\]]+)\]$/.exec(part),source=match?lookup.get(match[1]):null;return source?<Link className="copilot-citation" to={source.path} title={`Abrir ${source.label}`} key={`${part}-${index}`}>{part}</Link>:<span key={index}>{part}</span>})}</div>}
 
 export function Copilot(){
  const {operator}=useAuth(),available=useMemo(()=>operator?.role==='admin'?plants:plants.filter(plant=>operator?.plantIds.includes(plant.id)),[operator])
