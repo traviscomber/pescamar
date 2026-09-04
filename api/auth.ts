@@ -1,6 +1,7 @@
 import { createSession, clearSessionCookie, destroySession, requireOperator, sessionCookie, verifyPassword } from "./_auth.js";
 import { clearSuccessfulPair, loginRateState, recordAuthEvent, recordLoginFailure } from "./_auth-security.js";
 import { getSql } from "./_db.js";
+import { activeOrganization } from "./_organization.js";
 
 type Request={method?:string;body?:unknown;headers?:Record<string,string|string[]|undefined>};
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void};
@@ -40,17 +41,17 @@ export default async function handler(request:Request,response:Response){
       const session=await createSession(row.id);
       await Promise.all([
         clearSuccessfulPair(request,email),
-        recordAuthEvent("login_success",request,email,row.id,{role:row.role}),
+        recordAuthEvent("login_success",request,email,row.id,{role:row.role,organizationId:activeOrganization.organizationId}),
       ]);
       response.setHeader("Set-Cookie",sessionCookie(session.token,session.maxAge));
-      return response.status(200).json({ok:true,operator:{id:row.id,fullName:row.full_name,email:row.email,role:row.role,plantIds:row.plant_ids??[]}});
+      return response.status(200).json({ok:true,operator:{id:row.id,fullName:row.full_name,email:row.email,role:row.role,plantIds:row.plant_ids??[],organizationId:activeOrganization.organizationId}});
     }
     if(request.method==="DELETE"){
       const operator=await requireOperator(request);
       await destroySession(request);
       response.setHeader("Set-Cookie",clearSessionCookie());
       if(operator){
-        await recordAuthEvent("logout",request,operator.email,operator.id,{role:operator.role});
+        await recordAuthEvent("logout",request,operator.email,operator.id,{role:operator.role,organizationId:operator.organizationId});
       }
       return response.status(200).json({ok:true});
     }
