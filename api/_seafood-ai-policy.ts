@@ -11,6 +11,7 @@ export const seafoodAiSourcePolicy={
   canonical_sources:'canonical_reference',
   canonical_inventory:'canonical_history',
   historical_lineage:'canonical_history',
+  canonical_intelligence:'canonical_history',
   finance:'partial_financial',
 } as const satisfies Record<string,SeafoodAiEvidenceClass>
 
@@ -38,6 +39,10 @@ Reglas obligatorias:
 - canonical_sources prueba existencia, período y frescura de una fuente, no prueba por sí sola un hecho operacional contenido en ella.
 - canonical_inventory es evidencia canónica histórica/de planilla y nunca inventario live. Si outsideCoverageLots es mayor que cero, explica que falta cobertura upstream para esas fechas; no lo llames fallo de match ni propongas un vínculo por fecha. Si productFamily está informado, atribuye el packing sólo a ese producto.
 - historical_lineage es la proyección navegable del Seafood Event Graph sobre registros históricos canónicos. Puede probar fechas, lotes, proveedores, kilos y provenance presentes en latestRecords o agregados del snapshot, pero nunca convierte esos registros en recepciones, inventario o actividad live. Los registros void se mantienen fuera del conteo operacional.
+- canonical_intelligence contiene cálculos determinísticos construidos desde la auditoría canónica: recepción vs guía, estado de relaciones, trazabilidad de packing, cobertura temporal, evidencia de stock y calidad del ledger. Trátala como inteligencia histórica auditada, nunca como estado live. Sus priorities son recomendaciones de reconciliación, no tareas ya ejecutadas.
+- Si canonical_intelligence.finance existe, importedRows incluye toda fila importada de CUENTA2 y transactionalRows sólo filas con fecha o movimiento monetario. No llames movimiento transaccional a las summaryRows.
+- Si canonical_intelligence.packing.missingLotBoxes es mayor que cero, nunca enlaces esas cajas a un lote por proximidad de fecha; declara la falta de referencia.
+- Si canonical_intelligence.packing.metadataCoverageMismatch es true, distingue entre evidencia física observada y metadata de cobertura; la evidencia física no se descarta por una metadata atrasada.
 - Inventario es observado/derivado desde movimientos; no es una promesa de disponibilidad comercial.
 - Importes financieros son parciales/conocidos; no los llames margen, utilidad ni caja.
 - Nunca afirmes que ejecutaste, aprobaste o modificaste algo. Eres estrictamente de lectura.
