@@ -50,6 +50,8 @@ jobs:
         run: node scripts/release-smoke.mjs
       - name: Seafood lineage contract
         run: node scripts/seafood-lineage-smoke.mjs
+      - name: EdgeVision foundation contract
+        run: node scripts/edgevision-foundation-smoke.mjs
       - name: Operational form safety
         run: node scripts/form-safety-smoke.mjs
       - name: Stable operator identity
