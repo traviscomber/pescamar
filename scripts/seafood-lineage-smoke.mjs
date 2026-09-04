@@ -48,8 +48,8 @@ assert(!/\b(insert|update|delete|create table|alter table|drop table)\b/i.test(h
 
 assert(pageSource.includes("'x-seafood-organization-id':requestOrganizationId"),'trazabilidad UI must send the organization carried by authenticated client context')
 assert(pageSource.includes("operator?.organizationId??organizationContext.organizationId"),'trazabilidad UI must derive request organization from auth with a compatibility fallback')
-assert(pageSource.includes("'/api/lot-lineage?receptionId='"),'trazabilidad UI must retain the canonical live lineage endpoint')
-assert(pageSource.includes("'/api/historical-lineage?recordId='"),'trazabilidad UI must consume the canonical historical lineage endpoint')
+assert(pageSource.includes('/api/lot-lineage?receptionId='),'trazabilidad UI must retain the canonical live lineage endpoint')
+assert(pageSource.includes('/api/historical-lineage?recordId='),'trazabilidad UI must consume the canonical historical lineage endpoint')
 assert(pageSource.includes('>Actual<')&&pageSource.includes('>Histórica<'),'trazabilidad UI must expose simple current and historical modes')
 assert(pageSource.includes('HISTÓRICO · SOLO LECTURA'),'trazabilidad UI must label historical lineage as read-only')
 assert(pageSource.includes('No modifica ni completa artificialmente la operación live'),'trazabilidad UI must not promote historical evidence to live operation')
