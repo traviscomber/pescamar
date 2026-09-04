@@ -238,12 +238,12 @@ El core técnico está desplegado y no debe confundirse con aceptación operacio
 **Objetivo:** que el código pueda representar N organizaciones sin hardcodear Pescamar como frontera de producto.
 
 - [ ] Definir `organization/tenant` como primer contexto del OS.
-- [ ] Separar branding global del branding cliente.
-- [ ] Mantener Pescamar como tenant inicial.
+- [x] Separar branding global del branding cliente.
+- [x] Mantener Pescamar como tenant inicial.
 - [ ] Inventariar literales Pescamar que son branding vs contratos de datos reales.
 - [ ] Definir configuración por organización, planta, especie, proceso y rol.
-- [ ] Evitar cambios destructivos de IDs históricos o fuentes canónicas durante el rename.
-- [ ] Renombrar metadata, documentación y UI global a Seafood Intelligence OS.
+- [x] Evitar cambios destructivos de IDs históricos o fuentes canónicas durante el rename.
+- [x] Renombrar metadata, documentación y UI global a Seafood Intelligence OS.
 
 **Gate:** nueva organización puede configurarse sin fork del core.
 
@@ -518,8 +518,9 @@ Evitar quedar atrapados en una única especie o modalidad productiva.
 - target ICP;
 - integration partners;
 - hardware partners;
-- first lighthouse customers;
-- Chile → LATAM → international expansion.
+- buyer/traceability requirements;
+- implementation playbook;
+- measurable ROI case studies.
 
 ---
 
@@ -527,70 +528,86 @@ Evitar quedar atrapados en una única especie o modalidad productiva.
 
 ### Operación
 
-- % de eventos críticos capturados en el OS.
-- % de lotes con lineage completo soportado por evidencia.
-- tiempo para responder una excepción.
+- Tiempo desde recepción a estado reconciliado.
+- % lotes con lineage completo.
+- % masa reconciliada.
 - reducción de recaptura manual.
+- tiempo de resolución de excepciones.
 
-### Datos
+### Calidad / Vision
 
-- % eventos con source/actor/timestamp.
-- tasa de reconciliación de mass balance.
-- tasa de duplicados/reprocesos.
-
-### EdgeVision
-
-- precision/recall según caso de uso.
-- % inferencias con lote asociado.
-- tasa de override humano.
-- drift por modelo/versión.
+- precisión/recall por modelo y clase.
+- % resultados con evidencia visual atribuible.
+- override humano por modelo/versión.
+- relación entre visual grade y outcome real.
 
 ### Inteligencia
 
-- % respuestas con provenance.
-- tiempo de detección de excepción.
-- aceptación de recomendaciones.
-- decisiones con impacto medible.
+- % respuestas con provenance navegable.
+- tiempo para explicar una desviación.
+- recomendaciones aceptadas/rechazadas y outcome.
+- reducción de decisiones basadas en reconciliación manual.
 
 ### Plataforma
 
-- cero P0/P1 para releases aceptados;
-- tenant isolation verificado;
-- CI/build/release estable;
-- recovery ensayado;
-- performance con volumen real.
+- aislamiento tenant/planta/rol.
+- uptime y error budget.
+- latencia de eventos.
+- idempotencia de integraciones.
+- recovery probado.
+
+### Comercial
+
+- tiempo de implementación de un nuevo tenant.
+- número de integraciones reutilizables.
+- expansión plantas/especies por cliente.
+- ROI documentado por caso de uso.
 
 ---
 
-## 16. Secuencia inmediata
+## 16. Secuencia de ejecución
 
-1. Consolidar el rename documental y visual global a **Seafood Intelligence OS**.
-2. Mantener **Pescamar** como Implementación 01 / tenant.
-3. Completar UAT real de Pescamar sin inventar datos para cerrar gates.
-4. Definir formalmente el `organization/tenant context` reusable.
-5. Especificar Seafood Event Graph v1.
-6. Mapear el modelo actual de Pescamar al grafo sin migración destructiva prematura.
-7. Elegir primer caso EdgeVision con evidencia real y ROI claro.
-8. Implementar evidence contract para visión.
-9. Evolucionar Pescamar IA hacia Seafood AI evidence-native manteniendo scope cliente.
-10. Diseñar Integration/Data Plane.
-11. Validar un segundo deployment/cliente sin fork del core.
-12. Sólo entonces ampliar a Aquaculture/Fisheries como verticales completas.
+### Ahora — P0 + Pescamar rollout
+
+1. Separar producto global de tenant Pescamar.
+2. Inventariar hardcodes de tenant.
+3. Definir organization context sin migrar destructivamente datos existentes.
+4. Mantener rollout real Pescamar en paralelo.
+5. Documentar el contrato del Seafood Event Graph.
+
+### Después — P1 + EdgeVision foundation
+
+6. Implementar event envelope y lineage API.
+7. Visualización de lineage en Lot 360.
+8. Definir VisionEvent reusable.
+9. Conectar primer caso EdgeVision real sobre erizo.
+10. Medir calidad y human override.
+
+### Luego — Integration plane + Seafood AI
+
+11. Formalizar conectores northbound/southbound.
+12. Añadir provenance de eventos a Seafood AI.
+13. Convertir Control Tower en consumidor del event graph.
+14. Integrar señales externas según clientes reales.
+15. Preparar Implementation 02 sin fork.
 
 ---
 
-# Definition of Done — Seafood Intelligence OS v1
+# DONE — PESCAMAR
 
-La versión 1 se considera validada cuando:
+Pescamar se considera operacionalmente aceptado cuando cumple `PILOT_ACCEPTANCE.md`: usuarios y datos reales, flujo E2E enlazado por lote, continuidad requerida, UAT humano, cero P0/P1 y release estable.
 
-- existe al menos un tenant Pescamar operando con UAT real aceptado;
-- el core soporta una segunda organización sin fork;
-- el Seafood Event Graph conecta origen/lote/transformación/inventario/comercial con provenance;
-- al menos un caso EdgeVision real está vinculado a eventos operacionales y tiene evaluación documentada;
-- Seafood AI responde con evidencia y respeta scope de tenant/rol/planta;
-- integración externa puede entrar/salir por contratos versionados;
-- no existen P0/P1 abiertos en el release aceptado;
-- recuperación, seguridad y aislamiento multi-tenant están probados;
-- el producto puede demostrar una decisión operacional o comercial mejorada por la combinación de datos + visión + inteligencia.
+# DONE — SEAFOOD INTELLIGENCE OS v1
 
-Pescamar seguirá su propia Definition of Done operacional en `PILOT_ACCEPTANCE.md`; Seafood Intelligence OS no se declarará validado usando datos simulados como sustituto de UAT real.
+El producto v1 se considera productizado cuando:
+
+1. Pescamar funciona como tenant y no como frontera hardcodeada del producto.
+2. Puede configurarse una segunda organización sin fork.
+3. Existe Seafood Event Graph con lineage navegable.
+4. EdgeVision puede registrar evidencia versionada ligada a lot/proceso.
+5. Seafood AI responde con provenance y scope correcto.
+6. Control Tower consume eventos canónicos y prioriza excepciones.
+7. Integraciones externas usan contratos versionados/idempotentes.
+8. Seguridad demuestra aislamiento organization → site → role.
+9. Cero P0/P1 en gates de producto.
+10. Existe al menos un caso operativo real que demuestre Vision → quality/yield → commercial outcome.
