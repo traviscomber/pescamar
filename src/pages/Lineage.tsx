@@ -1,6 +1,7 @@
 import {ArrowRight,CheckCircle2,CircleDashed,GitBranch,History,ShieldCheck} from 'lucide-react'
 import {useEffect,useMemo,useState} from 'react'
 import {Link,useSearchParams} from 'react-router-dom'
+import {useAuth} from '../auth'
 import {PageHeader} from '../components/PageHeader'
 import {organizationContext} from '../organization'
 import {useLots} from '../store'
@@ -16,15 +17,15 @@ const dt=(value:string|null)=>value?new Intl.DateTimeFormat('es-CL',{dateStyle:'
 function summary(event:LineageEvent){const m=event.metrics??{};switch(event.type){case'reception':return [m.supplier,m.species,m.grossKg!=null?`${Number(m.grossKg).toLocaleString('es-CL')} kg`:null].filter(Boolean).join(' · ');case'quality':return [m.qualityStatus,m.defectPct!=null?`${Number(m.defectPct).toFixed(1)}% defectos`:null].filter(Boolean).join(' · ');case'production':return [m.lineName,m.outputKg!=null?`${Number(m.outputKg).toLocaleString('es-CL')} kg salida`:null,m.yieldPct!=null?`${Number(m.yieldPct).toFixed(1)}% yield`:null].filter(Boolean).join(' · ');case'vision':return [m.operatorGrade?`Grade ${String(m.operatorGrade)}`:m.suggestedGrade?`Sugerido ${String(m.suggestedGrade)}`:null,m.deltaE!=null?`ΔE ${Number(m.deltaE).toFixed(2)}`:null,m.decision?String(m.decision):null,m.deviceLabel?String(m.deviceLabel):null].filter(Boolean).join(' · ');case'inventory':return [m.movedKg!=null?`${Number(m.movedKg).toLocaleString('es-CL')} kg`:null,m.fromLocation?String(m.fromLocation):'Ingreso',m.toLocation?`→ ${String(m.toLocation)}`:null].filter(Boolean).join(' · ');case'commercial_commitment':return [m.customer,m.allocatedKg!=null?`${Number(m.allocatedKg).toLocaleString('es-CL')} kg`:null,m.status].filter(Boolean).join(' · ');case'dispatch':return [m.customer,m.dispatchedKg!=null?`${Number(m.dispatchedKg).toLocaleString('es-CL')} kg`:null,m.status].filter(Boolean).join(' · ');case'sale':return [m.customer,m.soldKg!=null?`${Number(m.soldKg).toLocaleString('es-CL')} kg`:null,m.status].filter(Boolean).join(' · ');default:return event.detail??''}}
 
 export function Lineage(){
- const {lots,loading:lotsLoading,error:lotsError}=useLots(),[params,setParams]=useSearchParams();
- const requested=params.get('receptionId')??'',selectedId=requested||lots[0]?.receptionId||'';
+ const {operator}=useAuth(),{lots,loading:lotsLoading,error:lotsError}=useLots(),[params,setParams]=useSearchParams();
+ const requested=params.get('receptionId')??'',selectedId=requested||lots[0]?.receptionId||'',requestOrganizationId=operator?.organizationId??organizationContext.organizationId;
  const [data,setData]=useState<Payload|null>(null),[loading,setLoading]=useState(false),[error,setError]=useState('');
- useEffect(()=>{if(!selectedId){setData(null);return}let active=true;setLoading(true);void fetch(`/api/lot-lineage?receptionId=${encodeURIComponent(selectedId)}`,{cache:'no-store',headers:{'x-seafood-organization-id':organizationContext.organizationId}}).then(async response=>{const payload=await response.json() as Payload;if(!response.ok)throw new Error(payload.error??'No fue posible cargar el lineage');if(active){setData(payload);setError('')}}).catch(cause=>{if(active){setData(null);setError(cause instanceof Error?cause.message:'No fue posible cargar el lineage')}}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[selectedId]);
+ useEffect(()=>{if(!selectedId){setData(null);return}let active=true;setLoading(true);void fetch(`/api/lot-lineage?receptionId=${encodeURIComponent(selectedId)}`,{cache:'no-store',headers:{'x-seafood-organization-id':requestOrganizationId}}).then(async response=>{const payload=await response.json() as Payload;if(!response.ok)throw new Error(payload.error??'No fue posible cargar el lineage');if(active){setData(payload);setError('')}}).catch(cause=>{if(active){setData(null);setError(cause instanceof Error?cause.message:'No fue posible cargar el lineage')}}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[selectedId,requestOrganizationId]);
  const selectedLot=lots.find(lot=>lot.receptionId===selectedId),events=data?.events??[],coverage=data?.coverage;
  const coverageEntries=useMemo(()=>coverage?Object.entries(coverage).filter(([,value])=>value!==null) as [keyof Coverage,boolean][]:[],[coverage]);
  const complete=coverageEntries.filter(([,value])=>value).length,total=coverageEntries.length;
  const implementationName=data?.organization?.implementationName??organizationContext.implementationName;
- const organizationId=data?.organizationId??organizationContext.organizationId;
+ const organizationId=data?.organizationId??requestOrganizationId;
  return <><PageHeader eyebrow="Seafood Event Graph" title="Lineage operacional del lote" description="Una vista canónica y ordenada de la evidencia que conecta recepción, calidad, producción, Vision, inventario y outcome comercial." actions={<div className="lineage-selector"><label htmlFor="lineage-lot">Lote</label><select id="lineage-lot" value={selectedId} onChange={event=>setParams({receptionId:event.target.value})} disabled={lotsLoading||!lots.length}>{lots.map(lot=><option key={lot.receptionId} value={lot.receptionId}>{lot.id} · {lot.supplier} · {lot.species}</option>)}</select></div>}/>
  {lotsError?<div className="notice error">{lotsError}</div>:null}
  {!selectedId&&!lotsLoading?<section className="panel lineage-empty"><GitBranch size={28}/><h2>Sin lotes disponibles</h2><p>El Event Graph aparecerá cuando exista una recepción accesible para tu usuario.</p></section>:null}
