@@ -131,6 +131,123 @@
 .operational-health.expanded .operational-health-hero{border-radius:9px!important}
 .operational-health.expanded .operational-check{border-radius:7px!important}
 
+/* Hoy: one reading, one priority, one action. Depth is progressive disclosure. */
+.daily-cockpit{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:28px;
+  align-items:end;
+  padding:34px 0 30px;
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+}
+.daily-cockpit-copy{max-width:720px}
+.daily-cockpit h2{
+  margin:7px 0 8px;
+  font-size:clamp(2.35rem,6vw,4.8rem);
+  line-height:.94;
+  letter-spacing:-.055em;
+  font-weight:500;
+}
+.daily-cockpit p{
+  max-width:620px;
+  margin:0;
+  color:var(--text-muted);
+  font-size:1rem;
+  line-height:1.65;
+}
+.daily-cockpit-actions{
+  display:flex;
+  align-items:center;
+  gap:18px;
+  flex-wrap:wrap;
+  margin-top:22px;
+}
+.daily-status-mark{
+  width:116px;
+  aspect-ratio:1;
+  border:1px solid var(--line);
+  border-radius:50%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+}
+.daily-status-mark span{
+  font-size:2.15rem;
+  line-height:1;
+  font-weight:500;
+}
+.daily-status-mark small{
+  margin-top:7px;
+  color:var(--text-muted);
+  text-transform:uppercase;
+  letter-spacing:.12em;
+  font-size:.61rem;
+}
+.daily-cockpit.has-attention .daily-status-mark{border-color:var(--warning,#9f8f60)}
+.daily-cockpit.is-clear .daily-status-mark{border-color:var(--success,#5d8d7a)}
+.text-action{
+  appearance:none;
+  border:0;
+  padding:0;
+  background:transparent;
+  color:var(--text-muted);
+  font:inherit;
+  font-size:.82rem;
+  cursor:pointer;
+  text-decoration:none;
+}
+.text-action:hover{color:var(--text)}
+.inline-link{display:inline-flex;align-items:center;gap:6px}
+.daily-reveal{
+  padding:18px 0;
+  border-bottom:1px solid var(--line);
+}
+.daily-signal-grid{margin:0!important}
+.daily-priority{
+  padding:26px 0;
+  border-bottom:1px solid var(--line);
+}
+.daily-priority-head{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:24px;
+  align-items:start;
+}
+.daily-priority h2{
+  margin:6px 0 5px;
+  font-size:clamp(1.35rem,3vw,2rem);
+  font-weight:500;
+  letter-spacing:-.025em;
+}
+.daily-priority p{margin:0;color:var(--text-muted)}
+.daily-priority-detail{
+  display:block;
+  max-width:760px;
+  margin-top:12px;
+  color:var(--text-muted);
+  line-height:1.55;
+}
+.daily-more{margin-top:16px}
+.daily-more-list{margin-top:14px}
+.daily-clear-note{
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+  padding:24px 0;
+  border-bottom:1px solid var(--line);
+}
+.daily-clear-note b,.daily-clear-note small{display:block}
+.daily-clear-note small{margin-top:3px;color:var(--text-muted)}
+.daily-footer-actions{
+  display:flex;
+  align-items:center;
+  gap:22px;
+  padding:18px 0 4px;
+}
+
 @media(max-width:900px){
   .communication-overview{grid-template-columns:repeat(2,minmax(0,1fr))!important}
   .communication-overview>.signal-card:nth-child(3n){border-right:1px solid var(--line)!important}
@@ -147,4 +264,13 @@
   .communication-overview>.signal-card:first-child{border-top:0!important}
   .communications-directory-grid{grid-template-columns:1fr!important}
   .communications-channels,.communications-inbox,.audit-panel.panel{padding:18px 0!important}
+  .daily-cockpit{grid-template-columns:1fr;gap:22px;padding:26px 0 24px;align-items:start}
+  .daily-cockpit h2{font-size:clamp(2.5rem,15vw,4rem)}
+  .daily-status-mark{width:84px;grid-row:1;justify-self:end;margin-bottom:-98px}
+  .daily-status-mark span{font-size:1.6rem}
+  .daily-cockpit-copy{padding-right:0}
+  .daily-cockpit-copy>p{max-width:78%}
+  .daily-cockpit-actions{gap:14px}
+  .daily-priority-head{grid-template-columns:1fr;gap:10px}
+  .daily-footer-actions{justify-content:space-between}
 }
