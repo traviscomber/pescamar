@@ -35,7 +35,7 @@ export const osStages:readonly OsStage[]=[
  ]},
  {id:'control',order:6,label:'Inteligencia y control',owner:'Gerencia',description:'Decisiones, memoria, auditoría y configuración transversal.',entry:'/',modules:[
  {path:'/',label:'Hoy',description:'Prioridades y cierre diario'},
-  {path:'/pescamar-ia',label:'Pescamar IA',description:'Copiloto canónico y operacional'},
+  {path:'/pescamar-ia',label:'Pescamar IA',description:'Copiloto canónico y operacional de la implementación'},
   {path:'/aprobaciones',label:'Decisiones',description:'Excepciones que requieren persona'},
   {path:'/timeline',label:'Línea de tiempo',description:'Continuidad histórica y viva'},
   {path:'/auditoria',label:'Auditoría operacional',description:'Actor, acción, fecha y planta'},
@@ -44,8 +44,8 @@ export const osStages:readonly OsStage[]=[
   {path:'/identidades-plantas',label:'Identidades históricas',description:'Resolución de continuidad'},
   {path:'/estaciones',label:'Estaciones y dispositivos',description:'Infraestructura física'},
   {path:'/operadores',label:'Operadores',description:'Responsables y alcance'},
-  {path:'/rollout',label:'Rollout',description:'Activación por planta'},
-  {path:'/modulos',label:'Pescamar OS',description:'Mapa del sistema'},
+  {path:'/rollout',label:'Rollout Pescamar',description:'Activación por planta de la implementación 01'},
+  {path:'/modulos',label:'Seafood Intelligence OS',description:'Mapa del producto y sus sistemas'},
  ]},
 ] as const
 
