@@ -6,6 +6,7 @@ type Operator = {
   email: string;
   role: "admin" | "operations" | "finance" | "quality" | "viewer";
   plantIds: string[];
+  organizationId: string;
 };
 
 type AuthContextValue = {
