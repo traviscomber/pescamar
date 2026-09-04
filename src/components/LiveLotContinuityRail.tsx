@@ -1,4 +1,4 @@
-import {CircleDollarSign,ClipboardList,MessageCircle,MoveRight,ReceiptText} from 'lucide-react'
+import {CircleDollarSign,ClipboardList,GitBranch,MessageCircle,MoveRight,ReceiptText} from 'lucide-react'
 import {useEffect,useState} from 'react'
 import {Link} from 'react-router-dom'
 
@@ -21,6 +21,6 @@ export function LiveLotContinuityRail({receptionId}:{receptionId:string|null}){
     <section><h4><ClipboardList size={14}/>Órdenes</h4>{orders.length?orders.slice(0,4).map(o=><p key={o.id}><b>OV-{o.order_number} · {o.customer}</b><small>{o.product} · {kg(o.allocated_kg)} · {o.delivery_date}</small></p>):<small>Sin compromisos asignados</small>}<Link className="source-link compact" to={href('/ordenes-venta',receptionId,plantId)}>Abrir órdenes</Link></section>
     <section><h4><MoveRight size={14}/>Inventario</h4>{moves.length?moves.slice(0,4).map(m=><p key={m.id}><b>{kg(m.moved_kg)} · {m.movement_type}</b><small>{m.from_location??'Ingreso'} → {m.to_location??'Salida'}</small></p>):<small>Sin movimientos físicos</small>}<Link className="source-link compact" to={href('/inventario',receptionId,plantId)}>Gestionar inventario</Link></section>
     <section><h4><CircleDollarSign size={14}/>Transformación</h4><strong>{clp(data?.totalTransformationCostClp??0)}</strong>{costs.length?costs.slice(0,4).map(c=><p key={c.id}><b>{c.category} · {clp(c.amount_clp)}</b><small>{c.note??c.created_by}</small></p>):<small>Sin costos registrados</small>}<Link className="source-link compact" to={href('/costos-transformacion',receptionId,plantId)}>Registrar costo</Link></section>
-    <div className="continuity-rail-actions"><Link className="button secondary compact" to={href('/liquidaciones',receptionId,plantId)}><ReceiptText size={14}/>Liquidación</Link><Link className="button secondary compact" to={href('/comunicaciones',receptionId,plantId)}><MessageCircle size={14}/>Comunicaciones</Link></div>
+    <div className="continuity-rail-actions"><Link className="button secondary compact" to={href('/lineage',receptionId,plantId)}><GitBranch size={14}/>Lineage</Link><Link className="button secondary compact" to={href('/liquidaciones',receptionId,plantId)}><ReceiptText size={14}/>Liquidación</Link><Link className="button secondary compact" to={href('/comunicaciones',receptionId,plantId)}><MessageCircle size={14}/>Comunicaciones</Link></div>
   </aside>
 }
