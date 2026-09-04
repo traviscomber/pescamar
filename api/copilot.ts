@@ -1,6 +1,7 @@
 import { gateway, generateText } from 'ai'
 import { requireOperator } from './_auth.js'
 import { buildCopilotContext, resolveCopilotPlant } from './_copilot-context.js'
+import { buildHistoricalLineageEvidence } from './_copilot-historical-lineage.js'
 import { activeOrganization } from './_organization.js'
 import { evidenceClassForSource, invalidSourceTags, SEAFOOD_AI_POLICY_VERSION, seafoodAiSystemPrompt } from './_seafood-ai-policy.js'
 
@@ -25,9 +26,10 @@ export default async function handler(req:Request,res:Response){
  if(plantId===undefined)return res.status(403).json({ok:false,error:'Planta fuera de tu alcance'})
  if(!process.env.AI_GATEWAY_API_KEY&&!process.env.VERCEL_OIDC_TOKEN)return res.status(503).json({ok:false,error:'Pescamar IA aún no está configurado en este entorno'})
  try{
-  const context=await buildCopilotContext(operator,plantId)
-  const sources=context.sources.map(source=>{const evidenceClass=evidenceClassForSource(source.id);if(!evidenceClass)throw new Error(`unclassified_source:${source.id}`);return {...source,evidenceClass}})
-  const scopedContext={...context,scope:{...context.scope,organizationId:operator.organizationId},sources}
+  const [context,historicalLineage]=await Promise.all([buildCopilotContext(operator,plantId),buildHistoricalLineageEvidence(operator)])
+  const baseSources=historicalLineage?[...context.sources,historicalLineage.source]:context.sources
+  const sources=baseSources.map(source=>{const evidenceClass=evidenceClassForSource(source.id);if(!evidenceClass)throw new Error(`unclassified_source:${source.id}`);return {...source,evidenceClass}})
+  const scopedContext={...context,scope:{...context.scope,organizationId:operator.organizationId},sources,data:historicalLineage?{...context.data,historical_lineage:historicalLineage.data}:context.data}
   const conversation=history(body.history).map((turn,index)=>`TURNO ${index+1}\nPREGUNTA: ${turn.question}\nRESPUESTA: ${turn.answer}`).join('\n\n')||'Sin turnos previos.'
   const sourceLegend=sources.map(source=>`[${source.id}] ${source.label} · class=${source.evidenceClass} · rows=${source.rows} · freshness=${source.freshness??'unknown'}`).join('\n')
   const result=await generateText({
