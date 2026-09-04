@@ -1,5 +1,6 @@
+import {activeOrganization} from './_organization.js'
+
 export const SEAFOOD_EVENT_SCHEMA='seafood.event.v1' as const
-export const PESCAMAR_ORGANIZATION_ID='pescamar' as const
 
 export type SeafoodEventType=
   |'reception'
@@ -25,7 +26,7 @@ export type SeafoodEvent={
   detail:string|null
   actor:string|null
   metrics:Record<string,unknown>
-  source:{system:'pescamar';entityType:string;entityId:string}
+  source:{system:string;entityType:string;entityId:string}
 }
 
 type SeafoodEventInput=Omit<SeafoodEvent,'schemaVersion'|'organizationId'|'source'> & {
@@ -36,8 +37,8 @@ export function seafoodEvent(input:SeafoodEventInput):SeafoodEvent{
   return {
     ...input,
     schemaVersion:SEAFOOD_EVENT_SCHEMA,
-    organizationId:PESCAMAR_ORGANIZATION_ID,
-    source:{system:'pescamar',...input.source},
+    organizationId:activeOrganization.organizationId,
+    source:{system:activeOrganization.sourceSystem,...input.source},
   }
 }
 

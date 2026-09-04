@@ -7,6 +7,7 @@
     { "source": "/timeline", "destination": "/index.html" },
     { "source": "/lineage", "destination": "/index.html" },
     { "source": "/edgevision", "destination": "/index.html" },
+    { "source": "/organization", "destination": "/index.html" },
     { "source": "/pescamar-ia", "destination": "/index.html" },
     { "source": "/comunicaciones", "destination": "/index.html" },
     { "source": "/auditoria", "destination": "/index.html" },

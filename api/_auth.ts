@@ -1,10 +1,11 @@
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { getSql } from "./_db.js";
+import { activeOrganization } from "./_organization.js";
 
 type Headers = Record<string, string | string[] | undefined>;
 export type AuthRequest = { headers?: Headers };
 export type OperatorRole = "admin" | "operations" | "finance" | "quality" | "viewer";
-export type SessionOperator = { id: string; fullName: string; email: string; role: OperatorRole; plantIds: string[] };
+export type SessionOperator = { id: string; fullName: string; email: string; role: OperatorRole; plantIds: string[]; organizationId: string };
 
 const COOKIE = "pescamar_session";
 const SESSION_DAYS = 7;
@@ -76,5 +77,5 @@ export async function requireOperator(request: AuthRequest, roles?: OperatorRole
     await getSql()`update operator_sessions set last_seen_at=now() where token_hash=${hash}`;
   }
 
-  return { id: row.id, fullName: row.full_name, email: row.email, role: row.role, plantIds: row.plant_ids ?? [] } satisfies SessionOperator;
+  return { id: row.id, fullName: row.full_name, email: row.email, role: row.role, plantIds: row.plant_ids ?? [], organizationId: activeOrganization.organizationId } satisfies SessionOperator;
 }

@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { organizationContext } from "./organization";
 
 type Operator = {
   id: string;
@@ -6,7 +7,10 @@ type Operator = {
   email: string;
   role: "admin" | "operations" | "finance" | "quality" | "viewer";
   plantIds: string[];
+  organizationId: string;
 };
+
+type AuthOperatorPayload = Omit<Operator, "organizationId"> & { organizationId?: string };
 
 type AuthContextValue = {
   operator: Operator | null;
@@ -18,12 +22,19 @@ type AuthContextValue = {
 
 type AuthPayload = {
   ok?: boolean;
-  operator?: Operator;
+  operator?: AuthOperatorPayload;
   error?: string;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 const SESSION_REVALIDATE_MS = 5 * 60 * 1000;
+
+function normalizeOperator(operator: AuthOperatorPayload): Operator {
+  return {
+    ...operator,
+    organizationId: operator.organizationId || organizationContext.organizationId,
+  };
+}
 
 async function authRequest(input: RequestInfo | URL, init?: RequestInit) {
   const response = await fetch(input, {
@@ -47,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { response, payload } = await authRequest("/api/auth");
       if (response.ok && payload.operator) {
-        setOperator(payload.operator);
+        setOperator(normalizeOperator(payload.operator));
         return true;
       }
       if (response.status === 401) setOperator(null);
@@ -96,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       throw new Error(payload.error || "No fue posible iniciar sesión");
     }
-    setOperator(payload.operator);
+    setOperator(normalizeOperator(payload.operator));
   }, []);
 
   const logout = useCallback(async () => {
