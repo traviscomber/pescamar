@@ -34,32 +34,34 @@ async function mockLineage(page:Page){
   })
 }
 
-test('Seafood Event Graph shows attributed lineage without inventing missing stages',async({page},testInfo)=>{
+test('Trazabilidad actual shows attributed lineage without inventing missing stages',async({page},testInfo)=>{
   await mockLineage(page)
-  await page.goto('/lineage')
-  await expect(page.getByRole('heading',{name:'Lineage operacional del lote'})).toBeVisible()
+  await page.goto('/lineage?mode=live')
+  await expect(page.getByRole('heading',{name:'Trazabilidad actual'})).toBeVisible()
+  await expect(page.getByText('Powered by Seafood Event Graph.',{exact:false})).toBeVisible()
   await expect(page.getByText('Pescamar',{exact:true}).first()).toBeVisible()
   await expect(page.getByText('6/9',{exact:true})).toBeVisible()
   await expect(page.getByText('Sin evento')).toHaveCount(3)
-  await expect(page.getByRole('heading',{name:'Secuencia atribuible'})).toBeVisible()
+  await expect(page.getByRole('heading',{name:'Eventos atribuibles'})).toBeVisible()
   await expect(page.locator('.lineage-events li')).toHaveCount(6)
   await expect(page.getByText('Grade A · ΔE 1.42 · accepted · Station QA',{exact:true})).toBeVisible()
   await expect(page.getByText('Cliente QA',{exact:false}).first()).toBeVisible()
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
-  await page.screenshot({path:testInfo.outputPath('seafood-lineage.png'),fullPage:true})
+  await page.screenshot({path:testInfo.outputPath('trazabilidad-actual.png'),fullPage:true})
 })
 
-test('Seafood Event Graph exposes canonical historical lineage without presenting it as live',async({page},testInfo)=>{
+test('Trazabilidad histórica exposes canonical evidence without presenting it as live',async({page},testInfo)=>{
   await mockLineage(page)
   await page.goto('/lineage?mode=historical&year=2026')
-  await expect(page.getByRole('heading',{name:'Lineage histórico canónico'})).toBeVisible()
+  await expect(page.getByRole('heading',{name:'Trazabilidad histórica'})).toBeVisible()
+  await expect(page.getByRole('combobox',{name:'Vista'})).toHaveValue('historical')
   await expect(page.getByText('Histórico canónico · solo lectura. 1 registros operacionales en 2026.',{exact:false})).toBeVisible()
   await expect(page.getByRole('combobox',{name:'Registro'})).toContainText('mdn149220526')
-  await expect(page.getByText('CANONICAL HISTORICAL · READ ONLY')).toBeVisible()
+  await expect(page.getByText('HISTÓRICO · SOLO LECTURA')).toBeVisible()
   await expect(page.getByText('Recepción histórica · guía 90')).toBeVisible()
   await expect(page.getByText('Fuente canónica · planilla de produccion 2026.xlsx')).toBeVisible()
   await expect(page.getByText('Sin evento')).toHaveCount(5)
   await expect(page.getByText('inventario live',{exact:false})).toBeVisible()
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
-  await page.screenshot({path:testInfo.outputPath('seafood-historical-lineage.png'),fullPage:true})
+  await page.screenshot({path:testInfo.outputPath('trazabilidad-historica.png'),fullPage:true})
 })
