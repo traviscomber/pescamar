@@ -20,12 +20,15 @@ export const activeOrganization:OrganizationContext={
   portableCore:true,
 }
 
-export function requestedOrganization(headers:Record<string,string|string[]|undefined>|undefined){
-  const raw=headers?.['x-seafood-organization-id']
-  return String(Array.isArray(raw)?raw[0]:raw??activeOrganization.organizationId).trim().toLowerCase()
+export function requestedOrganization(headers:Record<string,string|string[]|undefined>|undefined,expectedOrganizationId=activeOrganization.organizationId){
+  const entry=Object.entries(headers??{}).find(([key])=>key.toLowerCase()==='x-seafood-organization-id')?.[1]
+  const raw=Array.isArray(entry)?entry[0]:entry
+  return String(raw??expectedOrganizationId).trim().toLowerCase()
 }
 
-export function resolveRequestOrganization(headers:Record<string,string|string[]|undefined>|undefined){
-  const requested=requestedOrganization(headers)
-  return requested===activeOrganization.organizationId?activeOrganization:null
+export function resolveRequestOrganization(headers:Record<string,string|string[]|undefined>|undefined,expectedOrganizationId=activeOrganization.organizationId){
+  const expected=expectedOrganizationId.trim().toLowerCase()
+  const requested=requestedOrganization(headers,expected)
+  if(expected!==activeOrganization.organizationId)return null
+  return requested===expected?activeOrganization:null
 }
