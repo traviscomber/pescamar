@@ -1,3 +1,5 @@
+import {organizationContext} from './organization'
+
 export type ProductImplementation={
   id:string
   name:string
@@ -11,9 +13,9 @@ export const seafoodProduct={
   company:'N3uralia',
   promise:'Operational intelligence for seafood and aquaculture',
   implementation:{
-    id:'pescamar',
-    name:'Pescamar',
-    label:'Implementation 01',
+    id:organizationContext.implementationId,
+    name:organizationContext.implementationName,
+    label:organizationContext.implementationLabel,
     description:'Primera implementación operacional y proving ground del core reusable de Seafood Intelligence OS.',
   } satisfies ProductImplementation,
 } as const
