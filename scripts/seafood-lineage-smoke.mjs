@@ -13,6 +13,7 @@ const [eventSource,lineageSource,pageSource,appSource,accessSource,osSource]=awa
 
 assert(eventSource.includes("SEAFOOD_EVENT_SCHEMA='seafood.event.v1'"),'event envelope must expose seafood.event.v1')
 assert(eventSource.includes("PESCAMAR_ORGANIZATION_ID='pescamar'"),'Implementation 01 organization id must remain explicit until tenant context is implemented')
+assert(eventSource.includes("|'vision'"),'event envelope must support attributed vision evidence')
 assert(eventSource.includes("source:{system:'pescamar'"),'event provenance must identify the source system')
 assert(lineageSource.includes("request.method!=='GET'"),'lot lineage must remain read-only')
 assert(lineageSource.includes('requireOperator(request)'),'lot lineage must require an authenticated operator')
@@ -20,10 +21,14 @@ assert(lineageSource.includes('plant_id=any(${operator.plantIds}::text[])'),'lot
 assert(lineageSource.includes("commercialRole=['admin','operations','finance'].includes(operator.role)"),'commercial lineage must have an explicit role boundary')
 assert(lineageSource.includes('commercialRole?sql`select a.id allocation_id'),'commercial commitments must not be queried for unauthorized roles')
 assert(lineageSource.includes('commercialRole?sql`select s.id,s.dispatch_id'),'sales must not be queried for unauthorized roles')
+assert(lineageSource.includes('from sea_urchin_color_captures c join sea_urchin_process_runs u'),'existing Uni Vision evidence must project into the graph without a duplicate vision store')
+assert(lineageSource.includes("source:{entityType:'sea_urchin_color_capture'"),'vision events must retain their originating capture identity')
 assert(lineageSource.includes("schemaVersion:'seafood.lineage.v1'"),'lineage response must be versioned')
+assert(lineageSource.includes("vision:has('vision')"),'lineage coverage must make vision presence explicit')
 assert(lineageSource.includes('coverage:{reception:has(\'reception\')'),'lineage response must distinguish present and missing stages')
 assert(!/\b(insert|update|delete|create table|alter table|drop table)\b/i.test(lineageSource),'lot lineage endpoint must not mutate database state')
 assert(pageSource.includes("fetch(`/api/lot-lineage?receptionId="),'lineage UI must consume the canonical lineage endpoint')
+assert(pageSource.includes("vision:'Vision'"),'lineage UI must expose vision as its own evidence stage')
 assert(pageSource.includes('Cobertura canónica')&&pageSource.includes('Secuencia atribuible'),'lineage UI must surface evidence coverage and attributed event order')
 assert(appSource.includes('path="/lineage"'),'lineage page must be wired into application routes')
 assert(accessSource.includes('"/lineage":"all"'),'lineage route must have an explicit access contract')
@@ -34,4 +39,4 @@ if(failures.length){
   for(const failure of failures)console.error(`- ${failure}`)
   process.exit(1)
 }
-console.log('Seafood lineage smoke PASS: versioned read-only event envelope, authenticated plant scope, commercial visibility boundaries, UI route and OS navigation verified')
+console.log('Seafood lineage smoke PASS: versioned read-only event envelope, plant scope, vision provenance, commercial visibility boundaries, UI route and OS navigation verified')
