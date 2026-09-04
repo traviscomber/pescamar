@@ -35,7 +35,7 @@ assert(page.includes('No se declara multi-tenant todavía'),'productization UI m
 assert(page.includes('Implementation 02 gates'),'productization UI must expose gates before another customer is enabled')
 assert(app.includes('path="/organization"'),'organization context page must be mounted')
 assert(access.includes('"/organization":["admin","operations"]'),'organization context route must be restricted to operational administrators')
-assert(os.includes("{path:'/organization',label:'Organization Context'"),'OS map must expose the organization boundary')
+assert(os.includes("{path:'/organization',label:'Organización'")&&os.includes("description:'Contexto de la instancia y aislamiento del producto'"),'OS map must expose the organization boundary with operator-facing language')
 
 if(failures.length){
  console.error('Organization context smoke FAILED')
