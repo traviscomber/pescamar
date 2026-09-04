@@ -1,5 +1,7 @@
 import {ArrowRight,Camera,CheckCircle2,CircleDashed,GitBranch,ScanLine,ShieldCheck,Target} from 'lucide-react'
 import {Link} from 'react-router-dom'
+import {canAccessPath} from '../access'
+import {useAuth} from '../auth'
 import {PageHeader} from '../components/PageHeader'
 import {edgeVisionAdapters,edgeVisionCapabilities,edgeVisionEvidenceContract,type EdgeVisionCapabilityStatus} from '../edgevision'
 
@@ -7,10 +9,12 @@ const statusLabel:Record<EdgeVisionCapabilityStatus,string>={available_in_pescam
 const statusClass:Record<EdgeVisionCapabilityStatus,string>={available_in_pescamar:'success',foundation:'info',planned:'info'}
 
 export function EdgeVision(){
+ const {operator}=useAuth()
  const available=edgeVisionCapabilities.filter(item=>item.status==='available_in_pescamar').length
  const foundation=edgeVisionCapabilities.filter(item=>item.status==='foundation').length
  const planned=edgeVisionCapabilities.filter(item=>item.status==='planned').length
- return <><PageHeader eyebrow="Seafood Intelligence OS · Vision" title="EdgeVision" description="Evidencia visual atribuible al lote y al proceso. Medir, clasificar y detectar sin separar la visión del contexto operacional." actions={<div className="row-actions"><Link className="button secondary" to="/lineage"><GitBranch size={14}/>Seafood Event Graph</Link><Link className="button secondary" to="/estaciones"><Camera size={14}/>Estaciones</Link></div>}/>
+ const mayOpenStations=operator?canAccessPath(operator.role,'/estaciones'):false
+ return <><PageHeader eyebrow="Seafood Intelligence OS · Vision" title="EdgeVision" description="Evidencia visual atribuible al lote y al proceso. Medir, clasificar y detectar sin separar la visión del contexto operacional." actions={<div className="row-actions"><Link className="button secondary" to="/lineage"><GitBranch size={14}/>Seafood Event Graph</Link>{mayOpenStations?<Link className="button secondary" to="/estaciones"><Camera size={14}/>Estaciones</Link>:null}</div>}/>
  <section className="signal-grid"><article className="signal-card"><span><CheckCircle2 size={16}/>Capacidades existentes</span><b>{available}</b><small>adapter Pescamar con evidencia real de software</small></article><article className="signal-card"><span><Target size={16}/>Fundación</span><b>{foundation}</b><small>contratos listos para ampliar</small></article><article className="signal-card"><span><CircleDashed size={16}/>Planificadas</span><b>{planned}</b><small>no se presentan como operativas</small></article><article className="signal-card"><span><ScanLine size={16}/>Adapters</span><b>{edgeVisionAdapters.length}</b><small>fuentes Vision actualmente registradas</small></article></section>
  <section className="panel"><div className="section-heading"><div><span className="overline teal">Capability registry</span><h2>Qué debe observar EdgeVision</h2></div><span>{edgeVisionCapabilities.length} capacidades</span></div><div className="compact-ledger">{edgeVisionCapabilities.map(capability=><div className="alert-row static" key={capability.id}><span><ScanLine size={15}/></span><div><b>{capability.label}</b><small>{capability.outcome}</small><p className="source-note">{capability.currentEvidence}</p></div><span className={`status ${statusClass[capability.status]}`}>{statusLabel[capability.status]}</span></div>)}</div></section>
  <section className="panel"><div className="section-heading"><div><span className="overline teal">Adapter activo</span><h2>Pescamar · Uni Vision</h2></div><Link className="source-link compact" to="/proceso-erizo">Abrir proceso erizo <ArrowRight size={13}/></Link></div>{edgeVisionAdapters.map(adapter=><div className="governance-note" key={adapter.id}><ShieldCheck size={19}/><div><b>{adapter.label}</b><p>{adapter.executionMode} Capacidades: {adapter.capabilities.join(' · ')}. Autoridad: revisión humana obligatoria. Versionado reusable de modelo/engine: {adapter.modelVersioning==='implemented'?'implementado':'pendiente'}.</p><small>{adapter.notes} Evidencia fuente: {adapter.evidenceEntity}.</small></div></div>)}</section>
