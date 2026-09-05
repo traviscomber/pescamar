@@ -64,6 +64,7 @@ Desde `041_schema_migration_baseline.sql`, Neon conserva un registro explícito 
 | `041_schema_migration_baseline.sql` | establece `schema_migrations`, registra 001–040 como baseline estructural verificado y 041 como primera migración aplicada con timestamp real |
 | `042_japan_export_release_gate.sql` | evidencia auditada y versionada para los requisitos manuales de liberación de exportación a Japón |
 | `043_japan_dispatch_fail_closed.sql` | defensa en profundidad: impide confirmar un despacho Japón si el lote no satisface Japan Release |
+| `044_sea_urchin_sequence_fail_closed.sql` | secuencia fail-closed del proceso de erizo y bloqueo de estados de liberación si faltan etapas previas |
 
 El inventario anterior describe el repositorio actual. Si se agrega una migración, debe agregarse también a esta tabla; CI verifica esa correspondencia.
 
@@ -81,6 +82,7 @@ El inventario anterior describe el repositorio actual. Si se agrega una migraci�
 - Una packing unit sólo puede pertenecer a un pallet activo a la vez. Los retiros se conservan como historial auditable con actor y motivo; no se borran membresías físicas para ocultar correcciones.
 - Cerrar un pallet deriva cantidad y kilos desde sus packing units activas. No crea por sí mismo movimientos de inventario ni despachos.
 - `sea_urchin_stage_checks.freezing` conserva el chequeo de etapa del proceso de erizo; `cold_runs` representa la sesión física de un túnel, cámara o equipo. Ninguno reemplaza al otro.
+- El proceso de erizo es secuencial y fail-closed: una etapa posterior no puede validarse mientras exista una etapa previa distinta de `ok` o `not_applicable`; `ready_for_packing` exige todas las etapas hasta congelado conformes más Grade, Color y Rayos X aprobados.
 - Un pallet o lote sólo puede pertenecer a un ciclo de frío activo a la vez. Al completar/cancelar el ciclo se libera la carga para conservar historial y permitir ciclos posteriores.
 - Un activo físico de frío sólo puede tener un `cold_run` en estado `open` a la vez; un mismo ciclo puede agrupar múltiples cargas.
 - Toda observación de frío debe pertenecer a la misma planta del ciclo; una observación `sensor` debe usar un sensor activo y, si el activo tiene `station_id`, ese sensor debe pertenecer exactamente a esa estación.
@@ -93,7 +95,7 @@ El inventario anterior describe el repositorio actual. Si se agrega una migraci�
 - El gate regulatorio de despacho existe también en PostgreSQL sobre `lot_dispatches`; no depende de que la UI recuerde validar el hold.
 - Para destinos Japón, el despacho queda en fail-closed: proceso de erizo, etiquetas, holds regulatorios y los 10 requisitos Japan Release deben estar completos antes de confirmar la salida.
 - Una aprobación Japan Release requiere documento o evidencia, actor verificador y vigencia cuando corresponda; no se acepta una casilla sin provenance.
-- La integración Sernapesca XML/Siscomex no forma parte de 037–043 y sólo debe implementarse cuando exista contrato oficial de endpoint, autenticación y formato.
+- La integración Sernapesca XML/Siscomex no forma parte de 037–044 y sólo debe implementarse cuando exista contrato oficial de endpoint, autenticación y formato.
 
 ## Seguridad y tenancy operacional
 
