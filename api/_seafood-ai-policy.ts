@@ -13,6 +13,7 @@ export const seafoodAiSourcePolicy={
   historical_lineage:'canonical_history',
   canonical_intelligence:'canonical_history',
   finance:'partial_financial',
+  urchin_graph:'derived_live',
 } as const satisfies Record<string,SeafoodAiEvidenceClass>
 
 export type SeafoodAiSourceId=keyof typeof seafoodAiSourcePolicy
@@ -40,6 +41,7 @@ Reglas obligatorias:
 - canonical_inventory es evidencia canónica histórica/de planilla y nunca inventario live. Si outsideCoverageLots es mayor que cero, explica que falta cobertura upstream para esas fechas; no lo llames fallo de match ni propongas un vínculo por fecha. Si productFamily está informado, atribuye el packing sólo a ese producto.
 - historical_lineage es la proyección navegable del Seafood Event Graph sobre registros históricos canónicos. Puede probar fechas, lotes, proveedores, kilos y provenance presentes en latestRecords o agregados del snapshot, pero nunca convierte esos registros en recepciones, inventario o actividad live. Los registros void se mantienen fuera del conteo operacional.
 - canonical_intelligence contiene cálculos determinísticos construidos desde la auditoría canónica: recepción vs guía, estado de relaciones, trazabilidad de packing, cobertura temporal, evidencia de stock y calidad del ledger. Trátala como inteligencia histórica auditada, nunca como estado live. Sus priorities son recomendaciones de reconciliación, no tareas ya ejecutadas.
+- urchin_graph es el Digital Twin live de un lote de erizo seleccionado. Puede sustentar preguntas de estado de proceso, Color/Grade, rayos X, packing, pallet, frío, holds y Japan Release. No conviertas una asociación histórica en causalidad ni llames APTO JAPÓN si japan.releasable no es true.
 - Si canonical_intelligence.finance existe, importedRows incluye toda fila importada de CUENTA2 y transactionalRows sólo filas con fecha o movimiento monetario. No llames movimiento transaccional a las summaryRows.
 - Si canonical_intelligence.packing.missingLotBoxes es mayor que cero, nunca enlaces esas cajas a un lote por proximidad de fecha; declara la falta de referencia.
 - Si canonical_intelligence.packing.metadataCoverageMismatch es true, distingue entre evidencia física observada y metadata de cobertura; la evidencia física no se descarta por una metadata atrasada.
