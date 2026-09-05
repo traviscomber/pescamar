@@ -18,6 +18,7 @@ const MODEL='openai/gpt-5.4-mini',MAX_QUESTION=1800,MAX_HISTORY=6,MAX_IMAGES=3,M
 function history(value:unknown):HistoryTurn[]{if(!Array.isArray(value))return[];return value.slice(-MAX_HISTORY).flatMap(item=>{if(!item||typeof item!=='object')return[];const row=item as Record<string,unknown>,question=typeof row.question==='string'?row.question.trim().slice(0,MAX_QUESTION):'',answer=typeof row.answer==='string'?row.answer.trim().slice(0,5000):'';return question&&answer?[{question,answer}]:[]})}
 function images(value:unknown){if(!Array.isArray(value))return[] as string[];return value.slice(0,MAX_IMAGES).flatMap(item=>typeof item==='string'&&/^data:image\/(jpeg|png|webp);base64,/i.test(item)&&item.length<=MAX_IMAGE_CHARS?[item]:[])}
 function outputText(payload:unknown){if(!payload||typeof payload!=='object')return'';const row=payload as Record<string,unknown>;if(typeof row.output_text==='string')return row.output_text.trim();if(!Array.isArray(row.output))return'';return row.output.flatMap(item=>{if(!item||typeof item!=='object')return[];const content=(item as Record<string,unknown>).content;if(!Array.isArray(content))return[];return content.flatMap(part=>part&&typeof part==='object'&&typeof (part as Record<string,unknown>).text==='string'?[(part as Record<string,unknown>).text as string]:[])}).join('\n').trim()}
+function suggestedQuestions(text:string){try{const parsed=JSON.parse(text) as unknown;if(!Array.isArray(parsed))return[];return parsed.flatMap(item=>typeof item==='string'?[item.trim().slice(0,140)]:[]).filter(Boolean).slice(0,3)}catch{return[]}}
 
 async function inspectPhotos(imageData:string[],question:string){
  if(!imageData.length)return null
@@ -29,6 +30,19 @@ async function inspectPhotos(imageData:string[],question:string){
  const result=outputText(await response.json())
  if(!result)throw new Error('photo_analysis_empty')
  return result
+}
+
+async function buildSuggestions(answer:string,question:string,hasLot:boolean,hasPhotos:boolean){
+ try{
+  const result=await generateText({
+   model:gateway(MODEL),
+   system:'Genera exactamente 3 preguntas de seguimiento breves en español de Chile. Deben ser útiles para un operador de planta de erizo, no repetir la pregunta anterior, no inventar hechos y no sugerir acciones que impliquen liberar o aprobar producto. Devuelve SOLO un JSON array de 3 strings, sin markdown.',
+   prompt:`Pregunta previa: ${question}\nRespuesta: ${answer.slice(0,4500)}\nContexto: lote seleccionado=${hasLot}; fotos adjuntas=${hasPhotos}. Prioriza la siguiente duda operacional más útil: evidencia, calidad, proceso, frío, Japón o trazabilidad según corresponda.`,
+   maxOutputTokens:220,
+   providerOptions:{openai:{reasoningEffort:'low'}},
+  })
+  return suggestedQuestions(result.text.trim())
+ }catch{return[]}
 }
 
 export default async function handler(req:Request,res:Response){
@@ -61,6 +75,7 @@ export default async function handler(req:Request,res:Response){
   if(!answer)throw new Error('empty_answer')
   const invalidTags=invalidSourceTags(answer,new Set(sources.map(source=>source.id)))
   if(invalidTags.length)throw new Error(`invalid_source_tags:${invalidTags.join(',')}`)
-  return res.status(200).json({ok:true,answer,engine:seniorUrchin?'Asistente Senior de Erizo':'Seafood AI',implementation:activeOrganization.implementationName,policyVersion:SEAFOOD_AI_POLICY_VERSION,model:MODEL,generatedAt:context.generatedAt,scope:scopedContext.scope,sources,photoAnalysis:Boolean(photoObservation)})
+  const suggestions=seniorUrchin?await buildSuggestions(answer,question,Boolean(urchinGraph),Boolean(photoObservation)):[]
+  return res.status(200).json({ok:true,answer,suggestedQuestions:suggestions,engine:seniorUrchin?'Asistente Senior de Erizo':'Seafood AI',implementation:activeOrganization.implementationName,policyVersion:SEAFOOD_AI_POLICY_VERSION,model:MODEL,generatedAt:context.generatedAt,scope:scopedContext.scope,sources,photoAnalysis:Boolean(photoObservation)})
  }catch(error){console.error('copilot_error',error instanceof Error?error.message:'unknown');return res.status(502).json({ok:false,error:'Pescamar IA no pudo responder en este momento'})}
 }
