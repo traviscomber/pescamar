@@ -1,6 +1,7 @@
 -- 043_japan_dispatch_fail_closed.sql
--- Defense in depth for Japan exports: a confirmed dispatch to Japan is rejected
--- at the database boundary unless every Japan Release gate is satisfied.
+-- Defense in depth for Japan exports without PL/pgSQL triggers.
+-- New/updated confirmed Japan dispatches are rejected by a CHECK constraint
+-- unless every Japan Release gate is satisfied.
 
 create or replace function japan_destination_matches(p_destination text) returns boolean
 language sql immutable as $$
@@ -51,18 +52,21 @@ language sql stable as $$
     )=10
 $$;
 
-create or replace function enforce_japan_dispatch_release() returns trigger
-language plpgsql as $$
-begin
-  if new.status='confirmed'
-     and japan_destination_matches(new.destination)
-     and not japan_reception_is_released(new.reception_id) then
-    raise exception 'Despacho bloqueado por Japan Release';
-  end if;
-  return new;
-end $$;
+create or replace function japan_dispatch_is_allowed(
+  p_reception_id uuid,
+  p_destination text,
+  p_status text
+) returns boolean
+language sql stable as $$
+  select
+    coalesce(p_status,'') <> 'confirmed'
+    or not japan_destination_matches(p_destination)
+    or japan_reception_is_released(p_reception_id)
+$$;
 
-drop trigger if exists lot_dispatches_japan_release_gate on lot_dispatches;
-create trigger lot_dispatches_japan_release_gate
-before insert or update of reception_id,destination,status on lot_dispatches
-for each row execute function enforce_japan_dispatch_release();
+alter table lot_dispatches
+  drop constraint if exists lot_dispatches_japan_release_check;
+
+alter table lot_dispatches
+  add constraint lot_dispatches_japan_release_check
+  check (japan_dispatch_is_allowed(reception_id,destination,status)) not valid;
