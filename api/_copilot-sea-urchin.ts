@@ -8,6 +8,7 @@ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]
 const rows=(value:unknown)=>Array.isArray(value)?value as Row[]:[]
 const text=(value:unknown)=>value==null?null:String(value)
 const num=(value:unknown)=>{const parsed=Number(value);return Number.isFinite(parsed)?parsed:null}
+const stageLabel:Record<string,string>={pinching:'Pinzado',blanching:'Escaldado',thermal_shock:'Shock térmico',sanitary_break:'Sanitario',dripping:'DRI / goteo',draining:'Drenado',molding:'Moldeo',color:'Color',xray:'Rayos X',freezing:'Congelado',packing:'Packing'}
 
 export type SeaUrchinCopilotEvidence={source:CopilotSource;data:Record<string,unknown>}
 
@@ -33,7 +34,41 @@ export async function buildSeaUrchinCopilotEvidence(operator:SessionOperator,rec
  const latestCapture=captures[captures.length-1]??null
  const blockingHolds=holds.filter(row=>['open','rejected'].includes(String(row.status??'')))
  const deviations=checks.filter(row=>['deviation','hold'].includes(String(row.status??'')))
+ const pendingStages=checks.filter(row=>!['ok','not_applicable'].includes(String(row.status??'')))
  const packedKg=packing.reduce((sum,row)=>sum+(num(row.net_kg)??0),0)
+ const observableCauses:string[]=[]
+ if(deviations.length)observableCauses.push(...deviations.map(row=>`${stageLabel[String(row.stage)]??String(row.stage)} está ${String(row.status)}`))
+ if(run&&['ng','review'].includes(String(run.color_status??'')))observableCauses.push(`Color está ${String(run.color_status)}`)
+ if(run&&['failed','review'].includes(String(run.xray_status??'')))observableCauses.push(`Rayos X está ${String(run.xray_status)}`)
+ if(blockingHolds.length)observableCauses.push(...blockingHolds.map(row=>`Hold ${String(row.authority??'regulatorio')}: ${String(row.reason??'sin motivo visible')}`))
+ const blockers:string[]=[]
+ if(run==null)blockers.push('Proceso de erizo no iniciado')
+ if(run&&run.status==='hold')blockers.push('Process Run en hold')
+ if(deviations.length)blockers.push(`${deviations.length} etapa${deviations.length===1?'':'s'} con desviación/hold`)
+ if(run&&run.color_status!=='accepted')blockers.push(`Color no aceptado (${String(run.color_status??'pending')})`)
+ if(run&&run.xray_status!=='passed')blockers.push(`Rayos X no aprobado (${String(run.xray_status??'pending')})`)
+ if(packing.some(row=>['held','voided'].includes(String(row.status??''))))blockers.push('Existe packing retenido o anulado')
+ if(cold.some(row=>String(row.status)==='deviation'||Number(row.deviation_count??0)>0))blockers.push('Cadena de frío con desviación')
+ if(blockingHolds.length)blockers.push(`${blockingHolds.length} hold${blockingHolds.length===1?'':'s'} regulatorio${blockingHolds.length===1?'':'s'} vigente${blockingHolds.length===1?'':'s'}`)
+ if(japan&&!japan.releasable){if(japan.failed.length)blockers.push(`Japan Release: ${japan.failed.length} gate${japan.failed.length===1?'':'s'} FAIL`);if(japan.missing.length)blockers.push(`Japan Release: ${japan.missing.length} gate${japan.missing.length===1?'':'s'} faltante${japan.missing.length===1?'':'s'}`)}
+ const nextAction=(()=>{
+  if(run==null)return 'Iniciar Process Run del lote.'
+  if(deviations.length)return `Resolver ${stageLabel[String(deviations[0].stage)]??String(deviations[0].stage)} y registrar evidencia antes de continuar.`
+  if(run.color_status!=='accepted')return 'Completar captura controlada de Color / Grade y obtener confirmación de Calidad.'
+  if(run.xray_status!=='passed')return 'Completar y aprobar control de Rayos X.'
+  if(pendingStages.length)return `Completar ${stageLabel[String(pendingStages[0].stage)]??String(pendingStages[0].stage)}.`
+  if(!packing.length)return 'Crear packing units validadas para el lote.'
+  if(packing.length&&!pallets.length)return 'Palletizar las cajas liberadas.'
+  if(cold.some(row=>String(row.status)!=='completed'))return 'Cerrar el ciclo de frío sin desviaciones pendientes.'
+  if(blockingHolds.length)return 'Resolver los holds regulatorios con fundamento y evidencia.'
+  if(japan&&!japan.releasable)return `Completar Japan Release: ${[...japan.failed,...japan.missing].slice(0,3).join(', ')}.`
+  return 'Sin bloqueo observable en el Digital Twin; mantener revisión humana antes de despacho.'
+ })()
+ const unknowns:string[]=[]
+ if(!captures.length)unknowns.push('Sin captura EdgeVision de Color / Grade')
+ if(run&&!run.grade)unknowns.push('Grade final no registrado')
+ if(!cold.length)unknowns.push('Sin ciclo de frío vinculado')
+ if(japan==null)unknowns.push('Estado Japan Release no disponible')
  const data={
   reception:{id,receptionNumber:reception.reception_number,plantId:reception.plant_id,supplier:reception.supplier,species:reception.species,extractionZone:reception.extraction_zone,acceptedKg:num(reception.accepted_kg),receivedAt:reception.received_at},
   process:run?{status:run.status,grade:run.grade,fingerClass:run.finger_class,colorCode:run.color_code,colorStatus:run.color_status,xrayStatus:run.xray_status,packingFormat:run.packing_format,outputKg:num(run.output_kg),updatedAt:run.updated_at}:null,
@@ -42,8 +77,9 @@ export async function buildSeaUrchinCopilotEvidence(operator:SessionOperator,rec
   packing:{boxes:packing.length,netKg:Number(packedKg.toFixed(3)),held:packing.filter(row=>row.status==='held').length,voided:packing.filter(row=>row.status==='voided').length},
   pallets:pallets.map(row=>({code:row.pallet_code,status:row.status,grade:row.grade,destination:row.destination,boxCount:num(row.box_count),netKg:num(row.net_kg)})),
   cold:cold.map(row=>({runCode:row.run_code,status:row.status,asset:row.asset_name,assetType:row.asset_type,lastObservedC:num(row.last_observed_c),observedMinC:num(row.observed_min_c),observedMaxC:num(row.observed_max_c),deviationCount:num(row.deviation_count)})),
-  regulatory:{blocking: blockingHolds.length,holds:holds.map(row=>({authority:row.authority,status:row.status,reason:row.reason,openedAt:row.opened_at,resolvedAt:row.resolved_at}))},
+  regulatory:{blocking:blockingHolds.length,holds:holds.map(row=>({authority:row.authority,status:row.status,reason:row.reason,openedAt:row.opened_at,resolvedAt:row.resolved_at}))},
   japan:japan?{releasable:japan.releasable,failed:japan.failed,missing:japan.missing,gates:japan.gates.map(gate=>({code:gate.code,label:gate.label,status:gate.status,source:gate.source}))}:null,
+  diagnosis:{state:blockers.length?'attention':'clear',observableCauses,blockers,nextAction,unknowns,rule:'deterministic_read_only'},
   summary:{deviations:deviations.length,blockingHolds:blockingHolds.length,japanReleasable:japan?.releasable??null}
  }
  return {source:{id:'urchin_graph',label:`Digital Twin erizo · REC-${String(reception.reception_number??'')}`,path:`/proceso-erizo/grafo?receptionId=${encodeURIComponent(id)}`,rows:1,freshness:text(run?.updated_at)??text(reception.received_at)},data}
