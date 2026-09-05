@@ -62,6 +62,8 @@ Desde `041_schema_migration_baseline.sql`, Neon conserva un registro explícito 
 | `039_cold_asset_active_run_exclusion.sql` | impide más de un ciclo de frío abierto simultáneo por activo físico |
 | `040_cold_sensor_station_scope.sql` | obliga observaciones sensor a coincidir con planta y estación física del activo |
 | `041_schema_migration_baseline.sql` | establece `schema_migrations`, registra 001–040 como baseline estructural verificado y 041 como primera migración aplicada con timestamp real |
+| `042_japan_export_release_gate.sql` | evidencia auditada y versionada para los requisitos manuales de liberación de exportación a Japón |
+| `043_japan_dispatch_fail_closed.sql` | defensa en profundidad: impide confirmar un despacho Japón si el lote no satisface Japan Release |
 
 El inventario anterior describe el repositorio actual. Si se agrega una migración, debe agregarse también a esta tabla; CI verifica esa correspondencia.
 
@@ -89,7 +91,9 @@ El inventario anterior describe el repositorio actual. Si se agrega una migraci�
 - Mientras el despacho comercial sea por lote/kg, un hold en una caja o pallet bloquea conservadoramente cualquier recepción trazada a esa unidad física.
 - Mientras un hold de pallet siga en `open` o `rejected`, su membresía física queda congelada: no se pueden agregar, retirar, mover ni borrar cajas para alterar la línea de bloqueo.
 - El gate regulatorio de despacho existe también en PostgreSQL sobre `lot_dispatches`; no depende de que la UI recuerde validar el hold.
-- La integración Sernapesca XML/Siscomex no forma parte de 037–041 y sólo debe implementarse cuando exista contrato oficial de endpoint, autenticación y formato.
+- Para destinos Japón, el despacho queda en fail-closed: proceso de erizo, etiquetas, holds regulatorios y los 10 requisitos Japan Release deben estar completos antes de confirmar la salida.
+- Una aprobación Japan Release requiere documento o evidencia, actor verificador y vigencia cuando corresponda; no se acepta una casilla sin provenance.
+- La integración Sernapesca XML/Siscomex no forma parte de 037–043 y sólo debe implementarse cuando exista contrato oficial de endpoint, autenticación y formato.
 
 ## Seguridad y tenancy operacional
 
