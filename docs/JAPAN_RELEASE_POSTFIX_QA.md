@@ -29,8 +29,18 @@ PASS.
 2. After approving the tenth gate, `final_quality_release`, the same confirmed Japan dispatch was accepted.
 3. The accepted test dispatch received a normal dispatch number, proving the positive path remains functional after fail-closed enforcement.
 
+## Additional negative-path QA
+
+Starting from the fully releasable synthetic lot, three independent failure conditions were introduced one at a time inside isolated transactions:
+
+1. **Active regulatory hold** — adding an open SERNAPESCA hold caused the confirmed Japan dispatch to fail with `Lote bloqueado por control regulatorio`.
+2. **Invalid product label** — changing the validated label to `mismatch` caused the confirmed Japan dispatch to fail `lot_dispatches_japan_release_check`.
+3. **Expired Japan evidence** — setting the approved health certificate `valid_until` to the previous day caused the confirmed Japan dispatch to fail `lot_dispatches_japan_release_check`.
+
+Each failed test transaction rolled back, leaving the QA baseline unchanged: zero open holds, label status `validated`, health certificate not expired, and the previously accepted positive-path dispatch preserved.
+
 ## Invariant proven
 
-A confirmed Japan dispatch now requires the Japan release graph to be complete at database level. A missing manual Japan gate blocks the dispatch even if application code attempts to write it directly. When the full release state is complete, the dispatch is allowed.
+A confirmed Japan dispatch now requires the Japan release graph to be complete at database level. Any missing or invalid manual Japan gate, an expired release document, an invalid label, or an active regulatory hold blocks the dispatch even if application code attempts to write it directly. When the full release state is complete, the dispatch is allowed.
 
 QA branch: `qa-japan-release-postfix`.
