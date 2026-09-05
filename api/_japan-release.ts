@@ -10,24 +10,28 @@ export type JapanGate={code:string;label:string;status:'pass'|'fail'|'missing';s
 export type JapanReleaseState={releasable:boolean;gates:JapanGate[];missing:string[];failed:string[]}
 
 const labels:Record<string,string>={
- process_release:'Proceso Erizo',labels_release:'Etiquetas',regulatory_release:'Holds regulatorios',
- plant_japan_authorized:'Planta habilitada Japón',pac_japan_scope:'PAC / alcance Japón',origin_legal:'Origen legal',lab_release:'Laboratorio / inocuidad',cold_chain_release:'Cadena de frío',neppex_approved:'NEPPEX',health_certificate:'Certificado sanitario',japan_importer_ready:'Importador Japón / MHLW',japan_label_compliance:'Etiqueta y composición Japón',final_quality_release:'Liberación final Calidad'
+ process_release:'Proceso Erizo',labels_release:'Etiquetas',regulatory_release:'Holds regulatorios',cold_chain_computed:'Cadena de frío operacional',
+ plant_japan_authorized:'Planta habilitada Japón',pac_japan_scope:'PAC / alcance Japón',origin_legal:'Origen legal',lab_release:'Laboratorio / inocuidad',cold_chain_release:'Liberación documental de frío',neppex_approved:'NEPPEX',health_certificate:'Certificado sanitario',japan_importer_ready:'Importador Japón / MHLW',japan_label_compliance:'Etiqueta y composición Japón',final_quality_release:'Liberación final Calidad'
 }
 
 export async function getJapanReleaseState(receptionId:string):Promise<JapanReleaseState>{
  const sql=getSql()
- const [processRows,evidenceRows,labelState,regulatoryState]=await Promise.all([
+ const [processRows,evidenceRows,coldRows,labelState,regulatoryState]=await Promise.all([
   sql`select u.id,u.status,u.grade,u.color_status,u.xray_status from sea_urchin_process_runs u where u.reception_id=${receptionId}::uuid order by u.updated_at desc limit 1`,
   sql`select distinct on (gate_code) gate_code,status,document_ref,evidence_url,note,valid_until,verified_at from japan_export_release_evidence where reception_id=${receptionId}::uuid order by gate_code,verified_at desc`,
+  sql`select japan_reception_has_valid_cold_chain(${receptionId}::uuid) as ok`,
   getLabelReleaseState(receptionId),
   getRegulatoryReleaseState(receptionId)
  ])
  const process=Array.isArray(processRows)?processRows[0] as Record<string,unknown>|undefined:undefined
+ const cold=Array.isArray(coldRows)?coldRows[0] as Record<string,unknown>|undefined:undefined
  const processOk=Boolean(process&&['ready_for_packing','closed'].includes(String(process.status??''))&&process.grade&&process.color_status==='accepted'&&process.xray_status==='passed')
+ const coldOk=Boolean(cold?.ok)
  const gates:JapanGate[]=[
   {code:'process_release',label:labels.process_release,status:processOk?'pass':'fail',source:'computed',detail:processOk?`Grade ${String(process?.grade??'')} · color aceptado · rayos X aprobado`:'El lote debe estar listo/cerrado con Grade, color aceptado y rayos X aprobado'},
   {code:'labels_release',label:labels.labels_release,status:labelState.controlled&&labelState.releasable?'pass':'fail',source:'computed',detail:labelState.controlled?(labelState.releasable?'Etiquetas validadas con evidencia':labelState.reasons.join(' · ')):'Japón requiere etiquetado explícitamente controlado; no hay etiquetas registradas'},
-  {code:'regulatory_release',label:labels.regulatory_release,status:regulatoryState.releasable?'pass':'fail',source:'computed',detail:regulatoryState.releasable?'Sin holds regulatorios vigentes':regulatoryState.reasons.join(' · ')}
+  {code:'regulatory_release',label:labels.regulatory_release,status:regulatoryState.releasable?'pass':'fail',source:'computed',detail:regulatoryState.releasable?'Sin holds regulatorios vigentes':regulatoryState.reasons.join(' · ')},
+  {code:'cold_chain_computed',label:labels.cold_chain_computed,status:coldOk?'pass':'fail',source:'computed',detail:coldOk?'Ciclo de frío completado, liberado, con observaciones dentro de rango y sin desviaciones':'Falta ciclo de frío liberado o existen desviaciones/rangos fuera de especificación'}
  ]
  const evidence=new Map<string,Record<string,unknown>>()
  for(const row of Array.isArray(evidenceRows)?evidenceRows:[])evidence.set(String((row as Record<string,unknown>).gate_code??''),row as Record<string,unknown>)
