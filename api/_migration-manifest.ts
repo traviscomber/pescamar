@@ -40,7 +40,8 @@ export const expectedMigrations=[
   '041_schema_migration_baseline.sql',
   '042_japan_export_release_gate.sql',
   '043_japan_dispatch_fail_closed.sql',
-  '044_sea_urchin_sequence_fail_closed.sql'
+  '044_sea_urchin_sequence_fail_closed.sql',
+  '045_japan_cold_chain_fail_closed.sql'
 ] as const
 
 export const migrationLandmarks=[
