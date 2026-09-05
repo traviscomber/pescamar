@@ -1,87 +1,72 @@
 -- Fail-closed sequential control for sea urchin processing.
--- A later stage cannot be validated until every earlier stage is OK or not applicable.
--- Run release states also require the appropriate stage gates.
+-- Declarative implementation: generated dependency keys + self-referential foreign keys.
+-- No trigger or PL/pgSQL body is required.
 
-create or replace function enforce_sea_urchin_stage_sequence()
-returns trigger
-language plpgsql
-as $$
-declare
-  blocking_stage text;
-begin
-  if new.status = 'pending' then
-    return new;
-  end if;
+alter table sea_urchin_stage_checks
+  add column sequence_pass boolean generated always as (status in ('ok','not_applicable')) stored,
+  add column required_previous_sequence_no integer generated always as (
+    case
+      when status='pending' or sequence_no<=10 then null
+      else sequence_no-10
+    end
+  ) stored,
+  add column required_previous_pass boolean generated always as (
+    case
+      when status='pending' or sequence_no<=10 then null
+      else true
+    end
+  ) stored;
 
-  select s.stage
-    into blocking_stage
-  from sea_urchin_stage_checks s
-  where s.run_id = new.run_id
-    and s.sequence_no < new.sequence_no
-    and s.status not in ('ok','not_applicable')
-  order by s.sequence_no
-  limit 1;
+alter table sea_urchin_stage_checks
+  add constraint sea_urchin_stage_sequence_mapping_check
+  check (
+    (stage='pinching' and sequence_no=10)
+    or (stage='blanching' and sequence_no=20)
+    or (stage='thermal_shock' and sequence_no=30)
+    or (stage='sanitary_break' and sequence_no=40)
+    or (stage='dripping' and sequence_no=50)
+    or (stage='draining' and sequence_no=60)
+    or (stage='molding' and sequence_no=70)
+    or (stage='color' and sequence_no=80)
+    or (stage='xray' and sequence_no=90)
+    or (stage='freezing' and sequence_no=100)
+    or (stage='packing' and sequence_no=110)
+  );
 
-  if blocking_stage is not null then
-    raise exception 'SEA_URCHIN_SEQUENCE_BLOCKED: prior stage % is not validated', blocking_stage
-      using errcode = 'check_violation';
-  end if;
+alter table sea_urchin_stage_checks
+  add constraint sea_urchin_stage_sequence_pass_unique
+  unique (run_id,sequence_no,sequence_pass);
 
-  return new;
-end;
-$$;
+alter table sea_urchin_stage_checks
+  add constraint sea_urchin_stage_previous_pass_fk
+  foreign key (run_id,required_previous_sequence_no,required_previous_pass)
+  references sea_urchin_stage_checks(run_id,sequence_no,sequence_pass)
+  deferrable initially immediate;
 
-drop trigger if exists sea_urchin_stage_sequence_guard on sea_urchin_stage_checks;
-create trigger sea_urchin_stage_sequence_guard
-before update of status on sea_urchin_stage_checks
-for each row
-when (new.status is distinct from old.status)
-execute function enforce_sea_urchin_stage_sequence();
+alter table sea_urchin_process_runs
+  add column required_terminal_sequence_no integer generated always as (
+    case
+      when status='ready_for_packing' then 100
+      when status in ('released','closed') then 110
+      else null
+    end
+  ) stored,
+  add column required_terminal_pass boolean generated always as (
+    case
+      when status in ('ready_for_packing','released','closed') then true
+      else null
+    end
+  ) stored;
 
-create or replace function enforce_sea_urchin_run_release_sequence()
-returns trigger
-language plpgsql
-as $$
-declare
-  blocking_stage text;
-  max_required_sequence integer;
-begin
-  if new.status not in ('ready_for_packing','released','closed') then
-    return new;
-  end if;
+alter table sea_urchin_process_runs
+  add constraint sea_urchin_run_release_classification_check
+  check (
+    status not in ('ready_for_packing','released','closed')
+    or (grade is not null and color_status='accepted' and xray_status='passed')
+  );
 
-  max_required_sequence := case
-    when new.status = 'ready_for_packing' then 100
-    else 110
-  end;
-
-  select s.stage
-    into blocking_stage
-  from sea_urchin_stage_checks s
-  where s.run_id = new.id
-    and s.sequence_no <= max_required_sequence
-    and s.status not in ('ok','not_applicable')
-  order by s.sequence_no
-  limit 1;
-
-  if blocking_stage is not null then
-    raise exception 'SEA_URCHIN_RELEASE_BLOCKED: stage % is not validated', blocking_stage
-      using errcode = 'check_violation';
-  end if;
-
-  if new.status in ('ready_for_packing','released','closed')
-     and (new.grade is null or new.color_status <> 'accepted' or new.xray_status <> 'passed') then
-    raise exception 'SEA_URCHIN_RELEASE_BLOCKED: grade, color and xray must be approved'
-      using errcode = 'check_violation';
-  end if;
-
-  return new;
-end;
-$$;
-
-drop trigger if exists sea_urchin_run_release_sequence_guard on sea_urchin_process_runs;
-create trigger sea_urchin_run_release_sequence_guard
-before update of status, grade, color_status, xray_status on sea_urchin_process_runs
-for each row
-when (new.status in ('ready_for_packing','released','closed'))
-execute function enforce_sea_urchin_run_release_sequence();
+alter table sea_urchin_process_runs
+  add constraint sea_urchin_run_terminal_stage_fk
+  foreign key (id,required_terminal_sequence_no,required_terminal_pass)
+  references sea_urchin_stage_checks(run_id,sequence_no,sequence_pass)
+  deferrable initially immediate;
