@@ -24,11 +24,13 @@ export default async function handler(req:Request,res:Response){
  const body=req.body&&typeof req.body==='object'?req.body as Record<string,unknown>:{}
  const question=typeof body.question==='string'?body.question.trim().slice(0,MAX_QUESTION):''
  if(!question)return res.status(400).json({ok:false,error:'Escribe una pregunta operacional'})
+ const seniorUrchin=body.mode==='sea_urchin_senior'
  const plantId=resolveCopilotPlant(operator,body.plantId)
  if(plantId===undefined)return res.status(403).json({ok:false,error:'Planta fuera de tu alcance'})
  if(!process.env.AI_GATEWAY_API_KEY&&!process.env.VERCEL_OIDC_TOKEN)return res.status(503).json({ok:false,error:'Pescamar IA aún no está configurado en este entorno'})
  try{
   const [context,historicalLineage,canonicalIntelligence,urchinGraph]=await Promise.all([buildCopilotContext(operator,plantId),buildHistoricalLineageEvidence(operator),buildCanonicalBusinessIntelligence(operator),buildSeaUrchinCopilotEvidence(operator,body.receptionId)])
+  if(seniorUrchin&&!urchinGraph)return res.status(400).json({ok:false,error:'Selecciona un lote de erizo con Digital Twin disponible'})
   const extraSources=[historicalLineage?.source,canonicalIntelligence?.source,urchinGraph?.source].filter((source):source is NonNullable<typeof source>=>Boolean(source))
   const baseSources=[...context.sources,...extraSources]
   const sources=baseSources.map(source=>{const evidenceClass=evidenceClassForSource(source.id);if(!evidenceClass)throw new Error(`unclassified_source:${source.id}`);return {...source,evidenceClass}})
@@ -36,17 +38,18 @@ export default async function handler(req:Request,res:Response){
   const scopedContext={...context,scope:{...context.scope,organizationId:operator.organizationId},sources,data:{...context.data,...extraData}}
   const conversation=history(body.history).map((turn,index)=>`TURNO ${index+1}\nPREGUNTA: ${turn.question}\nRESPUESTA: ${turn.answer}`).join('\n\n')||'Sin turnos previos.'
   const sourceLegend=sources.map(source=>`[${source.id}] ${source.label} · class=${source.evidenceClass} · rows=${source.rows} · freshness=${source.freshness??'unknown'}`).join('\n')
+  const seniorPrompt=seniorUrchin?`\n\nMODO ASISTENTE SENIOR DE ERIZO:\n- Tu objeto principal es urchin_graph. Úsalo antes que cualquier agregado de red para describir el lote.\n- Razona con profundidad internamente, pero responde con máxima claridad operacional y poca carga visual.\n- Ante preguntas sobre Japón, la primera línea debe ser exactamente «APTO JAPÓN» sólo si urchin_graph.japan.releasable es true; en cualquier otro caso usa «NO LIBERADO JAPÓN». Nunca deduzcas aprobación desde Grade, calidad visual, documentos parciales o ausencia de alertas.\n- Después explica, en lenguaje humano, qué significa el estado del producto: origen/recepción, proceso, Color/Grade, rayos X, packing, frío operacional, holds y gates Japón relevantes.\n- Distingue siempre calidad del producto de habilitación regulatoria/exportadora. Un Grade A no equivale a aprobación Japón.\n- Prioriza el primer bloqueo determinístico y diagnosis.nextAction. Si el usuario pide una descripción completa, recorre el Digital Twin sin omitir un gate fallido o faltante.\n- Si hay contradicción aparente entre evidencia histórica y live, prevalece el estado live para decisiones operacionales y explica la diferencia.\n- No uses lenguaje de certeza causal para correlaciones de proceso, proveedor, rendimiento o Grade.\n- Mantén lectura solamente: puedes recomendar revisión, nunca aprobar, liberar ni cambiar parámetros.`:''
   const result=await generateText({
    model:gateway(MODEL),
-   system:seafoodAiSystemPrompt(activeOrganization.implementationName),
+   system:seafoodAiSystemPrompt(activeOrganization.implementationName)+seniorPrompt,
    prompt:`SOURCES:\n${sourceLegend}\n\nHISTORIAL:\n${conversation}\n\nPREGUNTA:\n${question}\n\nSEAFOOD_SNAPSHOT:\n${JSON.stringify(scopedContext)}`,
-   maxOutputTokens:1800,
-   providerOptions:{openai:{reasoningEffort:'low'}},
+   maxOutputTokens:seniorUrchin?2200:1800,
+   providerOptions:{openai:{reasoningEffort:seniorUrchin?'medium':'low'}},
   })
   const answer=result.text.trim()
   if(!answer)throw new Error('empty_answer')
   const invalidTags=invalidSourceTags(answer,new Set(sources.map(source=>source.id)))
   if(invalidTags.length)throw new Error(`invalid_source_tags:${invalidTags.join(',')}`)
-  return res.status(200).json({ok:true,answer,engine:'Seafood AI',implementation:activeOrganization.implementationName,policyVersion:SEAFOOD_AI_POLICY_VERSION,model:MODEL,generatedAt:context.generatedAt,scope:scopedContext.scope,sources})
+  return res.status(200).json({ok:true,answer,engine:seniorUrchin?'Asistente Senior de Erizo':'Seafood AI',implementation:activeOrganization.implementationName,policyVersion:SEAFOOD_AI_POLICY_VERSION,model:MODEL,generatedAt:context.generatedAt,scope:scopedContext.scope,sources})
  }catch(error){console.error('copilot_error',error instanceof Error?error.message:'unknown');return res.status(502).json({ok:false,error:'Pescamar IA no pudo responder en este momento'})}
 }
