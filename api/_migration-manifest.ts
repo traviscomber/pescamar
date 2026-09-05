@@ -37,7 +37,9 @@ export const expectedMigrations=[
   '038_regulatory_pallet_membership_freeze.sql',
   '039_cold_asset_active_run_exclusion.sql',
   '040_cold_sensor_station_scope.sql',
-  '041_schema_migration_baseline.sql'
+  '041_schema_migration_baseline.sql',
+  '042_japan_export_release_gate.sql',
+  '043_japan_dispatch_fail_closed.sql'
 ] as const
 
 export const migrationLandmarks=[
@@ -51,5 +53,6 @@ export const migrationLandmarks=[
   'label_templates',
   'pallets',
   'cold_runs',
-  'regulatory_holds'
+  'regulatory_holds',
+  'japan_export_release_evidence'
 ] as const
