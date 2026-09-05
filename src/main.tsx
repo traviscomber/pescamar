@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { AuthProvider } from './auth'
 import { RouteScrollReset } from './components/RouteScrollReset'
+import { SeaUrchinAssistant } from './components/SeaUrchinAssistant'
 import './app.css'
 
 createRoot(document.getElementById('root')!).render(
@@ -12,6 +13,7 @@ createRoot(document.getElementById('root')!).render(
    <BrowserRouter>
     <RouteScrollReset/>
     <App />
+    <SeaUrchinAssistant/>
    </BrowserRouter>
   </AuthProvider>
  </StrictMode>,
