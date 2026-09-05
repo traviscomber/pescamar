@@ -8,6 +8,7 @@ import { activeOrganization } from './_organization.js'
 import { evidenceClassForSource, invalidSourceTags, SEAFOOD_AI_POLICY_VERSION, seafoodAiSystemPrompt } from './_seafood-ai-policy.js'
 
 declare const process:{env:Record<string,string|undefined>}
+declare function fetch(input:string,init?:{method?:string;headers?:Record<string,string>;body?:string}):Promise<{ok:boolean;status:number;json:()=>Promise<unknown>}>
 type Request={method?:string;headers?:Record<string,string|string[]|undefined>;body?:unknown}
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void}
 type HistoryTurn={question:string;answer:string}
