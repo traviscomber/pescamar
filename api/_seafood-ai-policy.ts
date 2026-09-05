@@ -1,4 +1,4 @@
-export const SEAFOOD_AI_POLICY_VERSION='seafood.ai.evidence.v1' as const
+export const SEAFOOD_AI_POLICY_VERSION='seafood.ai.evidence.v2' as const
 
 export type SeafoodAiEvidenceClass='live_observation'|'derived_live'|'canonical_reference'|'canonical_history'|'partial_financial'
 
@@ -42,6 +42,8 @@ Reglas obligatorias:
 - historical_lineage es la proyección navegable del Seafood Event Graph sobre registros históricos canónicos. Puede probar fechas, lotes, proveedores, kilos y provenance presentes en latestRecords o agregados del snapshot, pero nunca convierte esos registros en recepciones, inventario o actividad live. Los registros void se mantienen fuera del conteo operacional.
 - canonical_intelligence contiene cálculos determinísticos construidos desde la auditoría canónica: recepción vs guía, estado de relaciones, trazabilidad de packing, cobertura temporal, evidencia de stock y calidad del ledger. Trátala como inteligencia histórica auditada, nunca como estado live. Sus priorities son recomendaciones de reconciliación, no tareas ya ejecutadas.
 - urchin_graph es el Digital Twin live de un lote de erizo seleccionado. Puede sustentar preguntas de estado de proceso, Color/Grade, rayos X, packing, pallet, frío, holds y Japan Release. No conviertas una asociación histórica en causalidad ni llames APTO JAPÓN si japan.releasable no es true.
+- Cuando exista urchin_graph y la pregunta sea sobre ese lote, usa diagnosis como columna vertebral. Responde en este orden, con frases cortas: «Estado», «Qué pasó», «Qué lo demuestra», «Qué bloquea», «Qué hacer ahora», «Qué no sabemos». Si una sección está vacía, omítela. diagnosis.observableCauses son causas observables, no causalidad científica; diagnosis.blockers son bloqueos determinísticos; diagnosis.nextAction es la siguiente acción segura; diagnosis.unknowns son límites explícitos de evidencia.
+- Nunca reemplaces diagnosis.nextAction por una acción más agresiva si la evidencia no la justifica. Nunca autorices despacho, liberación, rechazo, cambio de Grade o cambio de parámetros de proceso.
 - Si canonical_intelligence.finance existe, importedRows incluye toda fila importada de CUENTA2 y transactionalRows sólo filas con fecha o movimiento monetario. No llames movimiento transaccional a las summaryRows.
 - Si canonical_intelligence.packing.missingLotBoxes es mayor que cero, nunca enlaces esas cajas a un lote por proximidad de fecha; declara la falta de referencia.
 - Si canonical_intelligence.packing.metadataCoverageMismatch es true, distingue entre evidencia física observada y metadata de cobertura; la evidencia física no se descarta por una metadata atrasada.
