@@ -1,6 +1,6 @@
 import {ChevronRight,Search} from 'lucide-react'
 import {useDeferredValue,useEffect,useMemo,useState} from 'react'
-import {Link,useSearchParams} from 'react-router-dom'
+import {Link,useNavigate,useSearchParams} from 'react-router-dom'
 import {canCreateReception} from '../access'
 import {useAuth} from '../auth'
 import {DataContinuityBanner} from '../components/DataContinuityBanner'
@@ -14,7 +14,8 @@ const date=(value:string|null)=>value?new Intl.DateTimeFormat('es-CL',{day:'2-di
 
 export function Receptions({lots,onNew}:{lots:Lot[];onNew:()=>void}){
   const {operator}=useAuth()
-  const {records:history,summary,error:historyError,openRecord,openLive}=useLot360()
+  const {records:history,summary,error:historyError,openRecord}=useLot360()
+  const navigate=useNavigate()
   const [params]=useSearchParams()
   const requestedReceptionId=params.get('receptionId')
   const requestedPlantId=params.get('plantId')??''
@@ -25,16 +26,16 @@ export function Receptions({lots,onNew}:{lots:Lot[];onNew:()=>void}){
   const historicalFiltered=useMemo(()=>history.filter(item=>`${item.lot_code} ${item.supplier_name??item.supplier_original??''} ${item.guide_number??''} ${item.extraction_zone??''} ${item.process_site_original??''} ${item.source_file}`.toLowerCase().includes(deferred)),[history,deferred])
   const mayCreate=operator?canCreateReception(operator.role):false
   const historyCount=Number(summary?.total??history.length)
-  useEffect(()=>{if(requestedReceptionId&&lots.some(l=>l.receptionId===requestedReceptionId))openLive(requestedReceptionId)},[requestedReceptionId,lots,openLive])
+  useEffect(()=>{if(requestedReceptionId&&lots.some(l=>l.receptionId===requestedReceptionId))navigate(`/lotes/${encodeURIComponent(requestedReceptionId)}`,{replace:true})},[requestedReceptionId,lots,navigate])
 
   return <>
     <PageHeader eyebrow="Operación" title="Recepciones" description="Qué está entrando ahora. El histórico y la evidencia quedan disponibles cuando los necesitas." actions={<>{requestedPlantId?<Link className="button secondary" to={`/plantas/${encodeURIComponent(requestedPlantId)}`}>Volver a planta</Link>:null}{mayCreate?<button className="button primary" onClick={onNew}>+ Nueva recepción</button>:null}</>}/>
 
     <section className="panel list-panel receptions-workspace" aria-label="Recepciones activas">
       {scopedLots.length?<>
-        <div className="panel-header"><div><span className="overline teal">Ahora</span><h2>{filtered.length} recepción{filtered.length===1?'':'es'} activa{filtered.length===1?'':'s'}</h2><p>Abre un lote para continuar su flujo operacional.</p></div></div>
+        <div className="panel-header"><div><span className="overline teal">Ahora</span><h2>{filtered.length} recepción{filtered.length===1?'':'es'} activa{filtered.length===1?'':'s'}</h2><p>Abre un lote para ver estado, siguiente acción, balance y evidencia en una sola ficha.</p></div></div>
         <div className="toolbar"><div className="search-box"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Buscar lote o proveedor…" aria-label="Buscar recepciones"/></div></div>
-        <LotTable lots={filtered} onOpen={lot=>{if(lot.receptionId)openLive(lot.receptionId)}}/>
+        <LotTable lots={filtered} onOpen={lot=>{if(lot.receptionId)navigate(`/lotes/${encodeURIComponent(lot.receptionId)}`)}}/>
       </>:<div className="empty-inline"><div><span className="overline teal">Ahora</span><b>{requestedPlantId?'Sin recepciones activas en esta planta':'Sin recepciones activas'}</b><small>{mayCreate?'Registra la siguiente entrada cuando llegue materia prima.':'No hay una acción pendiente en este momento.'}</small>{mayCreate?<button className="button primary" onClick={onNew}>Nueva recepción</button>:null}</div></div>}
     </section>
 
