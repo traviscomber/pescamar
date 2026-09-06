@@ -44,11 +44,12 @@ export default async function handler(req:Request,res:Response){
     const expectedSet=new Set<string>(expectedMigrations)
     const missing=expectedMigrations.filter(name=>!byName.has(name))
     const unexpected=migrationRows.map(row=>row.migration_name).filter(name=>!expectedSet.has(name))
-    const invalid=migrationRows.filter(row=>row.evidence_kind!=='baseline'&&row.evidence_kind!=='applied').map(row=>row.migration_name)
+    const invalid=migrationRows.filter(row=>!['baseline','applied','reconciled'].includes(row.evidence_kind)).map(row=>row.migration_name)
     const latest=expectedMigrations.at(-1)!
     const latestRow=byName.get(latest)
     const latestApplied=latestRow?.evidence_kind==='applied'&&Boolean(latestRow.applied_at)
     const baselineRows=migrationRows.filter(row=>row.evidence_kind==='baseline').length
+    const reconciledRows=migrationRows.filter(row=>row.evidence_kind==='reconciled').length
     const appliedRows=migrationRows.filter(row=>row.evidence_kind==='applied'&&Boolean(row.applied_at)).length
     const trackerVerified=runtimeCompatible&&registryPresent&&missing.length===0&&unexpected.length===0&&invalid.length===0&&latestApplied
     const trackerTables=trackers.map(row=>`${row.schemaname}.${row.tablename}`)
@@ -61,6 +62,7 @@ export default async function handler(req:Request,res:Response){
         tracked:trackerVerified,
         trackerTables,
         baselineRows,
+        reconciledRows,
         appliedRows,
         missing,
         unexpected,
@@ -69,12 +71,12 @@ export default async function handler(req:Request,res:Response){
       pilotGate:{
         status:trackerVerified?'pass':'hold',
         reason:trackerVerified
-          ?`Neon contiene los ${expectedMigrations.length} archivos canónicos del manifiesto: 001–040 conservan baseline estructural y cada migración posterior está registrada individualmente. La última migración verificada es ${latest}.`
+          ?`Neon reconcilia exactamente los ${expectedMigrations.length} archivos canónicos. 001–040 conservan baseline estructural, los gaps históricos posteriores quedan explícitos como reconciled sin inventar timestamps y ${latest} consta como aplicada.`
           :registryPresent
             ?`Existe schema_migrations, pero todavía no reconcilia exactamente los ${expectedMigrations.length} archivos del inventario canónico o ${latest} no consta como aplicada.`
             :'El entorno no conserva una bitácora de migraciones aplicada que permita demostrar qué archivos se ejecutaron y en qué orden.'
       },
-      governance:{writesDatabase:false,rule:'Un baseline estructural explícito puede cerrar el gap histórico sin inventar fechas de ejecución. PASS requiere compatibilidad runtime, cobertura exacta del manifiesto y la migración más reciente registrada como applied. Este endpoint sólo inspecciona; no aplica ni registra migraciones.'}
+      governance:{writesDatabase:false,rule:'baseline certifica estructura histórica sin timestamps por archivo; reconciled certifica estructura canónica presente cuando el timestamp original no es demostrable; applied requiere applied_at real. PASS exige compatibilidad runtime, cobertura exacta del manifiesto y la migración más reciente como applied. Este endpoint sólo inspecciona.'}
     })
   }catch(error){
     const message=error instanceof Error?error.message:''
