@@ -123,7 +123,7 @@ export function FloorStation(){
  const modeLabel=writesEnabled===null?"Verificando gate":writesEnabled?selectedStation?"Escritura habilitada":"Sin estación configurada":"Modo seguro";
  const queueLabel=queueState.attention?`${queueState.attention} requiere${queueState.attention===1?"":"n"} revisión`:queueState.pending?`${queueState.pending} pendiente${queueState.pending===1?"":"s"} de sync`:"Sin cola pendiente";
  return <>
-  <PageHeader eyebrow="Plant Execution · Floor" title="Estación de planta" description={writesEnabled?"Captura operacional por lote con scanner HID, packing idempotente y recuperación offline.":"Superficie operacional táctil conectada al lote real. Las escrituras permanecen bloqueadas hasta habilitar Plant Execution en un entorno DB verificado."}/>
+  <PageHeader eyebrow="Operación · Packing" title="Packing" description={writesEnabled?"Escanea el lote, confirma el peso y continúa. Planta, lote y estación se heredan del contexto; sólo corrígelos cuando sea necesario.":"Captura física conectada al lote real. Las escrituras permanecen bloqueadas hasta habilitar Plant Execution en un entorno DB verificado."}/>
   {loading?<div className="system-banner">Sincronizando lotes autorizados…</div>:null}
   {error?<div className="system-banner error" role="alert">{error}</div>:null}
   {stationError?<div className="system-banner error" role="alert">{stationError}</div>:null}
@@ -134,25 +134,33 @@ export function FloorStation(){
    <div><ShieldCheck size={18}/><span><b>{modeLabel}</b><small>{writesEnabled?selectedStation?.name??"Configure estación real":"Sin escrituras DB"}</small></span></div>
   </section>
   <section className="floor-console" aria-label="Consola de operación">
-   <div className="floor-controls">
+   <div className="floor-controls minimum-team">
+    <div className="floor-step-label"><span>1</span><div><b>Escanear lote</b><small>El sistema recupera su contexto operacional.</small></div></div>
     <label>Scanner HID<input aria-label="Scanner HID" autoFocus autoComplete="off" spellCheck={false} placeholder="Escanee lote + Enter" value={scanCode} onChange={event=>{setScanCode(event.target.value);setScanFeedback(null)}} onKeyDown={event=>{if(event.key==="Enter"){event.preventDefault();applyScan()}}}/></label>
     {scanFeedback?<p className={`floor-scan-feedback ${scanFeedback.kind}`} role={scanFeedback.kind==="error"?"alert":"status"}>{scanFeedback.message}</p>:null}
-    <label>Planta<select value={effectivePlant} onChange={event=>{setPlantId(event.target.value);setLotId("");setStationId("");setScanFeedback(null);setFeedback(null)}} disabled={!plantIds.length}>{plantIds.map(id=><option key={id} value={id}>{id}</option>)}</select></label>
-    <label>Lote<select value={selected?.receptionId??""} onChange={event=>{setLotId(event.target.value);setScanFeedback(null);setFeedback(null)}} disabled={!plantLots.length}>{plantLots.map(lot=><option key={lot.receptionId} value={lot.receptionId}>{lot.id} · {lot.species} · {lot.supplier}</option>)}</select></label>
-    {writesEnabled?<label>Estación<select aria-label="Estación de planta" value={selectedStation?.id??""} onChange={event=>setStationId(event.target.value)} disabled={!plantStations.length}><option value="" disabled>{plantStations.length?"Seleccione estación":"Sin estación configurada"}</option>{plantStations.map(station=><option key={station.id} value={station.id}>{station.name} · {station.code}</option>)}</select></label>:null}
+    <div className="floor-auto-context" aria-label="Contexto heredado"><small>Contexto automático</small><b>{selected?`${selected.id} · ${effectivePlant}`:'Sin lote'}</b><span>{selectedStation?.name??'Estación pendiente'}</span></div>
+    <details className="floor-manual-context">
+     <summary>Corregir contexto manualmente</summary>
+     <div className="floor-manual-grid">
+      <label>Planta<select value={effectivePlant} onChange={event=>{setPlantId(event.target.value);setLotId("");setStationId("");setScanFeedback(null);setFeedback(null)}} disabled={!plantIds.length}>{plantIds.map(id=><option key={id} value={id}>{id}</option>)}</select></label>
+      <label>Lote<select value={selected?.receptionId??""} onChange={event=>{setLotId(event.target.value);setScanFeedback(null);setFeedback(null)}} disabled={!plantLots.length}>{plantLots.map(lot=><option key={lot.receptionId} value={lot.receptionId}>{lot.id} · {lot.species} · {lot.supplier}</option>)}</select></label>
+      {writesEnabled?<label>Estación<select aria-label="Estación de planta" value={selectedStation?.id??""} onChange={event=>setStationId(event.target.value)} disabled={!plantStations.length}><option value="" disabled>{plantStations.length?"Seleccione estación":"Sin estación configurada"}</option>{plantStations.map(station=><option key={station.id} value={station.id}>{station.name} · {station.code}</option>)}</select></label>:null}
+     </div>
+    </details>
    </div>
    {selected?<div className="floor-active-lot">
     <div className="floor-lot-heading"><span>Lote activo</span><strong>{selected.id}</strong><small>{selected.species} · {selected.supplier}</small></div>
     <dl className="floor-lot-metrics"><div><dt>Planta</dt><dd>{selected.plantId}</dd></div><div><dt>Guía</dt><dd>{selected.guide.toLocaleString("es-CL")} kg</dd></div><div><dt>Aceptado</dt><dd>{selected.accepted.toLocaleString("es-CL")} kg</dd></div><div><dt>Calidad</dt><dd>{selected.status}</dd></div></dl>
     <div className="floor-weight-panel">
+     <div className="floor-step-label"><span>2</span><div><b>Confirmar peso</b><small>Única captura física necesaria para este packing.</small></div></div>
      <label htmlFor="floor-weight">Peso de estación</label>
      <div className="floor-weight-input"><input id="floor-weight" inputMode="decimal" placeholder="0,00" value={weight} onChange={event=>{setWeight(event.target.value);setFeedback(null)}} aria-describedby="floor-weight-note"/><span>kg</span></div>
-     <p id="floor-weight-note">{writesEnabled?"El mismo idempotency key se conserva en reintentos y sincronización offline.":"Entrada local disponible; el gate impide crear eventos o packing persistente."}</p>
+     <p id="floor-weight-note">{writesEnabled?"Lote, planta, estación, hora e identidad de la operación se adjuntan automáticamente.":"Entrada local disponible; el gate impide crear eventos o packing persistente."}</p>
      {feedback?<p className={`floor-operation-feedback ${feedback.kind}`} role={feedback.kind==="error"?"alert":"status"}>{feedback.message}</p>:null}
-     <button className="floor-confirm" type="button" disabled={!writeReady||!validWeight||saving} onClick={()=>void submitPacking()} title={!writesEnabled?"Plant Execution writes deshabilitados":!selectedStation?"Configure una estación real":"Crear packing unit"}><PackagePlus size={22}/>{saving?"Registrando…":"Crear packing unit"}<span>{writesEnabled?selectedStation?online?"Evento idempotente":"Se guardará para sincronizar":"Sin estación real":"Persistencia bloqueada por gate #68"}</span></button>
+     <button className="floor-confirm" type="button" disabled={!writeReady||!validWeight||saving} onClick={()=>void submitPacking()} title={!writesEnabled?"Plant Execution writes deshabilitados":!selectedStation?"Configure una estación real":"Confirmar packing"}><PackagePlus size={22}/>{saving?"Registrando…":"Confirmar packing"}<span>{writesEnabled?selectedStation?online?"El sistema completa el registro":"Se guardará para sincronizar":"Sin estación real":"Persistencia bloqueada por gate #68"}</span></button>
     </div>
    </div>:<div className="floor-empty"><Scale size={30}/><h2>Sin lotes disponibles</h2><p>La estación sólo muestra recepciones reales dentro del alcance de planta del operador.</p></div>}
   </section>
-  <section className="floor-next-gate panel"><div><span className="overline">Continuidad operacional</span><h2>{writesEnabled?"Floor listo para packing idempotente":"Escritura aislada pendiente"}</h2><p>{writesEnabled?"Los eventos sin red quedan en IndexedDB y se reintentan con la misma identidad al recuperar conectividad. Los errores de contrato pasan a revisión humana y salen del loop automático.":"El frontend ya conoce el gate real y no consulta estaciones ni intenta escrituras mientras Plant Execution permanezca deshabilitado."}</p></div><span className={`status-pill ${writesEnabled&&queueState.attention===0?"":"warning"}`}>{writesEnabled?queueState.attention?`${queueState.attention} revisar`:`${queueState.pending} pendientes`:"Bloqueado por #68"}</span></section>
+  <section className="floor-next-gate panel"><div><span className="overline">Automatización operacional</span><h2>{writesEnabled?"Dos acciones humanas: escanear y pesar":"Escritura aislada pendiente"}</h2><p>{writesEnabled?"El sistema conserva identidad, lote, planta, estación, hora, idempotencia y sincronización. Sólo un error de contrato o una corrección de contexto vuelve a una persona.":"El frontend conoce el gate real y no intenta escrituras mientras Plant Execution permanezca deshabilitado."}</p></div><span className={`status-pill ${writesEnabled&&queueState.attention===0?"":"warning"}`}>{writesEnabled?queueState.attention?`${queueState.attention} revisar`:`${queueState.pending} pendientes`:"Bloqueado por #68"}</span></section>
  </>;
 }
