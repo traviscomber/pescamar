@@ -20,9 +20,17 @@ Vercel Preview debe quedar `READY` antes del merge. Después del merge, Producci
 
 ## 2. Esquema y fuente de verdad
 
-`db/migrations/` es la fuente canónica del esquema. Antes de aceptar un piloto se debe confirmar que el entorno Neon objetivo contiene **todos los archivos versionados actualmente presentes en ese directorio, ejecutados en orden ascendente**. No usar una lista histórica parcial como sustituto.
+`db/migrations/` es la fuente canónica del esquema. Antes de aceptar un piloto se debe confirmar que el entorno Neon objetivo contiene **todos los archivos versionados actualmente presentes en ese directorio, ejecutados o reconciliados en orden ascendente con evidencia explícita**. No usar una lista histórica parcial como sustituto.
 
-`db/README.md` mantiene el inventario actual y CI comprueba que toda migración del directorio esté documentada. Las compatibilidades idempotentes de runtime no reemplazan la confirmación del esquema versionado.
+`db/README.md` mantiene el inventario actual y CI comprueba que toda migración del directorio esté documentada, declarada en el manifiesto runtime y que los landmarks de `schema-preflight` no se desalineen. Las compatibilidades idempotentes de runtime no reemplazan la confirmación del esquema versionado.
+
+La evidencia de `schema_migrations` se interpreta de forma estricta:
+
+- `baseline` certifica estructura histórica verificada sin reconstruir timestamps individuales;
+- `reconciled` certifica que la estructura canónica de una migración está presente cuando el timestamp original no es demostrable; no equivale a una ejecución histórica fechada;
+- `applied` exige un `applied_at` real registrado al ejecutar la migración bajo el registro vigente.
+
+Para PASS de esquema, el inventario debe coincidir exactamente con el repositorio, no puede haber migraciones faltantes/inesperadas/inválidas, los landmarks runtime deben estar presentes y la migración canónica más reciente debe constar como `applied`. Nunca completar este gate inventando fechas de ejecución.
 
 ## 3. Identidades reales requeridas
 
@@ -140,7 +148,7 @@ Un cambio técnico puntual puede obtener **PASS** cuando sus gates de CI, previe
 El **piloto Pescamar** puede declararse **PASS** únicamente cuando:
 
 - Quality y Vercel están verdes en el commit de producción;
-- el esquema Neon objetivo está reconciliado con todos los archivos de `db/migrations/`;
+- el esquema Neon objetivo está reconciliado exactamente con todos los archivos de `db/migrations/`, con la migración más reciente registrada como `applied`;
 - las perspectivas de rol relevantes completan su matriz sin fallas críticas;
 - existe al menos un flujo real enlazado por lote que complete los diez gates UAT;
 - la continuidad LIVE requerida ha sido observada y aceptada humanamente;
