@@ -21,8 +21,8 @@ async function openNavigation(page:Page,projectName:string){
   await expect(page.locator('.sidebar')).toHaveClass(/is-open/)
 }
 
-async function expandCommercialGroup(page:Page){
-  const group=page.locator('details.nav-more').filter({hasText:'Comercial y finanzas'}).first()
+async function expandAdministration(page:Page){
+  const group=page.locator('details.nav-more').filter({hasText:'Administración'}).first()
   if(!await group.count())return
   if(await group.getAttribute('open')===null)await group.locator('summary').click()
 }
@@ -30,7 +30,7 @@ async function expandCommercialGroup(page:Page){
 async function expectAuthenticatedNavigation(page:Page,projectName:string){
   await expect(page.getByRole('heading',{name:'Acceso'})).toHaveCount(0)
   await openNavigation(page,projectName)
-  await expect(page.getByRole('link',{name:/Recepciones/})).toBeVisible()
+  await expect(page.getByRole('link',{name:'Operación',exact:true})).toBeVisible()
 }
 
 test('login surface is accessible and stable',async({page},testInfo)=>{
@@ -106,7 +106,7 @@ for(const scenario of [
     await expectAuthenticatedNavigation(page,testInfo.project.name)
     const configuration=page.getByRole('link',{name:'Mapa del OS'})
     if(scenario.configuration)await expect(configuration).toBeVisible();else await expect(configuration).toHaveCount(0)
-    await expandCommercialGroup(page)
+    await expandAdministration(page)
     const credits=page.getByRole('link',{name:/Créditos y anticipos/})
     if(scenario.finance)await expect(credits).toBeVisible();else await expect(credits).toHaveCount(0)
     await page.goto('/recepciones')
