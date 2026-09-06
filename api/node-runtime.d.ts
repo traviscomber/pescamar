@@ -19,7 +19,7 @@ declare module "node:crypto" {
 }
 
 declare const Buffer: {
-  from(value: string, encoding: "hex" | "base64"): RuntimeBuffer;
+  from(value: string, encoding: "hex" | "base64" | "utf8"): RuntimeBuffer;
 };
 
 declare const console: {
