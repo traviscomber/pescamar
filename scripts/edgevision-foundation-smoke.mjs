@@ -2,7 +2,7 @@ import {readFile} from 'node:fs/promises'
 
 const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
-const [registry,organization,page,app,access,os,shell,lineage]=await Promise.all([
+const [registry,organization,page,app,access,os,shell,modules,lineage]=await Promise.all([
   readFile(new URL('../src/edgevision.ts',import.meta.url),'utf8'),
   readFile(new URL('../src/organization.ts',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/EdgeVision.tsx',import.meta.url),'utf8'),
@@ -10,6 +10,7 @@ const [registry,organization,page,app,access,os,shell,lineage]=await Promise.all
   readFile(new URL('../src/access.ts',import.meta.url),'utf8'),
   readFile(new URL('../src/os.ts',import.meta.url),'utf8'),
   readFile(new URL('../src/components/AppShell.tsx',import.meta.url),'utf8'),
+  readFile(new URL('../src/pages/Modules.tsx',import.meta.url),'utf8'),
   readFile(new URL('../api/lot-lineage.ts',import.meta.url),'utf8'),
 ])
 
@@ -28,7 +29,8 @@ assert(page.includes('revisión humana obligatoria'),'EdgeVision page must prese
 assert(app.includes('path="/edgevision"'),'EdgeVision page must be mounted')
 assert(access.includes('"/edgevision":"all"'),'EdgeVision route must have an explicit access contract')
 assert(os.includes("{path:'/edgevision',label:'EdgeVision'"),'OS map must expose EdgeVision')
-assert(shell.includes('{to:"/edgevision",label:"EdgeVision"'),'operational navigation must expose EdgeVision')
+assert(!shell.includes('{to:"/edgevision",label:"EdgeVision"'),'EdgeVision must not compete in daily workspace navigation')
+assert(modules.includes("{to:'/edgevision',label:'EdgeVision'"),'EdgeVision must remain reachable from Administration')
 assert(lineage.includes("type:'vision'")&&lineage.includes("entityType:'sea_urchin_color_capture'"),'EdgeVision foundation must connect existing visual evidence to the Seafood Event Graph')
 
 if(failures.length){
@@ -36,4 +38,4 @@ if(failures.length){
  for(const failure of failures)console.error(`- ${failure}`)
  process.exit(1)
 }
-console.log('EdgeVision foundation smoke PASS: tenant-neutral capability registry, implementation adapter ownership, human authority, route/access and Vision→Event Graph provenance verified')
+console.log('EdgeVision foundation smoke PASS: tenant-neutral capability registry, implementation adapter ownership, human authority, simplified navigation and Vision→Event Graph provenance verified')
