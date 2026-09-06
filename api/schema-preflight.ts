@@ -27,7 +27,9 @@ export default async function handler(req:Request,res:Response){
         to_regclass('public.label_templates') is not null label_templates,
         to_regclass('public.pallets') is not null pallets,
         to_regclass('public.cold_runs') is not null cold_runs,
-        to_regclass('public.regulatory_holds') is not null regulatory_holds`,
+        to_regclass('public.regulatory_holds') is not null regulatory_holds,
+        to_regclass('public.japan_export_release_evidence') is not null japan_export_release_evidence,
+        to_regclass('public.lot_lifecycle_events') is not null lot_lifecycle_events`,
       sql`select schemaname,tablename from pg_tables where schemaname not in ('pg_catalog','information_schema') and (tablename ilike '%migration%' or tablename ilike '%schema%') order by schemaname,tablename`
     ])
     const landmarkRow=((Array.isArray(landmarkRaw)?landmarkRaw:[])[0]??{}) as LandmarkRow
@@ -55,7 +57,7 @@ export default async function handler(req:Request,res:Response){
       expected:{count:expectedMigrations.length,first:expectedMigrations[0],latest,migrations:expectedMigrations},
       runtimeCompatibility:{status:runtimeCompatible?'compatible':'incomplete',present:presentLandmarks,total:landmarks.length,landmarks},
       executionEvidence:{
-        status:trackerVerified?'baseline_verified':registryPresent?'tracker_present_unverified':'missing',
+        status:trackerVerified?'inventory_verified':registryPresent?'tracker_present_unverified':'missing',
         tracked:trackerVerified,
         trackerTables,
         baselineRows,
@@ -67,9 +69,9 @@ export default async function handler(req:Request,res:Response){
       pilotGate:{
         status:trackerVerified?'pass':'hold',
         reason:trackerVerified
-          ?'Neon tiene un baseline estructural explícito para 001–040 y 041 está registrada como aplicada. No se reconstruyeron timestamps históricos por archivo; desde este baseline, toda migración nueva debe quedar registrada individualmente como aplicada.'
+          ?`Neon contiene los ${expectedMigrations.length} archivos canónicos del manifiesto: 001–040 conservan baseline estructural y cada migración posterior está registrada individualmente. La última migración verificada es ${latest}.`
           :registryPresent
-            ?'Existe schema_migrations, pero todavía no reconcilia exactamente el inventario versionado o la última migración no consta como aplicada.'
+            ?`Existe schema_migrations, pero todavía no reconcilia exactamente los ${expectedMigrations.length} archivos del inventario canónico o ${latest} no consta como aplicada.`
             :'El entorno no conserva una bitácora de migraciones aplicada que permita demostrar qué archivos se ejecutaron y en qué orden.'
       },
       governance:{writesDatabase:false,rule:'Un baseline estructural explícito puede cerrar el gap histórico sin inventar fechas de ejecución. PASS requiere compatibilidad runtime, cobertura exacta del manifiesto y la migración más reciente registrada como applied. Este endpoint sólo inspecciona; no aplica ni registra migraciones.'}
