@@ -20,7 +20,7 @@ export type LotControlCard={
  blockers:string[]
  nextAction:string
  nextRoute:string
- signals:{quality:{label:string;tone:LotControlTone};balance:{inputKg:number|null;outputKg:number|null;yieldPct:number|null;lossKg:number|null;tone:LotControlTone};release:{label:string;tone:LotControlTone;kind:'japan'|'evidence'}}
+ signals:{quality:{label:string;detail:string|null;tone:LotControlTone};balance:{inputKg:number|null;outputKg:number|null;yieldPct:number|null;lossKg:number|null;tone:LotControlTone};release:{label:string;tone:LotControlTone;kind:'japan'|'evidence'}}
  evidence:{count:number}
  diagnosis:{state:'attention'|'clear';blockers:string[];nextAction:string;unknowns:string[];rule:'deterministic_read_only'}
  source:CopilotSource
@@ -56,7 +56,7 @@ export async function buildLotControlCard(operator:SessionOperator,receptionId:u
  let blockers:string[]=[],unknowns:string[]=[],nextAction='',state:{code:string;label:string;tone:LotControlTone},release:{label:string;tone:LotControlTone;kind:'japan'|'evidence'}
  let erizo:Awaited<ReturnType<typeof buildSeaUrchinCopilotEvidence>>|null=null
  if(isUrchin){try{erizo=await buildSeaUrchinCopilotEvidence(operator,id)}catch{erizo=null}}
- const erizoData=record(erizo?.data),erizoDiagnosis=record(erizoData?.diagnosis),erizoJapan=record(erizoData?.japan)
+ const erizoData=record(erizo?.data),erizoDiagnosis=record(erizoData?.diagnosis),erizoJapan=record(erizoData?.japan),erizoProcess=record(erizoData?.process)
  if(erizoData&&erizoDiagnosis){
   blockers=strings(erizoDiagnosis.blockers)
   unknowns=strings(erizoDiagnosis.unknowns)
@@ -80,7 +80,8 @@ export async function buildLotControlCard(operator:SessionOperator,receptionId:u
   else{state={code:'in_process',label:'LOTE EN CURSO',tone:'info'};nextAction='Continuar packing, inventario o despacho según el plan.'}
   release={label:`${Number(reception.evidence_count??0)}`,tone:Number(reception.evidence_count??0)>0?'info':'pending',kind:'evidence'}
  }
- const blocker=blockers[0]??null,qualityTone:LotControlTone=qualityStatus==='Clasificado'?'ready':qualityStatus==='Revisión'||qualityStatus==='Alerta calibre'?'attention':'pending',balanceTone:LotControlTone=yieldPct==null?'pending':'info'
+ const blocker=blockers[0]??null,qualityTone:LotControlTone=qualityStatus==='Clasificado'?'ready':qualityStatus==='Revisión'||qualityStatus==='Alerta calibre'?'attention':'pending',balanceTone:LotControlTone=yieldPct==null?'pending':'info',grade=text(erizoProcess?.grade),colorStatus=text(erizoProcess?.colorStatus)
+ const qualityLabel=grade?`Grade ${grade}`:qualityStatus||'—',qualityDetail=grade?(colorStatus?`Color ${colorStatus}`:qualityStatus):qualityStatus||null
  return {
   schemaVersion:'lot.control.v1',
   reception:{id,receptionNumber:reception.reception_number as string|number,plantId:text(reception.plant_id),species,supplier:String(reception.supplier??''),qualityStatus,status:String(reception.status??''),receivedAt:text(reception.received_at)},
@@ -89,7 +90,7 @@ export async function buildLotControlCard(operator:SessionOperator,receptionId:u
   blockers,
   nextAction,
   nextRoute:routeForNext(nextAction,isUrchin,id),
-  signals:{quality:{label:qualityStatus||'—',tone:qualityTone},balance:{inputKg,outputKg,yieldPct,lossKg,tone:balanceTone},release},
+  signals:{quality:{label:qualityLabel,detail:qualityDetail,tone:qualityTone},balance:{inputKg,outputKg,yieldPct,lossKg,tone:balanceTone},release},
   evidence:{count:Number(reception.evidence_count??0)},
   diagnosis:{state:blockers.length?'attention':'clear',blockers,nextAction,unknowns,rule:'deterministic_read_only'},
   source:{id:'lot_control',label:`Lot Control · REC-${String(reception.reception_number??'')}`,path:`/lotes/${encodeURIComponent(id)}`,rows:1,freshness:text(latestProduction?.occurred_at)??text(reception.received_at)},
