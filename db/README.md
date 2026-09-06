@@ -65,6 +65,8 @@ Desde `041_schema_migration_baseline.sql`, Neon conserva un registro explícito 
 | `042_japan_export_release_gate.sql` | evidencia auditada y versionada para los requisitos manuales de liberación de exportación a Japón |
 | `043_japan_dispatch_fail_closed.sql` | defensa en profundidad: impide confirmar un despacho Japón si el lote no satisface Japan Release |
 | `044_sea_urchin_sequence_fail_closed.sql` | secuencia fail-closed del proceso de erizo y bloqueo de estados de liberación si faltan etapas previas |
+| `045_japan_cold_chain_fail_closed.sql` | incorpora cadena de frío válida y sin desviaciones al gate fail-closed de liberación Japón |
+| `046_lot_operational_lifecycle.sql` | historial append-only y auditable de cierre/reapertura operacional por lote con fundamento, snapshot y operador |
 
 El inventario anterior describe el repositorio actual. Si se agrega una migración, debe agregarse también a esta tabla; CI verifica esa correspondencia.
 
@@ -95,7 +97,7 @@ El inventario anterior describe el repositorio actual. Si se agrega una migraci�
 - El gate regulatorio de despacho existe también en PostgreSQL sobre `lot_dispatches`; no depende de que la UI recuerde validar el hold.
 - Para destinos Japón, el despacho queda en fail-closed: proceso de erizo, etiquetas, holds regulatorios y los 10 requisitos Japan Release deben estar completos antes de confirmar la salida.
 - Una aprobación Japan Release requiere documento o evidencia, actor verificador y vigencia cuando corresponda; no se acepta una casilla sin provenance.
-- La integración Sernapesca XML/Siscomex no forma parte de 037–044 y sólo debe implementarse cuando exista contrato oficial de endpoint, autenticación y formato.
+- La integración Sernapesca XML/Siscomex no forma parte de 037–046 y sólo debe implementarse cuando exista contrato oficial de endpoint, autenticación y formato.
 
 ## Seguridad y tenancy operacional
 
