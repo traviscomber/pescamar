@@ -2,11 +2,12 @@ import {readFile} from 'node:fs/promises'
 
 const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
-const [status,connections,quality,coverage]=await Promise.all([
+const [status,connections,quality,coverage,upload]=await Promise.all([
   readFile(new URL('../api/canonical-status.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/canonical-connections.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/canonical-quality.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/canonical-source-coverage.ts',import.meta.url),'utf8'),
+  readFile(new URL('../api/canonical-upload.ts',import.meta.url),'utf8'),
 ])
 
 const movementRule="event_date is not null and (inflow_clp is not null or outflow_clp is not null)"
@@ -32,10 +33,19 @@ assert(coverage.includes("'declared_end_stale'"),'coverage diagnostics must dete
 assert(coverage.includes('s.file_hash'),'coverage diagnostics must bind observations to the exact source hash')
 assert(coverage.includes('never silently rewritten'),'coverage drift must remain diagnostic rather than mutate source metadata')
 assert(coverage.includes('readOnly:true'),'coverage diagnostics must be read-only')
+assert(upload.includes("flags.push('missing_process_date')"),'production parser must flag missing process dates during intake')
+assert(upload.includes("flags.push('missing_production_date')"),'production/packing parser must flag missing production dates during intake')
+assert(upload.includes("flags.push('missing_guide_price')"),'production parser must flag missing guide price during intake')
+assert(upload.includes("flags.push('missing_received_kg')"),'production parser must flag missing received kg during intake')
+assert(upload.includes("flags.push('production_before_reception')"),'production parser must detect production before reception during intake')
+assert(upload.includes("flags.push('reference_only_row')"),'ledger parser must preserve non-movement rows as reference-only evidence')
+assert(upload.includes("Math.abs(sourceBalance-balance)>0.01"),'ledger parser must flag material source-balance disagreement with CLP 0.01 tolerance')
+assert(upload.includes('if(isMovement)balance+='),'ledger running balance must advance only on dated monetary movements')
+assert(upload.includes('writesLive:false'),'canonical upload must remain staging-only and never promote rows to live operations')
 
 if(failures.length){
   console.error('Canonical data quality smoke FAILED')
   for(const failure of failures)console.error(`- ${failure}`)
   process.exit(1)
 }
-console.log('Canonical data quality smoke PASS: ledger movement boundary, recomputed balance, quality diagnostics, source coverage drift and safe promotion boundary verified')
+console.log('Canonical data quality smoke PASS: parse-time intake flags, ledger movement boundary, recomputed balance, quality diagnostics, source coverage drift and safe promotion boundary verified')
