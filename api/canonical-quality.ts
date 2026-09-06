@@ -31,7 +31,7 @@ export default async function handler(req:Request,res:Response){
         select *,event_date is not null and (inflow_clp is not null or outflow_clp is not null) as is_movement
         from canonical_account_entries
       ), recomputed as (
-        select *,sum(coalesce(inflow_clp,0)-coalesce(outflow_clp,0)) over(order by source_row rows unbounded preceding) recomputed_balance
+        select *,sum(coalesce(inflow_clp,0)-coalesce(outflow_clp,0)) over(partition by source_file_hash order by source_row rows unbounded preceding) recomputed_balance
         from classified
       )
       select
@@ -40,7 +40,8 @@ export default async function handler(req:Request,res:Response){
         count(*) filter(where not is_movement)::int reference_rows,
         count(*) filter(where event_date is null and inflow_clp is null and outflow_clp is null)::int pure_summary_rows,
         count(*) filter(where is_movement and cardinality(coalesce(data_quality_flags,array[]::text[]))>0)::int flagged_movements,
-        count(*) filter(where is_movement and balance_clp is distinct from recomputed_balance)::int canonical_balance_mismatch_rows,
+        count(*) filter(where is_movement and abs(coalesce(balance_clp,0)-coalesce(recomputed_balance,0))>0.01)::int canonical_balance_mismatch_rows,
+        max(abs(coalesce(balance_clp,0)-coalesce(recomputed_balance,0))) filter(where is_movement)::numeric max_balance_diff_clp,
         max(source_row) filter(where is_movement)::int last_movement_source_row,
         (array_agg(balance_clp order by source_row desc) filter(where is_movement))[1] final_recomputed_balance_clp
       from recomputed`,
@@ -75,7 +76,7 @@ export default async function handler(req:Request,res:Response){
       assessment:{blockers,reviews,status:blockers.length?'blocked':reviews.length?'review_required':'clean'},
       rules:{
         ledgerMovement:'dated row with inflow or outflow',
-        ledgerBalance:'recomputed from inflow minus outflow in source-row order; cached workbook balance is evidence only',
+        ledgerBalance:'recomputed from inflow minus outflow in source-row order per source file; differences <= CLP 0.01 are numeric noise; cached workbook balance is evidence only',
         packing:'canonical boxes remain historical/imported evidence until deterministic lot reconciliation; never create live packing implicitly',
         production:'date, guide, supplier and price gaps remain explicit quality evidence; never backfill live receptions from ambiguous history'
       }
