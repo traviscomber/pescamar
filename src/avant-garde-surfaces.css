@@ -1,0 +1,40 @@
+/* Second-order operational surfaces: linework over cards. */
+.inventory-workspace,.inventory-ledger{border:0!important;border-top:1px solid var(--line)!important;border-bottom:1px solid var(--line)!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;padding:22px 0!important}
+.inventory-workspace>.section-heading,.inventory-ledger>.section-heading{margin-bottom:14px}
+.inventory-workspace>.empty-state{min-height:210px;padding:34px 0}
+.inventory-ledger{margin-top:22px}
+
+.panel[aria-label="Siguiente acción recomendada"]{border:0!important;border-top:1px solid var(--line)!important;border-bottom:1px solid var(--line)!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;padding:22px 0!important}
+details.panel.list-panel{border:0!important;border-bottom:1px solid var(--line)!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
+details.panel.list-panel>summary{min-height:54px;padding:14px 0;list-style:none;cursor:pointer;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:18px}
+details.panel.list-panel>summary::-webkit-details-marker{display:none}
+details.panel.list-panel>summary>span:first-child{display:flex;align-items:baseline;gap:8px;min-width:0}
+details.panel.list-panel>summary b{font:500 14px Rajdhani}
+details.panel.list-panel>summary small,details.panel.list-panel>summary>span:last-child{color:var(--muted);font-size:9px}
+details.panel.list-panel[open]>summary{border-bottom:1px solid var(--line)}
+
+.corporate-plant-grid{gap:0!important;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.corporate-plant-card{min-height:220px!important;border:0!important;border-right:1px solid var(--line)!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;transform:none!important}
+.corporate-plant-card:nth-child(3n){border-right:0!important}
+.corporate-plant-card:hover,.corporate-plant-card:focus-visible{background:color-mix(in srgb,var(--surface-2) 46%,transparent)!important;transform:none!important;box-shadow:none!important}
+.corporate-plant-card>header{padding:22px 20px 16px!important}
+.corporate-plant-card .plant-card-state{margin-inline:20px}
+.corporate-plant-card .plant-products,.corporate-plant-card .plant-kpis,.corporate-plant-card footer{padding-inline:20px}
+.corporate-plant-card footer{border-top-color:var(--line)!important}
+
+.plant-directory-summary{border:0!important;border-top:1px solid var(--line)!important;border-bottom:1px solid var(--line)!important;background:transparent!important}
+.plant-directory-summary>div,.plant-directory-summary p{background:transparent!important}
+
+@media(max-width:1180px){
+  .corporate-plant-card:nth-child(3n){border-right:1px solid var(--line)!important}
+  .corporate-plant-card:nth-child(2n){border-right:0!important}
+  .corporate-plant-card:nth-child(n+3){border-top:1px solid var(--line)!important}
+}
+
+@media(max-width:680px){
+  .corporate-plant-grid{border-bottom:0}
+  .corporate-plant-card,.corporate-plant-card:nth-child(2n),.corporate-plant-card:nth-child(3n){min-height:0!important;border-right:0!important;border-bottom:1px solid var(--line)!important}
+  details.panel.list-panel>summary{align-items:flex-start;display:grid}
+  details.panel.list-panel>summary>span:first-child{display:grid;gap:3px}
+  .inventory-workspace,.inventory-ledger,.panel[aria-label="Siguiente acción recomendada"]{padding:18px 0!important}
+}
