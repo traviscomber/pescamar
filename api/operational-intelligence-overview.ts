@@ -4,7 +4,7 @@ import {resolveRequestOrganization} from './_organization.js'
 import {seafoodEvent,sortSeafoodEvents,type SeafoodEvent} from './_seafood-event.js'
 import {buildOperationalIntelligence,type OperationalSignal} from './_operational-intelligence.js'
 
-type Request={method?:string;headers?:Record<string,string|string[]|undefined>}
+type Request={method?:string;headers?:Record<string,string|string[]|undefined>;query?:Record<string,string|string[]|undefined>}
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void}
 type Row=Record<string,unknown>
 const rows=(value:unknown)=>Array.isArray(value)?value as Row[]:[]
@@ -22,9 +22,16 @@ export default async function handler(request:Request,response:Response){
   const organization=resolveRequestOrganization(request.headers,operator.organizationId)
   if(!organization)return response.status(409).json({ok:false,code:'ORGANIZATION_CONTEXT_UNSUPPORTED',error:'La organización solicitada no está habilitada'})
   const sql=getSql(),admin=operator.role==='admin',commercialRole=['admin','operations','finance'].includes(operator.role)
-  const receptionRaw=admin?await sql`select r.id,r.reception_number,r.plant_id,r.species,r.extraction_zone,r.source_reference,r.source,r.guide_kg,r.gross_kg,r.tare_kg,r.drained_kg,r.accepted_kg,r.received_at,r.created_at,r.created_by,p.legal_name supplier from receptions r join parties p on p.id=r.supplier_id order by coalesce(r.received_at,r.created_at) desc limit 30`:await sql`select r.id,r.reception_number,r.plant_id,r.species,r.extraction_zone,r.source_reference,r.source,r.guide_kg,r.gross_kg,r.tare_kg,r.drained_kg,r.accepted_kg,r.received_at,r.created_at,r.created_by,p.legal_name supplier from receptions r join parties p on p.id=r.supplier_id where r.plant_id=any(${operator.plantIds}::text[]) order by coalesce(r.received_at,r.created_at) desc limit 30`
+  const rawPlant=Array.isArray(request.query?.plantId)?request.query?.plantId[0]:request.query?.plantId
+  const plantId=typeof rawPlant==='string'&&rawPlant.trim()?rawPlant.trim():null
+  if(plantId&&!admin&&!operator.plantIds.includes(plantId))return response.status(403).json({ok:false,error:'Planta fuera de alcance'})
+  const receptionRaw=plantId
+   ?await sql`select r.id,r.reception_number,r.plant_id,r.species,r.extraction_zone,r.source_reference,r.source,r.guide_kg,r.gross_kg,r.tare_kg,r.drained_kg,r.accepted_kg,r.received_at,r.created_at,r.created_by,p.legal_name supplier from receptions r join parties p on p.id=r.supplier_id where r.plant_id=${plantId} order by coalesce(r.received_at,r.created_at) desc limit 30`
+   :admin
+    ?await sql`select r.id,r.reception_number,r.plant_id,r.species,r.extraction_zone,r.source_reference,r.source,r.guide_kg,r.gross_kg,r.tare_kg,r.drained_kg,r.accepted_kg,r.received_at,r.created_at,r.created_by,p.legal_name supplier from receptions r join parties p on p.id=r.supplier_id order by coalesce(r.received_at,r.created_at) desc limit 30`
+    :await sql`select r.id,r.reception_number,r.plant_id,r.species,r.extraction_zone,r.source_reference,r.source,r.guide_kg,r.gross_kg,r.tare_kg,r.drained_kg,r.accepted_kg,r.received_at,r.created_at,r.created_by,p.legal_name supplier from receptions r join parties p on p.id=r.supplier_id where r.plant_id=any(${operator.plantIds}::text[]) order by coalesce(r.received_at,r.created_at) desc limit 30`
   const receptions=rows(receptionRaw),ids=receptions.map(row=>String(row.id)).filter(Boolean)
-  if(!ids.length)return response.status(200).json({ok:true,schemaVersion:'seafood.operational-intelligence.overview.v1',organizationId:organization.organizationId,generatedAt:new Date().toISOString(),lots:0,counts:{p1:0,p2:0,p3:0},topSignals:[],boundary:{writesOperationalState:false,liveOnly:true,historicalIncluded:false}})
+  if(!ids.length)return response.status(200).json({ok:true,schemaVersion:'seafood.operational-intelligence.overview.v1',organizationId:organization.organizationId,scope:{plantId,role:operator.role},generatedAt:new Date().toISOString(),lots:0,counts:{p1:0,p2:0,p3:0},topSignals:[],boundary:{writesOperationalState:false,liveOnly:true,historicalIncluded:false}})
   const [evidenceRaw,lotEventsRaw,visionRaw,movementsRaw,ordersRaw,dispatchRaw,salesRaw]=await Promise.all([
    sql`select reception_id,id,kind,label,note,created_by,created_at from reception_evidence where reception_id=any(${ids}::uuid[]) order by created_at`,
    sql`select reception_id,id,event_type,title,detail,metrics,created_by,occurred_at from lot_events where reception_id=any(${ids}::uuid[]) order by occurred_at`,
@@ -50,6 +57,6 @@ export default async function handler(request:Request,response:Response){
   })
   const counts=lotResults.reduce((acc,lot)=>({p1:acc.p1+lot.intelligence.counts.p1,p2:acc.p2+lot.intelligence.counts.p2,p3:acc.p3+lot.intelligence.counts.p3}),{p1:0,p2:0,p3:0})
   const topSignals=lotResults.flatMap(lot=>lot.intelligence.signals.map((signal:OperationalSignal)=>({receptionId:lot.receptionId,receptionNumber:lot.receptionNumber,plantId:lot.plantId,species:lot.species,supplier:lot.supplier,latestAt:lot.latestAt,path:`/trazabilidad?mode=live&receptionId=${encodeURIComponent(lot.receptionId)}`,signal}))).sort((a,b)=>a.signal.priority-b.signal.priority||String(b.latestAt??'').localeCompare(String(a.latestAt??''))||a.signal.title.localeCompare(b.signal.title)).slice(0,8)
-  return response.status(200).json({ok:true,schemaVersion:'seafood.operational-intelligence.overview.v1',organizationId:organization.organizationId,generatedAt:new Date().toISOString(),lots:lotResults.length,counts,topSignals,boundary:{writesOperationalState:false,liveOnly:true,historicalIncluded:false,rule:'Resumen batch de señales determinísticas generadas por buildOperationalIntelligence sobre Seafood Event Graph live accesible.'}})
+  return response.status(200).json({ok:true,schemaVersion:'seafood.operational-intelligence.overview.v1',organizationId:organization.organizationId,scope:{plantId,role:operator.role},generatedAt:new Date().toISOString(),lots:lotResults.length,counts,topSignals,boundary:{writesOperationalState:false,liveOnly:true,historicalIncluded:false,rule:'Resumen batch de señales determinísticas generadas por buildOperationalIntelligence sobre Seafood Event Graph live accesible.'}})
  }catch(error){console.error('operational_intelligence_overview_failed',error instanceof Error?error.message:'unknown');return response.status(500).json({ok:false,error:'No fue posible construir prioridades operacionales'})}
 }
