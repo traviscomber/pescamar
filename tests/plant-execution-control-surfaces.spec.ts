@@ -1,19 +1,23 @@
 import {readFile} from 'node:fs/promises'
 import {expect,test} from '@playwright/test'
 
-test('Plant Execution control surfaces are routed, authorized and directly reachable',async()=>{
- const [app,access,shell,vercel]=await Promise.all([
+test('Plant Execution control surfaces remain routed and authorized without direct sidebar exposure',async()=>{
+ const [app,access,shell,modules,vercel]=await Promise.all([
   readFile('src/App.tsx','utf8'),
   readFile('src/access.ts','utf8'),
   readFile('src/components/AppShell.tsx','utf8'),
+  readFile('src/pages/Modules.tsx','utf8'),
   readFile('vercel.json','utf8'),
  ])
  for(const route of ['/pallets','/frio','/control-regulatorio']){
   expect(app).toContain(`path=\"${route}\"`)
   expect(access).toContain(`\"${route}\"`)
-  expect(shell).toContain(`to:\"${route}\"`)
   expect(vercel).toContain(`\"source\": \"${route}\"`)
  }
+ expect(shell).toContain('{to:"/frio",label:"Frío",step:6}')
+ expect(shell).toContain('"/pallets"')
+ expect(modules).toContain("{to:'/control-regulatorio',label:'Control regulatorio'")
+ expect(shell).not.toContain('{to:"/pallets",label:')
  expect(app).toContain('import("./pages/RegulatoryControl")')
 })
 
