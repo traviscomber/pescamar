@@ -2,6 +2,7 @@ import {requireOperator,type SessionOperator} from './_auth.js'
 import {getSql} from './_db.js'
 import {activeOrganization,resolveRequestOrganization} from './_organization.js'
 import {seafoodEvent,sortSeafoodEvents,type SeafoodEvent} from './_seafood-event.js'
+import {buildOperationalIntelligence} from './_operational-intelligence.js'
 
 type Request={method?:string;query?:Record<string,string|string[]|undefined>;headers?:Record<string,string|string[]|undefined>}
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void}
@@ -79,8 +80,8 @@ export default async function handler(request:Request,response:Response){
       events.push(seafoodEvent({id:`sale:${id}`,siteId,lotId:receptionId,type:'sale',occurredAt:text(row.sold_at),title:`Venta · ${text(row.invoice_ref)??text(row.customer)??id.slice(0,8)}`,detail:text(row.customer),actor:text(row.created_by),metrics:{dispatchId:text(row.dispatch_id),customer:text(row.customer),soldKg:numberOrNull(row.sold_kg),pricePerKgClp:numberOrNull(row.price_per_kg_clp),invoiceRef:text(row.invoice_ref),status:text(row.status)},source:{entityType:'lot_sale',entityId:id}},organization))
     }
 
-    const ordered=sortSeafoodEvents(events),has=(type:SeafoodEvent['type'])=>ordered.some(event=>event.type===type)
-    return response.status(200).json({ok:true,schemaVersion:'seafood.lineage.v1',organizationId:organization.organizationId,organization:{id:organization.organizationId,implementationId:organization.implementationId,implementationName:organization.implementationName,isolationMode:organization.isolationMode},siteId,lotId:receptionId,events:ordered,coverage:{reception:has('reception'),evidence:has('evidence'),quality:has('quality'),production:has('production'),vision:has('vision'),inventory:has('inventory'),commercialCommitment:has('commercial_commitment'),dispatch:has('dispatch'),sale:commercialRole?has('sale'):null},permissions:{canSeeCommercial:commercialRole},boundary:{organizationScoped:activeOrganization.isolationMode==='organization_scoped'}})
+    const ordered=sortSeafoodEvents(events),has=(type:SeafoodEvent['type'])=>ordered.some(event=>event.type===type),intelligence=buildOperationalIntelligence(ordered)
+    return response.status(200).json({ok:true,schemaVersion:'seafood.lineage.v1',organizationId:organization.organizationId,organization:{id:organization.organizationId,implementationId:organization.implementationId,implementationName:organization.implementationName,isolationMode:organization.isolationMode},siteId,lotId:receptionId,events:ordered,coverage:{reception:has('reception'),evidence:has('evidence'),quality:has('quality'),production:has('production'),vision:has('vision'),inventory:has('inventory'),commercialCommitment:has('commercial_commitment'),dispatch:has('dispatch'),sale:commercialRole?has('sale'):null},intelligence,permissions:{canSeeCommercial:commercialRole},boundary:{organizationScoped:activeOrganization.isolationMode==='organization_scoped'}})
   }catch(error){
     const message=error instanceof Error?error.message:''
     const migration=['lot_events','inventory_movements','sales_order_allocations','lot_dispatches','lot_sales'].some(table=>message.includes(table))
