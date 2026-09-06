@@ -28,7 +28,8 @@ assert(!control.includes('Sensor de estación'),'operator UI must not simulate s
 assert(control.includes('La telemetría automática no se digita aquí'),'UI must explain the machine-to-machine boundary')
 assert(focus.includes("'not_configured'|'ready_for_test'|'observed'")&&focus.includes('Telemetría observada')&&focus.includes('Listo para prueba')&&focus.includes('No configurado'),'daily cold-chain UI must expose truthful activation states')
 assert(focus.includes("fetch('/api/cold-sensor-status'"),'daily cold-chain UI must read server-observed sensor status')
-assert(model.includes("stage:'Cadena de frío',state:'partial'")&&model.includes('verificar telemetría live antes de declarar automatización operacional'),'operating model must keep cold chain partial until live sensor evidence exists')
+assert(model.includes("stage:'Cadena de frío',state:'ready'")&&model.includes('La lectura manual es una captura física válida, no deuda administrativa.'),'operating model must treat a manual temperature reading as legitimate physical capture within the minimum flow')
+assert(model.includes('Conectar sensor/gateway reduce carga, pero no bloquea el flujo mínimo.'),'sensor hardware must remain an optional workload reduction rather than a false software completion gate')
 assert(model.includes("stage:'Comercial',state:'ready'"),'commercial workflow may be minimum-flow once remaining human actions are material commitments')
 
 if(failures.length){
@@ -36,4 +37,4 @@ if(failures.length){
  for(const failure of failures)console.error(`- ${failure}`)
  process.exit(1)
 }
-console.log('Cold sensor ingest contract PASS: machine-only ingestion, authenticated activation state, manual fallback, station scope, replay protection and truthful live-status semantics verified')
+console.log('Cold sensor ingest contract PASS: machine-only ingestion, authenticated activation state, valid manual physical fallback, station scope, replay protection and truthful live-status semantics verified')
