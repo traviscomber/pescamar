@@ -10,6 +10,13 @@
 .workspace-tabs a:hover{color:var(--text)}
 .workspace-tabs a.active{color:var(--text)}
 .workspace-tabs a.active:after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;background:var(--ocean)}
+.operation-flow{gap:0}
+.operation-flow a{gap:7px;padding:0 16px 0 10px;font-weight:500}
+.operation-flow a:not(:last-child):before{content:"";position:absolute;right:0;top:17px;width:7px;height:7px;border-top:1px solid color-mix(in srgb,var(--muted) 58%,transparent);border-right:1px solid color-mix(in srgb,var(--muted) 58%,transparent);transform:rotate(45deg)}
+.operation-flow a.active{font-weight:650}
+.operation-flow a.active:after{left:10px;right:16px}
+.workspace-step-index{font:600 9px/1 Rajdhani,sans-serif;letter-spacing:.08em;color:color-mix(in srgb,var(--muted) 72%,transparent)}
+.operation-flow a.active .workspace-step-index{color:var(--ocean)}
 .topbar-actions{gap:6px}
 .topbar .compact-control{width:34px;min-width:34px;height:34px;min-height:34px;padding:0;display:grid;place-items:center;border-radius:7px}
 .topbar .system-state.compact-control{position:relative}
@@ -29,6 +36,9 @@
 @media(max-width:760px){
  .workspace-tabs{min-height:44px;padding:0 14px}
  .workspace-tabs a{min-height:44px;padding:0 10px;font-size:11px}
+ .operation-flow a{gap:6px;padding-right:15px}
+ .operation-flow a:not(:last-child):before{top:15px;width:6px;height:6px}
+ .workspace-step-index{font-size:8px}
  .topbar .compact-control{width:32px;min-width:32px;height:32px;min-height:32px}
  .topbar .compact-operator{min-width:40px;padding:3px 5px}
  .topbar .compact-operator>svg{display:none}
