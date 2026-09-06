@@ -15,7 +15,21 @@ export default async function handler(req:Request,res:Response){
     const [sources,production,ledger,stock,transfers,packing]=await Promise.all([
       sql`select file_hash,file_name,source_kind,canonical,period_start,period_end,source_sheets,record_count,notes,imported_at from canonical_source_files where canonical order by file_name`,
       sql`select source_file_hash,count(*)::int rows,count(*) filter(where cardinality(data_quality_flags)>0)::int flagged,coalesce(sum(guide_kg),0)::numeric guide_kg,coalesce(sum(received_kg),0)::numeric received_kg,min(event_date) first_date,max(event_date) last_date from historical_production_records where source_file_hash in(select file_hash from canonical_source_files where source_kind like '%production%' or file_name ilike '%produccion 2026%') group by source_file_hash`,
-      sql`select source_file_hash,count(*)::int rows,count(*) filter(where cardinality(data_quality_flags)>0)::int flagged,coalesce(sum(inflow_clp),0)::numeric inflow_clp,coalesce(sum(outflow_clp),0)::numeric outflow_clp,(array_agg(balance_clp order by source_row desc))[1] final_balance_clp,min(event_date) first_date,max(event_date) last_date from canonical_account_entries group by source_file_hash`,
+      sql`with classified as (
+        select *,event_date is not null and (inflow_clp is not null or outflow_clp is not null) as is_movement
+        from canonical_account_entries
+      )
+      select source_file_hash,
+        count(*)::int source_rows,
+        count(*) filter(where is_movement)::int rows,
+        count(*) filter(where not is_movement)::int reference_rows,
+        count(*) filter(where cardinality(data_quality_flags)>0 or not is_movement)::int flagged,
+        coalesce(sum(inflow_clp) filter(where is_movement),0)::numeric inflow_clp,
+        coalesce(sum(outflow_clp) filter(where is_movement),0)::numeric outflow_clp,
+        (array_agg(balance_clp order by source_row desc) filter(where is_movement))[1] final_balance_clp,
+        min(event_date) filter(where is_movement) first_date,
+        max(event_date) filter(where is_movement) last_date
+      from classified group by source_file_hash`,
       sql`select source_file_hash,product_family,count(*)::int rows,count(*) filter(where cardinality(data_quality_flags)>0)::int flagged,coalesce(sum(total_kg),0)::numeric net_kg,min(event_date) first_date,max(event_date) last_date from canonical_stock_records group by source_file_hash,product_family order by product_family`,
       sql`select source_file_hash,count(*)::int rows,count(*) filter(where cardinality(data_quality_flags)>0)::int flagged,coalesce(sum(amount_clp),0)::numeric amount_clp,min(event_date) first_date,max(event_date) last_date from canonical_transfers_received group by source_file_hash`,
       sql`select source_file_hash,pack_format,count(*)::int rows,count(*) filter(where cardinality(data_quality_flags)>0)::int flagged,coalesce(sum(total_kg),0)::numeric kg,count(distinct lot_code) filter(where lot_code is not null)::int lots,min(production_date) first_date,max(production_date) last_date from canonical_packing_boxes group by source_file_hash,pack_format order by pack_format`
