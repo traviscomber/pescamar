@@ -16,7 +16,7 @@ const roles:{key:Tone;title:string;subtitle:string;icon:typeof Bot}[]=[
 ]
 
 const stages:Stage[]=[
- {step:'01',title:'Recepción',description:'Ingreso de materia prima y registro inicial.',icon:Ship,tasks:{system:{tone:'system',text:'Prellena proveedor, lote y contexto'},operator:{tone:'operator',text:'Confirma ingreso físico, guía y kg',icon:'check'},manager:{tone:'manager',text:'Sólo si hay bloqueo',icon:'alert'}}},
+ {step:'01',title:'Recepción',description:'Ingreso de materia prima y registro inicial.',icon:Ship,tasks:{system:{tone:'system',text:'Prellena proveedor, lote y contexto'},operator:{tone:'operator',text:'Confirma evidencia y mediciones físicas',icon:'check'},manager:{tone:'manager',text:'Sólo si hay bloqueo',icon:'alert'}}},
  {step:'02',title:'Producción',description:'Proceso y transformación del producto.',icon:Factory,tasks:{system:{tone:'system',text:'Mantiene trazabilidad y secuencia'},operator:{tone:'operator',text:'Confirma proceso y rendimiento',icon:'check'},manager:{tone:'manager',text:'Interviene ante excepción P1',icon:'alert'}}},
  {step:'03',title:'Packing',description:'Acondicionamiento, etiquetado y preparación.',icon:PackageCheck,tasks:{system:{tone:'system',text:'Sugiere etiqueta y destino'},operator:{tone:'operator',text:'Confirma caja, lote y packing',icon:'check'}}},
  {step:'04',title:'Inventario y frío',description:'Control de stock, trazabilidad y cadena de frío.',icon:Snowflake,tasks:{system:{tone:'system',text:'Actualiza stock y cadena de frío'},operator:{tone:'operator',text:'Confirma movimientos críticos',icon:'check'}}},
@@ -25,7 +25,7 @@ const stages:Stage[]=[
 ]
 
 const workflowFacts:WorkflowFact[]=[
- {stage:'Recepción',state:'partial',automated:'Planta por alcance, fecha/hora, cálculo aceptado/merma y propuesta de contexto documental desde evidencia.',human:'Confirmar contexto documental propuesto y medir físicamente bruto, tara, escurrido y temperatura.',next:'Reducir la corrección administrativa a diferencias; nunca promover mediciones físicas desde Vision.'},
+ {stage:'Recepción',state:'ready',automated:'Planta por alcance, fecha/hora y propuesta de proveedor, guía, zona, especie y peso declarado desde evidencia; aceptado, merma y diferencia se calculan.',human:'Revisar el contexto documental sólo si existe diferencia y registrar bruto, tara, escurrido y temperatura observados.',next:'Mantener toda corrección administrativa detrás del flujo de excepción y nunca promover mediciones físicas desde Vision.'},
  {stage:'Producción',state:'ready',automated:'Planning calcula la siguiente prioridad usando órdenes, lotes y disponibilidad.',human:'Ejecutar físicamente el proceso y confirmar el rendimiento observado.',next:'El plan completo sólo reaparece ante bloqueo o excepción.'},
  {stage:'Packing',state:'ready',automated:'Scan identifica lote; planta y estación se heredan; escritura es idempotente y tolera offline.',human:'Escanear el lote y confirmar el peso físico del packing.',next:'Mantener Planta, Lote y Estación sólo como corrección manual, no como pasos normales.'},
  {stage:'Inventario',state:'ready',automated:'Disponibilidad, bloqueos y kilos sin ubicación se calculan desde estado operacional.',human:'Intervenir sólo para resolver bloqueo o una ubicación física faltante.',next:'Mantener inventario como consecuencia del flujo, nunca como segunda digitación.'},
