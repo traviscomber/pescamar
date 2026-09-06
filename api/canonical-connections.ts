@@ -61,9 +61,19 @@ export default async function handler(req:Request,res:Response){
         t.boxes,t.lot_referenced_boxes,t.unreferenced_boxes,t.kg,t.unreferenced_kg,c.last_date upstream_last_date,t.packing_first_date,t.packing_last_date,s.product_family
       from packed x cross join coverage c cross join totals t cross join source s left join produced p on p.lot_code=x.lot_code
       group by c.last_date,t.boxes,t.lot_referenced_boxes,t.unreferenced_boxes,t.kg,t.unreferenced_kg,t.packing_first_date,t.packing_last_date,s.product_family`,
-      sql`with direct as (
+      sql`with ledger as (
+        select *,event_date is not null and (inflow_clp is not null or outflow_clp is not null) as is_movement
+        from canonical_account_entries
+      ), ledger_stats as (
+        select count(*)::int ledger_source_rows,
+          count(*) filter(where is_movement)::int ledger_movement_rows,
+          count(*) filter(where not is_movement)::int ledger_reference_rows,
+          count(*) filter(where event_date is null and inflow_clp is null and outflow_clp is null)::int ledger_summary_rows,
+          count(*) filter(where is_movement and cardinality(coalesce(data_quality_flags,array[]::text[]))>0)::int ledger_flagged_movements
+        from ledger
+      ), direct as (
         select t.source_file_hash,t.sheet_name,t.source_row,t.event_date,t.bank,t.sender,t.amount_clp,count(a.source_row)::int direct_candidates
-        from canonical_transfers_received t left join canonical_account_entries a on a.event_date=t.event_date and a.inflow_clp=t.amount_clp
+        from canonical_transfers_received t left join ledger a on a.is_movement and a.event_date=t.event_date and a.inflow_clp=t.amount_clp
         group by t.source_file_hash,t.sheet_name,t.source_row,t.event_date,t.bank,t.sender,t.amount_clp
       ), direct_exact_keys as (
         select distinct event_date,amount_clp from direct where direct_candidates=1
@@ -72,7 +82,7 @@ export default async function handler(req:Request,res:Response){
         from direct where direct_candidates=0 group by event_date,bank,sender
       ), group_candidates as (
         select g.event_date,g.bank,g.sender,g.transfer_rows,g.group_amount,count(a.source_row)::int group_candidates
-        from unmatched_groups g left join canonical_account_entries a on a.event_date=g.event_date and a.inflow_clp=g.group_amount
+        from unmatched_groups g left join ledger a on a.is_movement and a.event_date=g.event_date and a.inflow_clp=g.group_amount
           and not exists(select 1 from direct_exact_keys d where d.event_date=g.event_date and d.amount_clp=g.group_amount)
         group by g.event_date,g.bank,g.sender,g.transfer_rows,g.group_amount
       ) select
@@ -82,20 +92,23 @@ export default async function handler(req:Request,res:Response){
         count(*) filter(where group_candidates=1)::int grouped_exact_groups,
         ((select count(*) from direct where direct_candidates=1)+coalesce(sum(transfer_rows) filter(where group_candidates=1),0))::int matched_transfers,
         coalesce(sum(transfer_rows) filter(where group_candidates=0),0)::int unmatched,
-        ((select count(*) from direct where direct_candidates>1)+coalesce(sum(transfer_rows) filter(where group_candidates>1),0))::int ambiguous
-      from group_candidates`,
+        ((select count(*) from direct where direct_candidates>1)+coalesce(sum(transfer_rows) filter(where group_candidates>1),0))::int ambiguous,
+        ls.ledger_source_rows,ls.ledger_movement_rows,ls.ledger_reference_rows,ls.ledger_summary_rows,ls.ledger_flagged_movements
+      from group_candidates cross join ledger_stats ls
+      group by ls.ledger_source_rows,ls.ledger_movement_rows,ls.ledger_reference_rows,ls.ledger_summary_rows,ls.ledger_flagged_movements`,
       sql`select count(*)::int rows,count(*) filter(where cardinality(coalesce(data_quality_flags,array[]::text[]))>0)::int flagged,coalesce(sum(total_kg),0)::numeric kg from canonical_stock_records`
     ])
+    const finance=first(financeRaw)
     return res.status(200).json({
       ok:true,
       connections:{
         production:{...first(productionRaw),target:'Recepciones / Calidad / Producción',mode:'eligible_evidence'},
         parties:{...first(partiesRaw),target:'Proveedores y clientes',mode:'exact_identity_only'},
         packing:{...first(packingRaw),target:'Lotes / Inventario',mode:'exact_lot_only'},
-        finance:{...first(financeRaw),target:'Finanzas',mode:'unique_date_amount_or_group_total',grouping_rule:'same_date_bank_sender_to_unique_unclaimed_inflow_total'},
+        finance:{...finance,target:'Finanzas',mode:'unique_date_amount_or_group_total',grouping_rule:'same_date_bank_sender_to_unique_unclaimed_inflow_total'},
         stock:{...first(stockRaw),target:'Inventario',mode:'staging_only'}
       },
-      governance:{promotion:'blocked',writesLive:false,rule:'Las conexiones se calculan desde evidencia canónica. Revisión significa contradicción, flag de calidad o contexto base no único. Varias filas que comparten lote, guía, proveedor y kilos no se declaran duplicadas ni se deduplican automáticamente: permanecen en revisión porque pueden representar procesos o desgloses distintos. Ausencias de maestro se mantienen como alta pendiente; faltas de cobertura permanecen como gaps de fuente. En finanzas, un grupo sólo se concilia cuando transferencias no emparejadas de la misma fecha, banco y remitente suman exactamente una única entrada contable de ese día que no esté ya reclamada por un match 1:1. Este endpoint no crea transacciones live.'}
+      governance:{promotion:'blocked',writesLive:false,rule:`Las conexiones se calculan desde evidencia canónica. En CUENTA2, sólo una fila fechada con entrada o salida monetaria cuenta como movimiento financiero; ${Number(finance.ledger_reference_rows??0)} filas quedan preservadas como referencia y ${Number(finance.ledger_summary_rows??0)} son resúmenes sin fecha ni monto. El saldo canónico se recompone desde entradas/salidas y no confía en fórmulas de saldo faltantes del workbook. Revisión significa contradicción, flag de calidad o contexto base no único. Varias filas que comparten lote, guía, proveedor y kilos no se deduplican automáticamente. En finanzas, un grupo sólo se concilia cuando transferencias no emparejadas de la misma fecha, banco y remitente suman exactamente una única entrada contable no reclamada. Este endpoint no crea transacciones live.`}
     })
   }catch(error){
     const message=error instanceof Error?error.message:''
