@@ -2,10 +2,11 @@ import {readFile} from 'node:fs/promises'
 
 const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
-const [status,connections,quality]=await Promise.all([
+const [status,connections,quality,coverage]=await Promise.all([
   readFile(new URL('../api/canonical-status.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/canonical-connections.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/canonical-quality.ts',import.meta.url),'utf8'),
+  readFile(new URL('../api/canonical-source-coverage.ts',import.meta.url),'utf8'),
 ])
 
 const movementRule="event_date is not null and (inflow_clp is not null or outflow_clp is not null)"
@@ -26,10 +27,15 @@ assert(quality.includes('partition by source_file_hash'),'balance diagnostics mu
 assert(quality.includes('missing_guide_price'),'production guide price coverage must remain explicit')
 assert(quality.includes('missing_lot_boxes'),'packing lot traceability must remain explicit')
 assert(quality.includes('readOnly:true'),'canonical quality diagnostics must be read-only')
+assert(coverage.includes("schemaVersion:'seafood.canonical.coverage.v1'"),'canonical coverage API must expose a versioned contract')
+assert(coverage.includes("'declared_end_stale'"),'coverage diagnostics must detect stale declared period end')
+assert(coverage.includes('s.file_hash'),'coverage diagnostics must bind observations to the exact source hash')
+assert(coverage.includes('never silently rewritten'),'coverage drift must remain diagnostic rather than mutate source metadata')
+assert(coverage.includes('readOnly:true'),'coverage diagnostics must be read-only')
 
 if(failures.length){
   console.error('Canonical data quality smoke FAILED')
   for(const failure of failures)console.error(`- ${failure}`)
   process.exit(1)
 }
-console.log('Canonical data quality smoke PASS: ledger movements, preserved references, recomputed balance, source-scoped diagnostics and safe promotion boundary verified')
+console.log('Canonical data quality smoke PASS: ledger movement boundary, recomputed balance, quality diagnostics, source coverage drift and safe promotion boundary verified')
