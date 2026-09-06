@@ -36,6 +36,7 @@ export const osStages:readonly OsStage[]=[
  ]},
  {id:'control',order:6,label:'Inteligencia y control',owner:'Gerencia',description:'Decisiones, memoria, auditoría y configuración transversal.',entry:'/',modules:[
   {path:'/',label:'Hoy',description:'Prioridades y cierre diario'},
+  {path:'/lotes',label:'Lote 360',description:'Estado, balance, evidencia, lineage y siguiente acción por lote'},
   {path:'/pescamar-ia',label:'Inteligencia',description:'Seafood AI para preguntas sobre la operación y evidencia canónica'},
   {path:'/lineage',label:'Trazabilidad',description:'Seafood Event Graph · recorrido actual e histórico de la evidencia'},
   {path:'/organization',label:'Organización',description:'Contexto de la instancia y aislamiento del producto'},
