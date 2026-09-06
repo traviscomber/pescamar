@@ -42,8 +42,9 @@ export function ProductionFocus({lots}:{lots:Lot[]}){
   },[])
 
   const hasLots=lots.length>0
+  const blocked=priority?.action==='blocked'
   return <>
-    <PageHeader eyebrow="Operación" title="Producción" description="Sólo la siguiente decisión. El detalle técnico queda disponible cuando lo necesitas."/>
+    <PageHeader eyebrow="Operación" title="Producción" description="El sistema resuelve prioridad, lote y destino. Tú ejecutas la siguiente acción física; el plan completo sólo aparece cuando existe un bloqueo."/>
     {error?<div className="system-banner error" role="alert">{error}</div>:null}
     <section className="panel" aria-label="Siguiente acción de producción">
       <div className="section-heading"><div><span className="overline">Siguiente acción</span><h2>{loading?'Calculando…':priority?actionLabel(priority.action):'Sin producción priorizada'}</h2></div></div>
@@ -54,8 +55,11 @@ export function ProductionFocus({lots}:{lots:Lot[]}){
           <div><small>Destino</small><b>{priority.customer}</b></div>
         </div>
         <p className="data-caveat">{priority.product} · {priority.species}{priority.supplier?` · ${priority.supplier}`:''}{priority.lineName?` · ${priority.lineName}`:''}</p>
-        <div className="page-actions">{priority.receptionId?<button className="button primary" onClick={()=>openLive(priority.receptionId!)}>Abrir lote</button>:<Link className="button primary" to="/planificacion">Resolver en planificación</Link>}<Link className="button secondary" to="/planificacion">Ver plan</Link></div>
-      </>:<div className="empty-state"><Factory size={28}/><h3>{hasLots?'No hay una orden que requiera producción ahora':'Sin lotes vivos'}</h3><p>{hasLots?'La operación no tiene una prioridad productiva pendiente.':'La primera recepción operacional aparecerá aquí cuando exista.'}</p><Link className="button primary" to={hasLots?'/planificacion':'/recepciones'}>{hasLots?'Revisar planificación':'Ir a recepciones'}</Link></div>}
+        <div className="page-actions">
+          {blocked?<Link className="button primary" to="/planificacion">Resolver bloqueo</Link>:priority.receptionId?<button className="button primary" onClick={()=>openLive(priority.receptionId!)}>Abrir lote</button>:<Link className="button primary" to="/planificacion">Resolver en planificación</Link>}
+          {blocked&&priority.receptionId?<button className="button secondary" onClick={()=>openLive(priority.receptionId!)}>Ver evidencia del lote</button>:null}
+        </div>
+      </>:<div className="empty-state"><Factory size={28}/><h3>{hasLots?'No hay una orden que requiera producción ahora':'Sin lotes vivos'}</h3><p>{hasLots?'No hay una acción productiva pendiente. No necesitas revisar el plan completo.':'La primera recepción operacional aparecerá aquí cuando exista.'}</p>{!hasLots?<Link className="button primary" to="/recepciones">Ir a recepciones</Link>:null}</div>}
     </section>
     <nav className="more-actions" aria-label="Más información de producción"><Link to="/lineas/detalle">Ver detalle productivo</Link></nav>
   </>
