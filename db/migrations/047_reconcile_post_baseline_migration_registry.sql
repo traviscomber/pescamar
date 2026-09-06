@@ -98,7 +98,7 @@ select migration_name,'reconciled',jsonb_build_object(
   'historical_execution_reconstructed',false,
   'original_execution_timestamp_known',false,
   'reconciled_by','047_reconcile_post_baseline_migration_registry.sql',
-  'note','La estructura canónica está presente; no se inventa applied_at histórico para este archivo.'
+  'note','La estructura canónica está presente y no se inventa applied_at histórico para este archivo.'
 )
 from unnest(array[
   '042_japan_export_release_gate.sql',
