@@ -1,4 +1,4 @@
-import {useEffect,useState} from 'react'
+import {useCallback,useEffect,useState} from 'react'
 
 type Lifecycle={
  available:boolean
@@ -13,10 +13,10 @@ const dt=(value:string|null|undefined)=>value?new Intl.DateTimeFormat('es-CL',{d
 
 export function LotLifecycleControl({receptionId}:{receptionId:string}){
  const [data,setData]=useState<Lifecycle|null>(null),[reason,setReason]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('')
- async function load(){
+ const load=useCallback(async()=>{
   try{const response=await fetch(`/api/lot-lifecycle?receptionId=${encodeURIComponent(receptionId)}`,{cache:'no-store'}),payload=await response.json() as Lifecycle;if(!response.ok)throw new Error(payload.error??'No fue posible cargar el cierre');setData(payload);setError('')}catch(cause){setError(cause instanceof Error?cause.message:'No fue posible cargar el cierre')}
- }
- useEffect(()=>{void load();const refresh=()=>void load();window.addEventListener('pescamar:data-updated',refresh);return()=>window.removeEventListener('pescamar:data-updated',refresh)},[receptionId])
+ },[receptionId])
+ useEffect(()=>{void load();const refresh=()=>void load();window.addEventListener('pescamar:data-updated',refresh);return()=>window.removeEventListener('pescamar:data-updated',refresh)},[load])
  async function act(action:'close'|'reopen'){
   if(reason.trim().length<5){setError('Agrega un fundamento breve para mantener trazabilidad.');return}
   setBusy(true)
