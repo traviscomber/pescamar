@@ -14,7 +14,7 @@ test('Floor Station is scoped to operator plants and remains read-only while the
   if(path==='/api/plant-stations'){stationCalls++;return json({ok:true,writesEnabled:false,stations:[]})}
   return json({})
  })
- await page.goto('/floor')
+ await page.goto('/floor/detalle')
  await expect(page.getByRole('heading',{name:'Estación de planta'})).toBeVisible()
  await expect(page.getByText('REC-101',{exact:true})).toBeVisible()
  await expect(page.getByText('Erizo · Proveedor Ancud',{exact:true})).toBeVisible()

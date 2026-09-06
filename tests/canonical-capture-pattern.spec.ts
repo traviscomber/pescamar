@@ -26,7 +26,7 @@ async function mockApp(page:Page){
 
 test('canonical capture intelligence distinguishes roll-forward plants from direct mass balance',async({page},testInfo)=>{
  await mockApp(page)
- await page.goto('/')
+ await page.goto('/inicio/detalle')
  await expect(page.getByRole('heading',{name:'Cómo registra cada planta'})).toBeVisible()
  const pescamar=page.getByRole('row').filter({hasText:'Pescamar'}),curanue=page.getByRole('row').filter({hasText:'Curanue'}),santaRosa=page.getByRole('row').filter({hasText:'Santa Rosa'}),candelaria=page.getByRole('row').filter({hasText:'candelaria'})
  await expect(pescamar.getByText('Mixta',{exact:true})).toBeVisible()

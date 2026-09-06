@@ -20,8 +20,8 @@ async function mockPlantExecution(page:Page){
 }
 
 for(const surface of [
- {path:'/pallets',heading:'Palletización'},
- {path:'/frio',heading:'Cadena de frío'},
+ {path:'/pallets/detalle',heading:'Palletización'},
+ {path:'/frio/detalle',heading:'Cadena de frío'},
  {path:'/control-regulatorio',heading:'Control regulatorio'},
 ]){
  test(`${surface.path} renders as an authenticated Plant Execution control on desktop and mobile`,async({page},testInfo)=>{

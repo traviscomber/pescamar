@@ -38,7 +38,7 @@ async function mock(page:Page,role:Role='admin'){
 
 test('home surfaces compact operational alerts without horizontal overflow',async({page},testInfo)=>{
  await mock(page,'admin')
- await page.goto('/')
+ await page.goto('/inicio/detalle')
  await expect(page.getByRole('heading',{name:/Atascado · 1 críticas · 3 advertencias/})).toBeVisible()
  await expect(page.getByText('Proceso de erizo estancado',{exact:true})).toBeVisible()
  await expect(page.getByText('Referencias de color pendientes',{exact:true})).toBeVisible()

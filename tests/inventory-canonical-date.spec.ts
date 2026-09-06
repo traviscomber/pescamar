@@ -11,7 +11,7 @@ test('inventory preserves canonical dates and explains upstream packing coverage
     if(path==='/api/status')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,platform:'vercel-functions',environment:'test',persistence:{database:true,files:true},metrics:{pendingDecisions:0,pendingCredits:0,activeOperators:1,receptions:0},commit:'qa',checkedAt:new Date().toISOString()})})
     return route.fulfill({status:200,contentType:'application/json',body:'{}'})
   })
-  await page.goto('/inventario')
+  await page.goto('/inventario/detalle')
   await expect(page.getByRole('heading',{name:'Inventario',exact:true})).toBeVisible()
   await expect(page.getByRole('region',{name:'Evidencia canónica de inventario'})).toBeVisible()
   await expect(page.getByText('Packing pulpo',{exact:true})).toBeVisible()

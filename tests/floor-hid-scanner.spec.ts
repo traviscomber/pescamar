@@ -11,7 +11,7 @@ test('USB HID scanner selects only an authorized lot by code',async({page})=>{
   if(path==='/api/status')return json({ok:true,platform:'vercel-functions',environment:'test',persistence:{database:true,files:true},metrics:{pendingDecisions:0,pendingCredits:0,activeOperators:1,receptions:3},commit:'qa-hid',checkedAt:new Date().toISOString()})
   return json({})
  })
- await page.goto('/floor')
+ await page.goto('/floor/detalle')
  const scanner=page.getByLabel('Scanner HID')
  await scanner.fill('REC-102')
  await scanner.press('Enter')

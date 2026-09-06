@@ -16,6 +16,7 @@ test('station administration reuses canonical Plant Execution API and stays admi
  expect(api).toContain("if(operator.role!=='admin')")
  expect(access).toContain('"/estaciones":["admin"]')
  expect(app).toContain('path="/estaciones"')
+ expect(app).toContain('path="/estaciones/detalle"')
  expect(vercel).toContain('"source": "/estaciones"')
 })
 
@@ -36,7 +37,7 @@ test('admin can open station administration without overflow or console errors',
  const consoleErrors:string[]=[]
  page.on('console',message=>{if(message.type()==='error')consoleErrors.push(message.text())})
  await mock(page,'admin')
- await page.goto('/estaciones')
+ await page.goto('/estaciones/detalle')
  await expect(page.getByRole('heading',{name:'Estaciones y dispositivos',exact:true})).toBeVisible()
  await expect(page.getByRole('button',{name:'Guardar estación'})).toBeVisible()
  await expect(page.getByRole('button',{name:'Guardar dispositivo'})).toBeVisible()
@@ -47,7 +48,7 @@ test('admin can open station administration without overflow or console errors',
 
 test('read-only gate disables station and device mutations',async({page})=>{
  await mock(page,'admin',false)
- await page.goto('/estaciones')
+ await page.goto('/estaciones/detalle')
  await page.getByLabel('Código').fill('packing-01')
  await page.getByLabel('Nombre').fill('Packing 1')
  await expect(page.getByRole('button',{name:'Guardar estación'})).toBeDisabled()
