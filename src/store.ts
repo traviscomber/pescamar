@@ -54,10 +54,17 @@ function toLot(row: ApiReception): Lot {
 
 async function loadReceptions() {const response = await fetch("/api/receptions");const payload = (await response.json()) as {receptions?: ApiReception[];error?: string};if (!response.ok) throw new Error(payload.error ?? "No fue posible cargar recepciones");return (payload.receptions ?? []).map(toLot);}
 
-export function useLots() {
-  const [lots, setLots] = useState<Lot[]>([]),[loading, setLoading] = useState(true),[error, setError] = useState("");
+export function useLots(enabled = true) {
+  const [lots, setLots] = useState<Lot[]>([]),[loading, setLoading] = useState(enabled),[error, setError] = useState("");
   const refresh = useCallback(async () => {setLoading(true);setError("");try {setLots(await loadReceptions());} catch (cause) {setLots([]);setError(cause instanceof Error ? cause.message : "No fue posible cargar recepciones");} finally {setLoading(false);}}, []);
-  useEffect(() => {let active = true;loadReceptions().then((receptions) => {if (active) setLots(receptions);}).catch((cause: unknown) => {if (active) setError(cause instanceof Error ? cause.message : "No fue posible cargar recepciones");}).finally(() => {if (active) setLoading(false);});return () => {active = false;};}, []);
-  const addLot = useCallback(async (lot: Lot) => {const response = await fetch("/api/receptions", {method: "POST",headers: { "Content-Type": "application/json" },body: JSON.stringify(lot)});const payload = (await response.json()) as { reception?:{id?:string}; error?: string };if (!response.ok) throw new Error(payload.error ?? "No fue posible crear la recepción");const receptionId=String(payload.reception?.id??'');if(!receptionId)throw new Error('La recepción fue creada sin identidad navegable');await refresh();return receptionId;}, [refresh]);
+  useEffect(() => {
+    if (!enabled) {setLoading(false);return;}
+    let active = true;
+    setLoading(true);
+    setError("");
+    loadReceptions().then((receptions) => {if (active) setLots(receptions);}).catch((cause: unknown) => {if (active) setError(cause instanceof Error ? cause.message : "No fue posible cargar recepciones");}).finally(() => {if (active) setLoading(false);});
+    return () => {active = false;};
+  }, [enabled]);
+  const addLot = useCallback(async (lot: Lot) => {const response = await fetch("/api/receptions", {method: "POST",headers: { "Content-Type": "application/json" },body: JSON.stringify(lot)});const payload = (await response.json()) as { reception?:{id?:string}; error?: string };if (!response.ok) throw new Error(payload.error ?? "No fue posible crear la recepción");const receptionId=String(payload.reception?.id??'');if(!receptionId)throw new Error('La recepción fue creada sin identidad navegable');if(enabled)await refresh();return receptionId;}, [enabled,refresh]);
   return { lots, loading, error, addLot, refresh };
 }
