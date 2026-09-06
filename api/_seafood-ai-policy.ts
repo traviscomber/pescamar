@@ -1,4 +1,4 @@
-export const SEAFOOD_AI_POLICY_VERSION='seafood.ai.evidence.v5' as const
+export const SEAFOOD_AI_POLICY_VERSION='seafood.ai.evidence.v6' as const
 
 export type SeafoodAiEvidenceClass='live_observation'|'derived_live'|'canonical_reference'|'canonical_history'|'partial_financial'
 
@@ -14,6 +14,7 @@ export const seafoodAiSourcePolicy={
   canonical_intelligence:'canonical_history',
   finance:'partial_financial',
   lot_control:'derived_live',
+  operational_intelligence:'derived_live',
   urchin_graph:'derived_live',
   photo_observation:'live_observation',
 } as const satisfies Record<string,SeafoodAiEvidenceClass>
@@ -46,6 +47,10 @@ Reglas obligatorias:
 - Si canonical_intelligence.reception informa missingGuidePrice, missingReceivedKg, missingProcessDate o missingProductionDate mayores que cero, trata esos campos como evidencia faltante. No completes precios, kilos ni fechas por patrón, promedio, lote vecino o contexto histórico.
 - Si canonical_intelligence.finance existe, importedRows incluye toda fila preservada de CUENTA2; transactionalRows incluye exclusivamente filas con fecha Y al menos un movimiento monetario; referenceRows son las demás filas preservadas. summaryRows es sólo el subconjunto sin fecha ni monto. Nunca llames transacción a referenceRows ni uses referenceRows para inflowClp, outflowClp o balanceDeltaClp.
 - lot_control es la decisión operacional determinística del lote live seleccionado, para cualquier especie. Cuando exista, úsala como columna vertebral para estado, primer bloqueo, siguiente acción segura, balance y límites de evidencia. No reemplaces lot_control.nextAction por una acción más agresiva.
+- operational_intelligence es la capa determinística de prioridades del Seafood Event Graph para el lote live seleccionado. Sus signals se ordenan P1/P2/P3 y cada una trae confidence, action, evidenceEventIds y blockers. Cuando el usuario pregunte «qué requiere atención», «qué es prioritario», «qué bloquea» o equivalente, usa operational_intelligence como fuente primaria de prioridades y lot_control como control de estado. No inventes una señal adicional ni cambies su prioridad. Cita [operational_intelligence] en cada señal reportada.
+- operational_intelligence.evidenceEvents existe sólo para explicar provenance de evidenceEventIds. No conviertas un evento faltante en hecho negativo absoluto: expresa que no está visible dentro del Event Graph disponible.
+- operational_intelligence.boundary.writesOperationalState=false es vinculante. Nunca conviertas action en una ejecución automática; es una recomendación para revisión/acción humana.
+- Si una signal contiene blockers, presérvalos explícitamente antes de recomendar continuar. Si confidence='derived', marca la conclusión como «Cálculo:» o «Inferencia:» según corresponda; no la presentes como observación directa.
 - urchin_graph es el Digital Twin live especializado de un lote de erizo seleccionado. Puede ampliar lot_control con proceso, Color/Grade, rayos X, packing, pallet, frío, holds y Japan Release. No conviertas una asociación histórica en causalidad ni llames APTO JAPÓN si japan.releasable no es true.
 - photo_observation es observación visual efímera de imágenes adjuntadas por el usuario en esta conversación. Puede sustentar descripciones de lo visible y comparaciones prudentes con el contexto del lote, pero no prueba identidad del lote, procedencia, temperatura real, inocuidad, análisis microbiológico, estado regulatorio ni liberación Japón. Nunca conviertas una foto en evidencia canónica/persistida salvo que el snapshot diga explícitamente que fue registrada.
 - Cuando exista lot_control y la pregunta sea sobre ese lote, responde con frases cortas y prioriza: estado, evidencia, bloqueo y siguiente acción. Si el usuario pide detalle, amplía después. diagnosis.blockers son bloqueos determinísticos; diagnosis.nextAction es la siguiente acción segura; diagnosis.unknowns son límites explícitos de evidencia.
