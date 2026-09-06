@@ -13,6 +13,11 @@ export type OperationalSignal={
   blockers:string[]
 }
 
+export type OperationalIntelligenceCapabilities={
+  canAssessCommercialCommitment:boolean
+  canAssessSalesDispatch:boolean
+}
+
 export type OperationalIntelligence={
   schemaVersion:typeof OPERATIONAL_INTELLIGENCE_SCHEMA
   mode:'live'
@@ -25,11 +30,12 @@ export type OperationalIntelligence={
   boundary:{writesOperationalState:false;rule:string}
 }
 
+const fullAssessment:OperationalIntelligenceCapabilities={canAssessCommercialCommitment:true,canAssessSalesDispatch:true}
 const numberOrNull=(value:unknown)=>{const parsed=Number(value);return Number.isFinite(parsed)?parsed:null}
 const textOrNull=(value:unknown)=>value==null?null:String(value).trim()||null
 const byType=(events:SeafoodEvent[],type:SeafoodEvent['type'])=>events.filter(event=>event.type===type)
 
-export function buildOperationalIntelligence(events:SeafoodEvent[]):OperationalIntelligence{
+export function buildOperationalIntelligence(events:SeafoodEvent[],capabilities:OperationalIntelligenceCapabilities=fullAssessment):OperationalIntelligence{
   const signals:OperationalSignal[]=[]
   const lotIds=[...new Set(events.map(event=>event.lotId).filter(Boolean))]
   const organizationIds=[...new Set(events.map(event=>event.organizationId).filter(Boolean))]
@@ -76,13 +82,13 @@ export function buildOperationalIntelligence(events:SeafoodEvent[]):OperationalI
   }
 
   const commitments=byType(events,'commercial_commitment'),dispatches=byType(events,'dispatch'),sales=byType(events,'sale'),inventory=byType(events,'inventory')
-  if(dispatches.length&&!commitments.length){
+  if(capabilities.canAssessCommercialCommitment&&dispatches.length&&!commitments.length){
     push({priority:2,kind:'commercial-lineage',title:'Despacho sin compromiso comercial visible',detail:'El Event Graph contiene despacho pero no un compromiso comercial atribuible dentro de la evidencia disponible.',confidence:'observed',action:'Verificar orden/asignación comercial; no asumir que no existe fuera del alcance visible.',evidenceEventIds:dispatches.map(event=>event.id),blockers:['commercial_commitment_evidence_missing']})
   }
-  if(sales.length&&!dispatches.length){
+  if(capabilities.canAssessSalesDispatch&&sales.length&&!dispatches.length){
     push({priority:1,kind:'commercial-lineage',title:'Venta sin despacho visible',detail:'Existe una venta atribuible sin evento de despacho en la evidencia del lote.',confidence:'observed',action:'Reconciliar venta, despacho y documento antes de cierre comercial.',evidenceEventIds:sales.map(event=>event.id),blockers:['dispatch_evidence_missing']})
   }
-  if(commitments.length&&!inventory.length){
+  if(capabilities.canAssessCommercialCommitment&&commitments.length&&!inventory.length){
     push({priority:2,kind:'availability-evidence',title:'Compromiso sin inventario observado',detail:'Hay asignación comercial, pero el Event Graph no contiene movimientos de inventario para demostrar disponibilidad.',confidence:'observed',action:'Confirmar disponibilidad con evidencia de inventario antes de prometer despacho.',evidenceEventIds:commitments.map(event=>event.id),blockers:['inventory_evidence_missing']})
   }
 
@@ -97,5 +103,5 @@ export function buildOperationalIntelligence(events:SeafoodEvent[]):OperationalI
 
   signals.sort((a,b)=>a.priority-b.priority||a.kind.localeCompare(b.kind)||a.title.localeCompare(b.title))
   const counts={p1:signals.filter(signal=>signal.priority===1).length,p2:signals.filter(signal=>signal.priority===2).length,p3:signals.filter(signal=>signal.priority===3).length}
-  return {schemaVersion:OPERATIONAL_INTELLIGENCE_SCHEMA,mode:'live',lotId:lotIds.length===1?lotIds[0]:null,organizationId:organizationIds.length===1?organizationIds[0]:null,generatedFromEvents:events.length,highestPriority:counts.p1?1:counts.p2?2:counts.p3?3:null,counts,signals,boundary:{writesOperationalState:false,rule:'Las señales derivan sólo de Seafood Event Graph; orientan revisión y acción humana, no escriben ni completan estado operacional.'}}
+  return {schemaVersion:OPERATIONAL_INTELLIGENCE_SCHEMA,mode:'live',lotId:lotIds.length===1?lotIds[0]:null,organizationId:organizationIds.length===1?organizationIds[0]:null,generatedFromEvents:events.length,highestPriority:counts.p1?1:counts.p2?2:counts.p3?3:null,counts,signals,boundary:{writesOperationalState:false,rule:'Las señales derivan sólo de Seafood Event Graph y de evidencia que el contexto puede evaluar; ausencia por permisos nunca se convierte en ausencia factual. Orientan revisión y acción humana, no escriben ni completan estado operacional.'}}
 }
