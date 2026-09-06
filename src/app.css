@@ -20,4 +20,5 @@
 @import './urchin-focus.css' layer(system);
 @import './avant-garde.css' layer(system);
 @import './avant-garde-surfaces.css' layer(system);
+@import './operator-focus-pass.css' layer(system);
 @import './a11y.css' layer(accessibility);
