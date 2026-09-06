@@ -27,7 +27,7 @@ const stages:Stage[]=[
 const workflowFacts:WorkflowFact[]=[
  {stage:'Recepción',state:'partial',automated:'Planta por alcance, fecha/hora, cálculo aceptado/merma y prellenado asistido desde evidencia.',human:'Confirmar proveedor maestro, documento y mediciones físicas reales: pesos y temperatura.',next:'Que el operador revise evidencia sugerida en vez de volver a digitar contexto documental.'},
  {stage:'Producción',state:'ready',automated:'Planning calcula la siguiente prioridad usando órdenes, lotes y disponibilidad.',human:'Ejecutar físicamente el proceso y confirmar el rendimiento observado.',next:'No exigir revisión del plan completo salvo bloqueo o excepción.'},
- {stage:'Packing',state:'partial',automated:'Scan identifica lote; planta y estación tienen defaults; escritura es idempotente y tolera offline.',human:'Confirmar el peso físico del packing.',next:'Sacar Planta, Lote y Estación del camino normal y dejarlos sólo como corrección manual.'},
+ {stage:'Packing',state:'ready',automated:'Scan identifica lote; planta y estación se heredan; escritura es idempotente y tolera offline.',human:'Escanear el lote y confirmar el peso físico del packing.',next:'Mantener Planta, Lote y Estación sólo como corrección manual, no como pasos normales.'},
  {stage:'Inventario',state:'ready',automated:'Disponibilidad, bloqueos y kilos sin ubicación se calculan desde estado operacional.',human:'Intervenir sólo para resolver bloqueo o una ubicación física faltante.',next:'Mantener inventario como consecuencia del flujo, nunca como segunda digitación.'},
 ]
 
