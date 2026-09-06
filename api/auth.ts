@@ -1,7 +1,7 @@
 import { createSession, clearSessionCookie, destroySession, requireOperator, sessionCookie, verifyPassword } from "./_auth.js";
 import { clearSuccessfulPair, loginRateState, recordAuthEvent, recordLoginFailure } from "./_auth-security.js";
 import { getSql } from "./_db.js";
-import { activeOrganization } from "./_organization.js";
+import { activeOrganization, resolveRequestOrganization } from "./_organization.js";
 
 type Request={method?:string;body?:unknown;headers?:Record<string,string|string[]|undefined>};
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void};
@@ -11,6 +11,9 @@ const emailPattern=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export default async function handler(request:Request,response:Response){
   response.setHeader("Cache-Control","no-store");
   try{
+    const organization=resolveRequestOrganization(request.headers,activeOrganization.organizationId);
+    if(!organization)return response.status(409).json({ok:false,code:"ORGANIZATION_CONTEXT_UNSUPPORTED",error:"La organización solicitada no está habilitada en esta implementación"});
+
     if(request.method==="GET"){
       const operator=await requireOperator(request);
       if(!operator)return response.status(401).json({ok:false,error:"Sesión requerida"});
@@ -41,10 +44,10 @@ export default async function handler(request:Request,response:Response){
       const session=await createSession(row.id);
       await Promise.all([
         clearSuccessfulPair(request,email),
-        recordAuthEvent("login_success",request,email,row.id,{role:row.role,organizationId:activeOrganization.organizationId}),
+        recordAuthEvent("login_success",request,email,row.id,{role:row.role,organizationId:organization.organizationId}),
       ]);
       response.setHeader("Set-Cookie",sessionCookie(session.token,session.maxAge));
-      return response.status(200).json({ok:true,operator:{id:row.id,fullName:row.full_name,email:row.email,role:row.role,plantIds:row.plant_ids??[],organizationId:activeOrganization.organizationId}});
+      return response.status(200).json({ok:true,operator:{id:row.id,fullName:row.full_name,email:row.email,role:row.role,plantIds:row.plant_ids??[],organizationId:organization.organizationId}});
     }
     if(request.method==="DELETE"){
       const operator=await requireOperator(request);
