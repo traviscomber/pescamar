@@ -41,7 +41,8 @@ export const expectedMigrations=[
   '042_japan_export_release_gate.sql',
   '043_japan_dispatch_fail_closed.sql',
   '044_sea_urchin_sequence_fail_closed.sql',
-  '045_japan_cold_chain_fail_closed.sql'
+  '045_japan_cold_chain_fail_closed.sql',
+  '046_lot_operational_lifecycle.sql'
 ] as const
 
 export const migrationLandmarks=[
@@ -56,5 +57,6 @@ export const migrationLandmarks=[
   'pallets',
   'cold_runs',
   'regulatory_holds',
-  'japan_export_release_evidence'
+  'japan_export_release_evidence',
+  'lot_lifecycle_events'
 ] as const
