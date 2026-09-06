@@ -2,8 +2,9 @@ import {readFile} from 'node:fs/promises'
 
 const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
-const [reception,credits,commercial,inventory,costs,salesOrders,settlements,creditsApi,settlementApi,approvalsApi]=await Promise.all([
+const [reception,receptionVision,credits,commercial,inventory,costs,salesOrders,settlements,creditsApi,settlementApi,approvalsApi]=await Promise.all([
   readFile(new URL('../src/components/ReceptionModal.tsx',import.meta.url),'utf8'),
+  readFile(new URL('../src/components/ReceptionVisionUpload.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/Credits.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/Commercial.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/Inventory.tsx',import.meta.url),'utf8'),
@@ -19,6 +20,10 @@ assert(reception.includes('const [guide,setGuide]=useState("")'),'reception weig
 assert(!reception.includes('useState(100)')&&!reception.includes('useState(4.2)'),'reception capture must not contain synthetic measurement defaults')
 assert(reception.includes('setEvidence([])')&&reception.includes('setSupplier("")'),'reception capture must reset between openings')
 assert(reception.includes('aria-labelledby="reception-modal-title"')&&reception.includes('event.key==="Escape"'),'reception capture must remain keyboard-safe')
+assert(receptionVision.includes('setProposal(payload.vision)'),'reception vision must stage extracted fields as a proposal')
+assert(receptionVision.includes('function applyProposal()')&&receptionVision.includes('onExtract(proposal)'),'reception vision must apply proposed fields only after explicit confirmation')
+assert(!receptionVision.includes('if(payload.vision){onExtract(payload.vision)'),'reception vision must never silently apply probabilistic extraction')
+assert(receptionVision.includes('La evidencia queda guardada en ambos casos'),'reception vision must preserve evidence when a proposal is rejected')
 
 assert(!credits.includes('requestedBy'),'credit requester must come from authenticated server context')
 assert(credits.includes("setSupplier('')")&&credits.includes('setRecoveryValue(0)'),'credit capture must reset between openings')
@@ -49,7 +54,7 @@ assert(settlementApi.includes('${otherDeductions}<=round(r.accepted_kg*${pricePe
 assert(settlementApi.includes('created_by_operator_id')&&settlementApi.includes('${operator.id}::uuid'),'settlements must persist stable creator identity')
 assert(approvalsApi.includes('requested_by_operator_id is not null'),'credit dual control must prefer stable operator identity')
 assert(approvalsApi.includes('created_by_operator_id is not null'),'settlement dual control must prefer stable operator identity')
-assert(approvalsApi.includes('acted_by_operator_id'),'approval actions must persist stable operator identity')
+assert(approvalsApi.includes('acted_by_operator_id'),'approval actions must persist stable actor identity')
 assert(approvalsApi.includes('approved_by_operator_id'),'settlement approval must persist stable approver identity')
 assert(approvalsApi.includes('created_by_operator_id) select account_id,id'),'credit movements must persist stable actor identity')
 
@@ -58,4 +63,4 @@ if(failures.length){
   for(const failure of failures)console.error(`- ${failure}`)
   process.exit(1)
 }
-console.log('Operational form safety PASS: real-data defaults, stable authenticated identity, mastered counterparties, bounded financial inputs, UUID dual control, reset behavior and keyboard-safe modals verified')
+console.log('Operational form safety PASS: real-data defaults, explicit human confirmation of AI evidence proposals, stable authenticated identity, mastered counterparties, bounded financial inputs, UUID dual control, reset behavior and keyboard-safe modals verified')
