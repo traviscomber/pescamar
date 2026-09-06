@@ -1,6 +1,6 @@
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { getSql } from "./_db.js";
-import { activeOrganization } from "./_organization.js";
+import { activeOrganization, resolveRequestOrganization } from "./_organization.js";
 
 type Headers = Record<string, string | string[] | undefined>;
 export type AuthRequest = { headers?: Headers };
@@ -64,6 +64,12 @@ export function clearSessionCookie() {
 export async function requireOperator(request: AuthRequest, roles?: OperatorRole[]) {
   const token = cookieToken(request);
   if (!token) return null;
+
+  // In the current single-organization implementation the client organization header
+  // is only an assertion. A mismatched assertion must never select or cross into a tenant.
+  const organization = resolveRequestOrganization(request.headers, activeOrganization.organizationId);
+  if (!organization) return null;
+
   const hash = tokenHash(token);
   const rows = await getSql()`
     select o.id,o.full_name,o.email,o.role,o.plant_ids,s.last_seen_at
@@ -77,5 +83,5 @@ export async function requireOperator(request: AuthRequest, roles?: OperatorRole
     await getSql()`update operator_sessions set last_seen_at=now() where token_hash=${hash}`;
   }
 
-  return { id: row.id, fullName: row.full_name, email: row.email, role: row.role, plantIds: row.plant_ids ?? [], organizationId: activeOrganization.organizationId } satisfies SessionOperator;
+  return { id: row.id, fullName: row.full_name, email: row.email, role: row.role, plantIds: row.plant_ids ?? [], organizationId: organization.organizationId } satisfies SessionOperator;
 }
