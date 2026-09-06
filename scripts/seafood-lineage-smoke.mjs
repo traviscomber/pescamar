@@ -2,8 +2,9 @@ import {readFile} from 'node:fs/promises'
 
 const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
-const [eventSource,organizationSource,lineageSource,historicalLineageSource,pageSource,appSource,accessSource,osSource]=await Promise.all([
+const [eventSource,operationalIntelligenceSource,organizationSource,lineageSource,historicalLineageSource,pageSource,appSource,accessSource,osSource]=await Promise.all([
   readFile(new URL('../api/_seafood-event.ts',import.meta.url),'utf8'),
+  readFile(new URL('../api/_operational-intelligence.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/_organization.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/lot-lineage.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/historical-lineage.ts',import.meta.url),'utf8'),
@@ -21,6 +22,17 @@ assert(organizationSource.includes("organizationId:'pescamar'"),'Implementation 
 assert(organizationSource.includes("isolationMode:'single_organization_legacy'"),'server must not claim organization-scoped isolation before schema support exists')
 assert(eventSource.includes("|'vision'"),'event envelope must support attributed vision evidence')
 
+assert(operationalIntelligenceSource.includes("OPERATIONAL_INTELLIGENCE_SCHEMA='seafood.operational-intelligence.v1'"),'Event Graph intelligence must have a stable versioned schema')
+assert(operationalIntelligenceSource.includes("confidence:'observed'|'derived'"),'signals must distinguish direct observation from derived interpretation')
+assert(operationalIntelligenceSource.includes('evidenceEventIds:string[]'),'every signal must carry event-level evidence references')
+assert(operationalIntelligenceSource.includes('blockers:string[]'),'signals must expose blockers instead of silently completing evidence gaps')
+assert(operationalIntelligenceSource.includes('writesOperationalState:false'),'derived intelligence must remain read-only')
+assert(operationalIntelligenceSource.includes('accepted>gross'),'mass-balance guard must detect impossible accepted-vs-gross reception weights')
+assert(operationalIntelligenceSource.includes('output>input'),'production intelligence must detect impossible output-vs-input mass balance')
+assert(operationalIntelligenceSource.includes("kind:'vision-review'"),'Vision disagreement must become an explicit human-review signal')
+assert(operationalIntelligenceSource.includes("kind:'commercial-lineage'"),'commercial sequence gaps must become attributable lineage signals')
+assert(operationalIntelligenceSource.includes("kind:'availability-evidence'"),'commercial commitments without observed inventory evidence must remain a gap, not inferred availability')
+
 assert(lineageSource.includes("request.method!=='GET'"),'live lot lineage must remain read-only')
 assert(lineageSource.includes('requireOperator(request)'),'live lot lineage must require an authenticated operator')
 assert(lineageSource.includes('resolveRequestOrganization(request.headers,operator.organizationId)'),'live lot lineage must bind requested organization to authenticated session context before reading data')
@@ -35,6 +47,9 @@ assert(lineageSource.includes('},organization))'),'live lineage events must rece
 assert(lineageSource.includes("schemaVersion:'seafood.lineage.v1'"),'live lineage response must be versioned')
 assert(lineageSource.includes("vision:has('vision')"),'live lineage coverage must make vision presence explicit')
 assert(lineageSource.includes('coverage:{reception:has(\'reception\')'),'live lineage response must distinguish present and missing stages')
+assert(lineageSource.includes("import {buildOperationalIntelligence} from './_operational-intelligence.js'"),'live lineage must derive intelligence from the Event Graph layer')
+assert(lineageSource.includes('intelligence=buildOperationalIntelligence(ordered)'),'intelligence must be derived from the final ordered event collection')
+assert(lineageSource.includes('events:ordered,coverage:')&&lineageSource.includes(',intelligence,permissions:'),'live lineage response must expose events, coverage and derived intelligence together')
 assert(!/\b(insert|update|delete|create table|alter table|drop table)\b/i.test(lineageSource),'live lot lineage endpoint must not mutate database state')
 
 assert(historicalLineageSource.includes("request.method!=='GET'"),'historical lineage must remain read-only')
@@ -69,4 +84,4 @@ if(failures.length){
   for(const failure of failures)console.error(`- ${failure}`)
   process.exit(1)
 }
-console.log('Seafood lineage smoke PASS: versioned dual-mode Event Graph, resolved request organization provenance, authenticated boundaries, canonical historical provenance, read-only/live separation and Vision provenance verified')
+console.log('Seafood lineage smoke PASS: versioned dual-mode Event Graph, resolved request organization provenance, event-native operational intelligence, authenticated boundaries, canonical historical provenance, read-only/live separation and Vision provenance verified')
