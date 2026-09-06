@@ -2,12 +2,13 @@ import {readFile} from 'node:fs/promises'
 
 const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
-const [endpoint,engine,brief,css,today]=await Promise.all([
+const [endpoint,engine,brief,css,today,passCss]=await Promise.all([
  readFile(new URL('../api/operational-intelligence-overview.ts',import.meta.url),'utf8'),
  readFile(new URL('../api/_operational-intelligence.ts',import.meta.url),'utf8'),
  readFile(new URL('../src/components/ExecutiveDecisionBrief.tsx',import.meta.url),'utf8'),
  readFile(new URL('../src/components/executive-decision-brief.css',import.meta.url),'utf8'),
  readFile(new URL('../src/pages/DailyClose.tsx',import.meta.url),'utf8'),
+ readFile(new URL('../src/control-tower-pass.css',import.meta.url),'utf8'),
 ])
 
 assert(endpoint.includes("schemaVersion:'seafood.operational-intelligence.overview.v1'"),'Control Tower operational overview must be versioned')
@@ -30,17 +31,23 @@ assert(brief.includes('topOperational.signal.blockers'),'Control Tower must expo
 assert(brief.includes('operationalCounts.p1')&&brief.includes('operationalCounts.p2')&&brief.includes('operationalCounts.p3'),'Control Tower must show P1/P2/P3 counts')
 assert(brief.includes('topOperational.path'),'dominant signal must link back to attributable lineage evidence')
 assert(brief.includes('El Event Graph no genera P1/P2/P3'),'zero-signal state must be explicit rather than fabricated')
+assert(brief.includes('comparableCandidates=candidates.filter(item=>item.supplier.coverage>=40'),'supplier recommendation must not prefer raw high scores without minimum comparable coverage')
+assert(brief.includes("preferred.supplier.coverage<40?'score observado':'score compra'")&&brief.includes('cobertura ${nf.format(preferred.supplier.coverage)}%')&&brief.includes('confianza ${preferred.supplier.confidence}'),'supplier score presentation must expose coverage and confidence')
 assert(today.includes("readJson<OperationalPayload>(`/api/operational-intelligence-overview"),'Today must consume the same Operational Intelligence overview as the executive Control Tower')
 assert(!today.includes("readJson<TowerPayload>(`/api/control-tower"),'Today must not use the legacy parallel lot ranking as a priority source')
 assert(today.includes("source:'event_graph' as const")&&today.includes("Operational Intelligence · Seafood Event Graph live"),'Today must label Event Graph priority provenance explicitly')
 assert(today.includes('eventScore=(priority:OperationalSignal')&&today.includes("priority===1?1000:priority===2?700:400"),'Today must preserve P1 > P2 > P3 ordering')
 assert(today.includes("operationalQuery.set('plantId',nextPlant)"),'Today must pass selected plant scope into Operational Intelligence')
+assert(today.includes('daily-clear-context')&&today.includes('Cobertura live')&&today.includes('Actividad del día')&&today.includes('Inventario ubicado'),'green Today state must preserve useful live context rather than render an empty success state')
 assert(css.includes('.decision-operational-priority.p1')&&css.includes('.decision-operational-priority.p2')&&css.includes('.decision-operational-priority.p3'),'priority hierarchy must have explicit P1/P2/P3 visual states')
 assert(css.includes('@media(max-width:640px)'),'Control Tower priority surface must preserve mobile layout')
+assert(passCss.includes('.main-content:has(>.daily-cockpit)>.page-header')&&passCss.includes('.daily-clear-context'),'Today visual pass must keep a compact header and contextual clear state')
+assert(passCss.includes('.main-content:has(>.platform-strip)>.import-history.panel')&&passCss.includes('.main-content:has(>.event-kind-tabs+.signal-grid)>.panel:has(.compact-ledger)')&&passCss.includes('.corporate-plant-card'),'secondary operational/admin surfaces must share the flatter OS visual language')
+assert(passCss.includes('@media(max-width:620px)')&&passCss.includes('.daily-clear-context{grid-template-columns:1fr}'),'final polish must include explicit mobile behavior')
 
 if(failures.length){
  console.error('Operational Intelligence overview smoke FAILED')
  for(const failure of failures)console.error(`- ${failure}`)
  process.exit(1)
 }
-console.log('Operational Intelligence overview smoke PASS: one-source Event Graph priorities, plant scoping, batch live aggregation, read-only boundary and Control Tower consumers verified')
+console.log('Operational Intelligence overview smoke PASS: one-source Event Graph priorities, confidence-aware supplier scoring, compact Today, useful green state and consistent secondary surfaces verified')
