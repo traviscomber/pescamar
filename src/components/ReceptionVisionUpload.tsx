@@ -16,23 +16,28 @@ async function optimize(file:File){
   const base=file.name.replace(/\.[^.]+$/,"");return {blob,fileName:`${base || "evidencia"}.jpg`,mimeType:"image/jpeg"}
 }
 
-const fieldSummary=(vision:VisionFields)=>[
+const documentarySummary=(vision:VisionFields)=>[
   vision.supplier?`Proveedor: ${vision.supplier}`:null,
   vision.guideReference?`Guía: ${vision.guideReference}`:null,
   vision.zone?`Zona: ${vision.zone}`:null,
   vision.species?`Especie: ${vision.species}`:null,
   vision.guide!=null?`Peso guía: ${vision.guide} kg`:null,
-  vision.gross!=null?`Bruto: ${vision.gross} kg`:null,
-  vision.tare!=null?`Tara: ${vision.tare} kg`:null,
-  vision.drained!=null?`Escurrido: ${vision.drained} kg`:null,
-  vision.temperature!=null?`Temperatura: ${vision.temperature} °C`:null,
+  vision.occurredAt?`Fecha/hora: ${vision.occurredAt}`:null,
 ].filter((value):value is string=>Boolean(value));
+const physicalReferenceSummary=(vision:VisionFields)=>[
+  vision.gross!=null?`Bruto visible: ${vision.gross} kg`:null,
+  vision.tare!=null?`Tara visible: ${vision.tare} kg`:null,
+  vision.drained!=null?`Escurrido visible: ${vision.drained} kg`:null,
+  vision.temperature!=null?`Temperatura visible: ${vision.temperature} °C`:null,
+].filter((value):value is string=>Boolean(value));
+const documentaryFields=(vision:VisionFields):VisionFields=>({...vision,gross:null,tare:null,drained:null,temperature:null});
 
 export function ReceptionVisionUpload({disabled,onEvidence,onExtract}:{disabled:boolean;onEvidence:(evidence:ReceptionEvidence)=>void;onExtract:(fields:VisionFields)=>void}){
   const inputRef=useRef<HTMLInputElement>(null);
   const [reading,setReading]=useState(false),[message,setMessage]=useState("");
   const [proposal,setProposal]=useState<VisionFields|null>(null);
-  const proposalFields=useMemo(()=>proposal?fieldSummary(proposal):[],[proposal]);
+  const proposalFields=useMemo(()=>proposal?documentarySummary(proposal):[],[proposal]);
+  const physicalReferences=useMemo(()=>proposal?physicalReferenceSummary(proposal):[],[proposal]);
   async function select(event:ChangeEvent<HTMLInputElement>){
     const file=event.target.files?.[0];event.target.value="";if(!file)return;
     setMessage("");setProposal(null);
@@ -45,25 +50,26 @@ export function ReceptionVisionUpload({disabled,onEvidence,onExtract}:{disabled:
       const payload=await response.json() as Payload;
       if(!response.ok||!payload.ok||!payload.evidence)throw new Error(payload.error??"No fue posible procesar la fotografía");
       onEvidence(payload.evidence);
-      if(payload.vision){const confidence=Math.round(Math.max(0,Math.min(1,payload.vision.confidence))*100);setProposal(payload.vision);setMessage(`Datos visibles propuestos por IA · confianza ${confidence}% · confirma antes de aplicar`)}
+      if(payload.vision){const confidence=Math.round(Math.max(0,Math.min(1,payload.vision.confidence))*100);setProposal(payload.vision);setMessage(`Contexto documental propuesto por IA · confianza ${confidence}% · confirma antes de aplicar`)}
       else setMessage(payload.warning??"Foto guardada como evidencia");
     }catch(cause){setMessage(cause instanceof Error?cause.message:"No fue posible procesar la fotografía")}
     finally{setReading(false)}
   }
-  function applyProposal(){if(!proposal)return;onExtract(proposal);setMessage("Datos visibles aplicados. Revisa cualquier diferencia antes de registrar la recepción.");setProposal(null)}
+  function applyProposal(){if(!proposal)return;onExtract(documentaryFields(proposal));setMessage("Contexto documental aplicado. Pesos físicos y temperatura deben confirmarse en planta.");setProposal(null)}
   return <div className="vision-upload">
     <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={select} hidden/>
     <button type="button" className="vision-upload-button" onClick={()=>inputRef.current?.click()} disabled={disabled||reading}>
       <span className="vision-upload-icon">{reading?<LoaderCircle className="spin" size={20}/>:<ImageUp size={20}/>}</span>
-      <span><b>{reading?"Leyendo documento…":"Subir foto y leer con IA"}</b><small>{reading?"Vision está extrayendo sólo los datos visibles":"Guía, comprobante o documento de recepción · la IA propone, una persona confirma"}</small></span>
+      <span><b>{reading?"Leyendo documento…":"Subir foto y leer con IA"}</b><small>{reading?"Vision está extrayendo sólo los datos visibles":"Guía, comprobante o documento de recepción · la IA propone contexto, una persona confirma"}</small></span>
       <ScanLine size={18}/>
     </button>
     {message?<p className="vision-upload-status" aria-live="polite">{message}</p>:null}
     {proposal?<section className="vision-proposal" aria-label="Datos propuestos por evidencia">
       <header><div><span className="overline teal">Propuesta desde evidencia</span><b>{proposal.documentType??"Documento de recepción"}</b></div><span>{Math.round(Math.max(0,Math.min(1,proposal.confidence))*100)}%</span></header>
-      {proposalFields.length?<ul>{proposalFields.map(item=><li key={item}>{item}</li>)}</ul>:<p>No se detectaron campos operacionales confiables para aplicar.</p>}
-      <div className="vision-proposal-actions"><button type="button" className="button primary" onClick={applyProposal} disabled={!proposalFields.length}><CheckCircle2 size={16}/>Aplicar datos visibles</button><button type="button" className="button secondary" onClick={()=>{setProposal(null);setMessage("Evidencia conservada. Los datos propuestos no se aplicaron.")}}>No aplicar</button></div>
-      <small>La evidencia queda guardada en ambos casos. La propuesta no modifica el registro hasta que una persona la confirme.</small>
+      {proposalFields.length?<><small className="vision-proposal-label">Se puede aplicar como contexto documental</small><ul>{proposalFields.map(item=><li key={item}>{item}</li>)}</ul></>:<p>No se detectó contexto documental confiable para aplicar.</p>}
+      {physicalReferences.length?<div className="vision-physical-reference"><small>Referencia visible · no se aplica automáticamente</small><ul>{physicalReferences.map(item=><li key={item}>{item}</li>)}</ul><p>Estas mediciones deben confirmarse físicamente en planta.</p></div>:null}
+      <div className="vision-proposal-actions"><button type="button" className="button primary" onClick={applyProposal} disabled={!proposalFields.length}><CheckCircle2 size={16}/>Aplicar contexto documental</button><button type="button" className="button secondary" onClick={()=>{setProposal(null);setMessage("Evidencia conservada. Los datos propuestos no se aplicaron.")}}>No aplicar</button></div>
+      <small>La evidencia queda guardada en ambos casos. Ninguna medición física se promueve desde el documento.</small>
     </section>:null}
   </div>
 }
