@@ -1,4 +1,4 @@
-import {Activity, Building2, ClipboardCheck, Database, Factory, FileSpreadsheet, History, Link2, Settings2, ShieldCheck, UsersRound} from 'lucide-react'
+import {Activity, Building2, ClipboardCheck, Database, Eye, Factory, FileSpreadsheet, History, Link2, Settings2, ShieldCheck, UsersRound} from 'lucide-react'
 import {Link} from 'react-router-dom'
 import {canAccessPath} from '../access'
 import {useAuth} from '../auth'
@@ -16,6 +16,7 @@ const groups:AdminGroup[]=[
  {label:'Control y cumplimiento',description:'Revisa evidencia, decisiones y trazabilidad administrativa.',items:[
   {to:'/auditoria',label:'Auditoría operacional',description:'Quién hizo qué, cuándo y sobre qué registro.',icon:ShieldCheck},
   {to:'/control-regulatorio',label:'Control regulatorio',description:'Estados y bloqueos de cumplimiento.',icon:ClipboardCheck},
+  {to:'/edgevision',label:'EdgeVision',description:'Captura visual y evidencia especializada del proceso.',icon:Eye},
   {to:'/observabilidad',label:'Observabilidad',description:'Salud técnica y señales del sistema.',icon:Activity},
   {to:'/timeline',label:'Línea de tiempo',description:'Secuencia histórica de eventos relevantes.',icon:History},
  ]},
