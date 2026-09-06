@@ -17,7 +17,7 @@ assert(policy.includes('Cálculo:')&&policy.includes('Inferencia:')&&policy.incl
 assert(policy.includes('Nunca afirmes que ejecutaste, aprobaste o modificaste algo'),'Seafood AI must remain read-only in its policy')
 assert(handler.includes('requireOperator(req)'),'Seafood AI implementation must require authenticated operator')
 assert(handler.includes('operator.organizationId!==activeOrganization.organizationId'),'Seafood AI must enforce organization boundary before context retrieval')
-assert(authServer.includes('organizationId: activeOrganization.organizationId'),'server auth must carry organization context')
+assert(authServer.includes('organizationId: organization.organizationId'),'server auth must carry the resolved organization context')
 assert(authClient.includes('organizationId: operator.organizationId || organizationContext.organizationId'),'client auth must preserve/normalize organization context')
 assert(handler.includes('evidenceClassForSource(source.id)'),'every source returned to the model must be classified')
 assert(handler.includes('unclassified_source:'),'unclassified evidence sources must fail closed')
