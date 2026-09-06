@@ -1,0 +1,54 @@
+/* Decision surface pass — one dominant task per daily workspace. */
+
+/* Operation: active work reads as a continuous queue, not nested cards. */
+.receptions-workspace.panel,
+.main-content:has(>.page-header)>.panel[aria-label="Siguiente acción de producción"]{
+  padding:16px 0!important;
+  border:0!important;
+  border-top:1px solid var(--line)!important;
+  border-bottom:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.receptions-workspace .panel-header{padding-inline:0;margin-bottom:10px}
+.receptions-workspace .toolbar{padding:8px 0;border-top:1px solid color-mix(in srgb,var(--line) 65%,transparent)}
+.receptions-history{margin-top:12px!important;background:transparent!important}
+.main-content:has(>.page-header)>.panel[aria-label="Siguiente acción de producción"] .balance-summary{margin-block:10px 12px}
+.main-content:has(>.page-header)>.panel[aria-label="Siguiente acción de producción"] .page-actions{justify-content:flex-start;margin-top:12px}
+.more-actions{margin-top:8px!important;padding-top:8px!important}
+
+/* Commercial: demand and next closing step dominate; summaries become instrumentation. */
+.main-content:has(.commercial-form-grid)>.signal-grid{margin-bottom:12px!important}
+.main-content:has(.commercial-form-grid)>.signal-grid .signal-card{border-top:1px solid var(--line)!important;border-bottom:1px solid var(--line)!important;border-left:0!important;border-right:0!important;border-radius:0!important;background:transparent!important}
+.main-content:has(.commercial-form-grid)>.panel{margin-top:0}
+.commercial-summary{gap:0!important;margin-bottom:14px!important;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.commercial-summary>article{padding:12px 14px!important;border:0!important;border-right:1px solid var(--line)!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
+.commercial-summary>article:first-child{padding-left:0!important}.commercial-summary>article:last-child{border-right:0!important}
+.commercial-summary>article span{display:none!important}.commercial-summary>article small{font-size:9px!important}.commercial-summary>article b{font-size:21px!important}.commercial-summary>article em{font-size:9px!important}
+.commercial-lots.panel{padding:16px 0!important;border-left:0!important;border-right:0!important;border-radius:0!important;background:transparent!important}
+.commercial-history{gap:10px!important}.commercial-history>.panel{padding:15px!important}
+
+/* Intelligence: question first; trust remains visible but quiet. */
+.copilot-trust{display:flex!important;gap:0!important;padding:0!important;border-top:1px solid var(--line)!important;border-bottom:1px solid var(--line)!important;border-left:0!important;border-right:0!important;border-radius:0!important;background:transparent!important;overflow-x:auto}
+.copilot-trust>span{flex:0 0 auto;padding:9px 12px!important;border-right:1px solid var(--line);font-size:9px!important;white-space:nowrap}.copilot-trust>span:first-child{padding-left:0!important}.copilot-trust>span:last-child{border-right:0}
+.copilot-trust svg{width:13px;height:13px}
+.canonical-brief{margin-bottom:12px!important}
+.copilot-empty{min-height:260px!important}.copilot-mark{width:38px!important;height:38px!important}.copilot-empty h2{margin-top:10px!important}.copilot-composer{padding:12px 14px!important}
+
+/* Administration is reference/support, never visually louder than daily work. */
+.admin-hub-group{background:transparent!important;border-left:0!important;border-right:0!important;border-radius:0!important}
+.admin-hub-group>header h2{font-size:15px!important}.admin-hub-group>header p{max-width:520px}
+
+@media(max-width:800px){
+ .commercial-summary{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ .commercial-summary>article:nth-child(2){border-right:0!important}
+ .commercial-summary>article:nth-child(n+3){border-top:1px solid var(--line)!important}
+ .copilot-trust>span{padding:8px 10px!important}
+}
+@media(max-width:560px){
+ .commercial-summary{grid-template-columns:1fr!important}
+ .commercial-summary>article{padding:10px 0!important;border-right:0!important;border-bottom:1px solid var(--line)!important}
+ .commercial-summary>article:last-child{border-bottom:0!important}
+ .copilot-empty{min-height:220px!important;padding:28px 14px!important}
+}
