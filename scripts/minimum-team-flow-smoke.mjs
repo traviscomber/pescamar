@@ -2,7 +2,7 @@ import {readFile} from 'node:fs/promises'
 
 const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
-const [vision,reception,production,floor,inventory,salesOrders,commercial,operatingModel]=await Promise.all([
+const [vision,reception,production,floor,inventory,salesOrders,commercial,today,operatingModel]=await Promise.all([
   readFile(new URL('../src/components/ReceptionVisionUpload.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/components/ReceptionModal.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/ProductionFocus.tsx',import.meta.url),'utf8'),
@@ -10,6 +10,7 @@ const [vision,reception,production,floor,inventory,salesOrders,commercial,operat
   readFile(new URL('../src/pages/InventoryFocus.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/SalesOrders.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/Commercial.tsx',import.meta.url),'utf8'),
+  readFile(new URL('../src/pages/DailyClose.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/OperatingModel.tsx',import.meta.url),'utf8'),
 ])
 
@@ -37,6 +38,8 @@ assert(salesOrders.includes("mode==='allocate'?'Confirmar reserva':'Confirmar'")
 assert(commercial.includes('Contexto heredado del despacho confirmado')&&commercial.includes('nada se vende hasta confirmar'),'sale capture must inherit confirmed dispatch context without auto-selling')
 assert(commercial.includes('sales.filter(s=>s.dispatch_id===dispatch.id)'),'sale proposal must subtract sales already linked to the dispatch')
 assert(commercial.includes("mode==='dispatch'?'Confirmar salida':'Confirmar venta'"),'dispatch and sale mutations must remain explicit human confirmations')
+assert(today.includes("const suggestedOwner=(path:string)=>")&&today.includes("'Comercial / administrativo':'Operador generalista'"),'Today must route each priority to a minimum-team responsibility without inventing an individual assignment')
+assert(today.includes('<b>Responsable sugerido:</b>')&&today.includes('Responsable sugerido: {item.owner}'),'Today must display the suggested owner on the primary priority and remaining queue')
 assert(operatingModel.includes('Un dato heredable o calculable no debe convertirse en una nueva tarea humana'),'operating model must state the minimum-team rule')
 
 if(failures.length){
@@ -44,4 +47,4 @@ if(failures.length){
   for(const failure of failures)console.error(`- ${failure}`)
   process.exit(1)
 }
-console.log('Minimum-team flow contract PASS: reception, production, packing, inventory, allocation and sale confirmation preserve capture-once, bounded suggestions, inherited context and exception-only review')
+console.log('Minimum-team flow contract PASS: reception, production, packing, inventory, commercial commitments and Today owner routing preserve capture-once, inherited context and exception-only review')
