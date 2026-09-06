@@ -21,12 +21,6 @@ async function openNavigation(page:Page,projectName:string){
   await expect(page.locator('.sidebar')).toHaveClass(/is-open/)
 }
 
-async function expandAdministration(page:Page){
-  const group=page.locator('details.nav-more').filter({hasText:'Administración'}).first()
-  if(!await group.count())return
-  if(await group.getAttribute('open')===null)await group.locator('summary').click()
-}
-
 async function expectAuthenticatedNavigation(page:Page,projectName:string){
   await expect(page.getByRole('heading',{name:'Acceso'})).toHaveCount(0)
   await openNavigation(page,projectName)
@@ -96,21 +90,20 @@ test('canonical home starts with operational hierarchy and stable theme switchin
 })
 
 for(const scenario of [
-  {role:'admin' as const,newReception:true,configuration:true,finance:true},
-  {role:'operations' as const,newReception:true,configuration:true,finance:true},
-  {role:'finance' as const,newReception:false,configuration:false,finance:true},
-  {role:'quality' as const,newReception:true,configuration:false,finance:false},
-  {role:'viewer' as const,newReception:false,configuration:false,finance:false},
+  {role:'admin' as const,newReception:true,administration:true,commercial:true},
+  {role:'operations' as const,newReception:true,administration:true,commercial:true},
+  {role:'finance' as const,newReception:false,administration:false,commercial:true},
+  {role:'quality' as const,newReception:true,administration:false,commercial:false},
+  {role:'viewer' as const,newReception:false,administration:false,commercial:true},
 ]){
   test(`${scenario.role} navigation honors role contract`,async({page},testInfo)=>{
     await mockAuthenticatedApp(page,scenario.role)
     await page.goto('/')
     await expectAuthenticatedNavigation(page,testInfo.project.name)
-    const configuration=page.getByRole('link',{name:'Mapa del OS'})
-    if(scenario.configuration)await expect(configuration).toBeVisible();else await expect(configuration).toHaveCount(0)
-    await expandAdministration(page)
-    const credits=page.getByRole('link',{name:/Créditos y anticipos/})
-    if(scenario.finance)await expect(credits).toBeVisible();else await expect(credits).toHaveCount(0)
+    const administration=page.getByRole('link',{name:'Administración',exact:true})
+    if(scenario.administration)await expect(administration).toBeVisible();else await expect(administration).toHaveCount(0)
+    const commercial=page.getByRole('link',{name:'Comercial',exact:true})
+    if(scenario.commercial)await expect(commercial).toBeVisible();else await expect(commercial).toHaveCount(0)
     await page.goto('/recepciones')
     await expect(page.getByRole('heading',{name:'Recepciones',exact:true})).toBeVisible()
     const receptionCta=page.getByRole('button',{name:/Nueva recepción/})
