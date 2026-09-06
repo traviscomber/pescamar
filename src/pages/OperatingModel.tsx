@@ -5,6 +5,7 @@ import '../operating-model.css'
 type Tone='system'|'operator'|'commercial'|'manager'|'support'
 type Task={tone:Tone;text:string;icon?:'check'|'alert'|'gear'}
 type Stage={step:string;title:string;description:string;icon:typeof Ship;tasks:Partial<Record<Tone,Task>>}
+type WorkflowFact={stage:string;state:'ready'|'partial';automated:string;human:string;next:string}
 
 const roles:{key:Tone;title:string;subtitle:string;icon:typeof Bot}[]=[
  {key:'system',title:'Sistema / automatización',subtitle:'Datos, reglas y contexto',icon:Bot},
@@ -21,6 +22,13 @@ const stages:Stage[]=[
  {step:'04',title:'Inventario y frío',description:'Control de stock, trazabilidad y cadena de frío.',icon:Snowflake,tasks:{system:{tone:'system',text:'Actualiza stock y cadena de frío'},operator:{tone:'operator',text:'Confirma movimientos críticos',icon:'check'}}},
  {step:'05',title:'Comercial y despacho',description:'Órdenes, clientes, despachos y liquidación.',icon:ShoppingCart,tasks:{system:{tone:'system',text:'Arrastra contexto de lote y stock'},commercial:{tone:'commercial',text:'Gestiona órdenes, guías, despacho y liquidación',icon:'check'},manager:{tone:'manager',text:'Aprueba sólo decisiones materiales',icon:'alert'}}},
  {step:'06',title:'Decisión y mejora',description:'Análisis, excepciones y mejora continua.',icon:TrendingUp,tasks:{system:{tone:'system',text:'Prioriza P1 / P2 / P3'},manager:{tone:'manager',text:'Decide con evidencia',icon:'check'},support:{tone:'support',text:'Soporte, usuarios, integraciones y auditoría',icon:'gear'}}},
+]
+
+const workflowFacts:WorkflowFact[]=[
+ {stage:'Recepción',state:'partial',automated:'Planta por alcance, fecha/hora, cálculo aceptado/merma y prellenado asistido desde evidencia.',human:'Confirmar proveedor maestro, documento y mediciones físicas reales: pesos y temperatura.',next:'Que el operador revise evidencia sugerida en vez de volver a digitar contexto documental.'},
+ {stage:'Producción',state:'ready',automated:'Planning calcula la siguiente prioridad usando órdenes, lotes y disponibilidad.',human:'Ejecutar físicamente el proceso y confirmar el rendimiento observado.',next:'No exigir revisión del plan completo salvo bloqueo o excepción.'},
+ {stage:'Packing',state:'partial',automated:'Scan identifica lote; planta y estación tienen defaults; escritura es idempotente y tolera offline.',human:'Confirmar el peso físico del packing.',next:'Sacar Planta, Lote y Estación del camino normal y dejarlos sólo como corrección manual.'},
+ {stage:'Inventario',state:'ready',automated:'Disponibilidad, bloqueos y kilos sin ubicación se calculan desde estado operacional.',human:'Intervenir sólo para resolver bloqueo o una ubicación física faltante.',next:'Mantener inventario como consecuencia del flujo, nunca como segunda digitación.'},
 ]
 
 const legend=[
@@ -57,6 +65,18 @@ export function OperatingModel(){
 
   <section className="operating-legend" aria-label="Leyenda de responsabilidades">
    {legend.map(item=><div key={item.tone}><span className={`legend-dot tone-${item.tone}`}/><p><b>{item.label}</b><small>{item.note}</small></p></div>)}
+  </section>
+
+  <section className="workflow-audit" aria-label="Auditoría de automatización del flujo">
+   <header><div><span className="overline teal">Seafood Chile Core</span><h2>Qué debe tocar una persona</h2><p>Estado observado en el flujo actual. Un dato heredable o calculable no debe convertirse en una nueva tarea humana.</p></div></header>
+   <div className="workflow-audit-grid">
+    {workflowFacts.map(item=><article className="workflow-audit-row" key={item.stage}>
+     <div className="workflow-audit-stage"><b>{item.stage}</b><span className={`workflow-state ${item.state}`}>{item.state==='ready'?'Flujo mínimo':'Reducible'}</span></div>
+     <div><small>Sistema</small><p>{item.automated}</p></div>
+     <div><small>Persona</small><p>{item.human}</p></div>
+     <div><small>Siguiente eliminación</small><p>{item.next}</p></div>
+    </article>)}
+   </div>
   </section>
 
   <section className="operating-summary">
