@@ -2,6 +2,7 @@ import type {SessionOperator} from './_auth.js'
 import {getSql} from './_db.js'
 import {buildSeaUrchinCopilotEvidence} from './_copilot-sea-urchin.js'
 import type {CopilotSource} from './_copilot-context.js'
+import {getLotLifecycle} from './_lot-lifecycle.js'
 
 type Row=Record<string,unknown>
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -15,6 +16,7 @@ export type LotControlTone='ready'|'attention'|'pending'|'info'
 export type LotControlCard={
  schemaVersion:'lot.control.v1'
  reception:{id:string;receptionNumber:string|number;plantId:string|null;species:string;supplier:string;qualityStatus:string;status:string;receivedAt:string|null}
+ lifecycle:{available:boolean;state:'open'|'closed';closedAt:string|null;closedBy:string|null}
  state:{code:string;label:string;tone:LotControlTone}
  blocker:string|null
  blockers:string[]
@@ -45,10 +47,11 @@ export async function buildLotControlCard(operator:SessionOperator,receptionId:u
  const receptionRaw=await sql`select r.id,r.reception_number,r.plant_id,r.species,r.status,r.quality_status,r.accepted_kg,r.received_at,p.legal_name supplier,coalesce((select count(*) from reception_evidence e where e.reception_id=r.id),0)::int evidence_count from receptions r join parties p on p.id=r.supplier_id where r.id=${id}::uuid and (${admin} or r.plant_id=any(${operator.plantIds}::text[])) limit 1`
  const reception=rows(receptionRaw)[0]
  if(!reception)return null
- const [eventRaw,holdRaw,dispatchRaw]=await Promise.all([
+ const [eventRaw,holdRaw,dispatchRaw,lifecycle]=await Promise.all([
   sql`select event_type,metrics,occurred_at from lot_events where reception_id=${id}::uuid order by occurred_at desc`,
   sql`select status,authority,reason,opened_at,resolved_at from regulatory_holds where reception_id=${id}::uuid order by opened_at desc`,
   sql`select status,dispatched_kg,dispatched_at from lot_dispatches where reception_id=${id}::uuid order by dispatched_at desc`,
+  getLotLifecycle(operator,id),
  ])
  const events=rows(eventRaw),holds=rows(holdRaw),dispatches=rows(dispatchRaw),qualityStatus=String(reception.quality_status??''),species=String(reception.species??''),isUrchin=/eriz|urchin/i.test(species)
  const latestProduction=events.find(event=>event.event_type==='production'&&num(record(event.metrics)?.outputKg)!=null),inputKg=num(reception.accepted_kg),outputKg=latestProduction?num(record(latestProduction.metrics)?.outputKg):null,yieldPct=inputKg!=null&&inputKg>0&&outputKg!=null?Number((outputKg/inputKg*100).toFixed(2)):null,lossKg=inputKg!=null&&outputKg!=null?Math.max(0,inputKg-outputKg):null
@@ -86,16 +89,19 @@ export async function buildLotControlCard(operator:SessionOperator,receptionId:u
   else{state={code:'in_process',label:'LOTE EN CURSO',tone:'info'};nextAction='Continuar packing, inventario o despacho según el plan.'}
   release={label:`${Number(reception.evidence_count??0)}`,tone:Number(reception.evidence_count??0)>0?'info':'pending',kind:'evidence'}
  }
+ const isClosed=lifecycle?.state==='closed'
+ if(isClosed){blockers=[];state={code:'closed',label:'LOTE CERRADO',tone:'ready'};nextAction='Sin acción operacional pendiente.'}
  const blocker=blockers[0]??null,qualityTone:LotControlTone=qualityStatus==='Clasificado'?'ready':qualityStatus==='Revisión'||qualityStatus==='Alerta calibre'?'attention':'pending',balanceTone:LotControlTone=yieldPct==null?'pending':'info',grade=text(erizoProcess?.grade),colorStatus=text(erizoProcess?.colorStatus)
  const qualityLabel=grade?`Grade ${grade}`:qualityStatus||'—',qualityDetail=grade?(colorStatus?`Color ${colorStatus}`:qualityStatus):qualityStatus||null
  return {
   schemaVersion:'lot.control.v1',
   reception:{id,receptionNumber:reception.reception_number as string|number,plantId:text(reception.plant_id),species,supplier:String(reception.supplier??''),qualityStatus,status:String(reception.status??''),receivedAt:text(reception.received_at)},
+  lifecycle:{available:lifecycle?.available??false,state:lifecycle?.state??'open',closedAt:lifecycle?.state==='closed'?lifecycle.latest?.occurredAt??null:null,closedBy:lifecycle?.state==='closed'?lifecycle.latest?.createdBy??null:null},
   state,
   blocker,
   blockers,
   nextAction,
-  nextRoute:routeForNext(nextAction,isUrchin,id),
+  nextRoute:isClosed?`/lotes/${encodeURIComponent(id)}`:routeForNext(nextAction,isUrchin,id),
   signals:{quality:{label:qualityLabel,detail:qualityDetail,tone:qualityTone},balance:{inputKg,outputKg,yieldPct,lossKg,tone:balanceTone},release},
   evidence:{count:Number(reception.evidence_count??0)},
   diagnosis:{state:blockers.length?'attention':'clear',blockers,nextAction,unknowns,rule:'deterministic_read_only'},
