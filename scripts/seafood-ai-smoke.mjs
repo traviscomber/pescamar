@@ -41,6 +41,8 @@ assert(operationalContext.includes("import {buildOperationalIntelligence} from '
 assert(operationalContext.includes('evidenceEventIds')===false,'copilot bridge must not invent signal evidence ids; ids come from buildOperationalIntelligence')
 assert(operationalContext.includes("id:'operational_intelligence'"),'copilot bridge must expose one classified operational intelligence source')
 assert(operationalContext.includes('writesOperationalState')===false,'copilot bridge must not introduce an independent write boundary')
+assert(operationalContext.includes('optionalVisionRows')&&operationalContext.includes("type:'vision'"),'copilot Event Graph bridge must include the same Vision evidence needed by lineage intelligence')
+assert(operationalContext.includes('suggestedGrade:text(row.suggested_grade)')&&operationalContext.includes('operatorGrade:text(row.operator_grade)')&&operationalContext.includes('confirmedBy:text(row.confirmed_by)'),'copilot Vision evidence must preserve human-review fields used by operational intelligence')
 assert(intelligence.includes("LEDGER_MOVEMENT_RULE='event_date is not null and (inflow_clp is not null or outflow_clp is not null)'"),'canonical intelligence must use dated monetary rows only as financial movements')
 assert(intelligence.includes('reference_rows'),'canonical intelligence must expose preserved non-movement ledger rows')
 assert(intelligence.includes("movementRule:'dated_monetary_row_only'"),'canonical intelligence must expose the finance grain contract')
@@ -58,4 +60,4 @@ if(failures.length){
  for(const failure of failures)console.error(`- ${failure}`)
  process.exit(1)
 }
-console.log('Seafood AI smoke PASS: evidence classes, organization scope, Event Graph operational priorities, canonical production gaps, audited ledger grain, read-only policy and source validation verified')
+console.log('Seafood AI smoke PASS: evidence classes, organization scope, Event Graph operational priorities including Vision review, canonical production gaps, audited ledger grain, read-only policy and source validation verified')
