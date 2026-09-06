@@ -9,8 +9,25 @@
 .canonical-inventory-evidence>.signal-grid{margin-bottom:14px}
 .canonical-inventory-evidence>.table-scroll{border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 
-.panel[aria-label="Siguiente acción recomendada"],.panel[aria-label="Siguiente acción de producción"]{border:0!important;border-top:1px solid var(--line)!important;border-bottom:1px solid var(--line)!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;padding:22px 0!important}
+/* Focus pages behave as instruments, not dashboard cards. */
+.decision-focus,.focus-surface,.decision-brief,.panel[aria-label="Siguiente acción recomendada"],.panel[aria-label="Siguiente acción de producción"]{border:0!important;border-top:1px solid var(--line)!important;border-bottom:1px solid var(--line)!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;padding:24px 0!important}
+.decision-focus>.section-heading,.focus-surface>.section-heading,.decision-brief>.section-heading{margin-bottom:16px}
+.decision-focus-icon{width:30px!important;height:30px!important;border:0!important;border-radius:0!important;background:transparent!important;color:var(--ocean)!important;display:grid;place-items:center}
+.decision-focus-copy h2,.decision-copy b,.focus-surface h2,.decision-brief h2{font-weight:500;letter-spacing:-.02em}
+.decision-focus-copy h2{margin:7px 0 8px;font-size:clamp(30px,3vw,44px)}
+.decision-focus-copy p,.decision-copy p,.focus-copy,.decision-brief>p{max-width:760px;color:var(--muted);font-size:11px;line-height:1.65}
+.decision-focus>.button.primary{justify-self:start;border:0!important;border-bottom:1px solid var(--ocean)!important;border-radius:0!important;padding-inline:0!important}
+.decision-focus>.signal-grid,.focus-surface>.signal-grid{margin-top:22px}
+.focus-primary-row,.decision-primary{border:0!important;border-top:1px solid var(--line)!important;border-bottom:1px solid var(--line)!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;margin:20px 0;padding:16px 0!important}
+.focus-primary-row small,.decision-primary small{letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font:600 8px Rajdhani}
+.focus-primary-row b,.decision-primary b{font-weight:500}
+.focus-primary-row span,.decision-primary span{color:var(--muted);font-size:10px}
+.focus-actions,.decision-focus>.page-actions,.decision-brief+.page-actions{gap:18px;margin-top:18px}
+.focus-actions .button,.decision-focus>.page-actions .button,.decision-primary .button{border:0!important;border-bottom:1px solid var(--ocean)!important;border-radius:0!important;background:transparent!important;color:var(--ocean)!important;padding-inline:0!important}
+.minimal-actions,.more-actions{border-top:1px solid var(--line);gap:24px;margin-top:18px;padding-top:16px;display:flex;align-items:center;flex-wrap:wrap}
+.minimal-actions a,.more-actions a{letter-spacing:.04em}
 .panel[aria-label="Siguiente acción de producción"]>.empty-state{min-height:210px;padding:34px 0}
+
 details.panel.list-panel{border:0!important;border-bottom:1px solid var(--line)!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
 details.panel.list-panel>summary{min-height:54px;padding:14px 0;list-style:none;cursor:pointer;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:18px}
 details.panel.list-panel>summary::-webkit-details-marker{display:none}
@@ -42,5 +59,7 @@ details.panel.list-panel[open]>summary{border-bottom:1px solid var(--line)}
   .corporate-plant-card,.corporate-plant-card:nth-child(2n),.corporate-plant-card:nth-child(3n){min-height:0!important;border-right:0!important;border-bottom:1px solid var(--line)!important}
   details.panel.list-panel>summary{align-items:flex-start;display:grid}
   details.panel.list-panel>summary>span:first-child{display:grid;gap:3px}
-  .inventory-workspace,.inventory-ledger,.canonical-inventory-evidence,.panel[aria-label="Siguiente acción recomendada"],.panel[aria-label="Siguiente acción de producción"]{padding:18px 0!important}
+  .inventory-workspace,.inventory-ledger,.canonical-inventory-evidence,.decision-focus,.focus-surface,.decision-brief,.panel[aria-label="Siguiente acción recomendada"],.panel[aria-label="Siguiente acción de producción"]{padding:18px 0!important}
+  .focus-primary-row,.decision-primary{align-items:flex-start!important;gap:14px;display:grid!important}
+  .minimal-actions,.more-actions{align-items:flex-start;display:grid}
 }
