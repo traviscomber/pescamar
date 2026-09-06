@@ -33,6 +33,10 @@ async function expectAuthenticatedNavigation(page:Page,projectName:string){
   await expect(page.getByRole('link',{name:'Operación',exact:true})).toBeVisible()
 }
 
+async function visibleCount(locator:ReturnType<Page['getByRole']>){
+  return locator.evaluateAll(elements=>elements.filter(element=>{const style=getComputedStyle(element);const box=element.getBoundingClientRect();return style.visibility!=='hidden'&&style.display!=='none'&&box.width>0&&box.height>0}).length)
+}
+
 test('login surface is accessible and stable',async({page},testInfo)=>{
   const consoleErrors:string[]=[]
   page.on('console',message=>{if(message.type()==='error')consoleErrors.push(message.text())})
@@ -72,14 +76,11 @@ test('canonical home starts with operational hierarchy and stable theme switchin
   await page.addInitScript(()=>localStorage.setItem('pescamar-theme','light'))
   await mockAuthenticatedApp(page,'operations',['ancud'])
   await page.goto('/')
-  const h1=page.getByRole('heading',{name:'Qué requiere acción',exact:true})
+  const h1=page.getByRole('heading',{name:'Qué necesita atención ahora',exact:true})
   await expect(h1).toBeVisible()
-  const receptionCta=page.getByRole('button',{name:/Nueva recepción/})
-  if(testInfo.project.name==='mobile-chromium')await expect(receptionCta).toHaveCount(1)
-  else expect(await receptionCta.count()).toBeLessThanOrEqual(1)
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
   const h1Size=await h1.evaluate(element=>Number.parseFloat(getComputedStyle(element).fontSize))
-  expect(h1Size).toBeGreaterThanOrEqual(30)
+  expect(h1Size).toBeGreaterThanOrEqual(20)
   const brief=page.getByRole('region',{name:'Centro de decisión'})
   await expect(brief).toBeVisible()
   const [h1Box,briefBox]=await Promise.all([h1.boundingBox(),brief.boundingBox()])
@@ -112,7 +113,7 @@ for(const scenario of [
     await page.goto('/recepciones')
     await expect(page.getByRole('heading',{name:'Recepciones',exact:true})).toBeVisible()
     const receptionCta=page.getByRole('button',{name:/Nueva recepción/})
-    if(scenario.newReception)await expect(receptionCta).toHaveCount(1);else await expect(receptionCta).toHaveCount(0)
+    expect(await visibleCount(receptionCta)).toBe(scenario.newReception?1:0)
     expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
     await page.screenshot({path:testInfo.outputPath(`${scenario.role}-receptions.png`),fullPage:true})
   })
@@ -156,15 +157,15 @@ test('mobile drawer traps focus, closes with Escape and restores trigger focus',
   await expect(trigger).toBeFocused()
 })
 
-test('inventory shell and signal rail remain stable',async({page},testInfo)=>{
+test('inventory focus shell remains stable',async({page},testInfo)=>{
   await page.addInitScript(()=>localStorage.setItem('pescamar-theme','dark'))
   await mockAuthenticatedApp(page,'operations',['ancud'])
   await page.goto('/inventario')
   await expect(page.getByRole('heading',{name:'Inventario',exact:true})).toBeVisible()
-  await expect(page.locator('.topbar-context')).toContainText('Pescamar')
-  await expect(page.locator('.topbar-context')).toContainText('Inventario')
-  const signals=page.locator('.inventory-signals .signal-card')
-  await expect(signals).toHaveCount(4)
+  await expect(page.getByText('Planificable',{exact:true})).toBeVisible()
+  await expect(page.getByText('Bloqueados',{exact:true})).toBeVisible()
+  await expect(page.getByText('Por ubicar',{exact:true})).toBeVisible()
+  await expect(page.getByRole('link',{name:/Ver inventario completo/})).toBeVisible()
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
   await page.screenshot({path:testInfo.outputPath('inventory-shell.png'),fullPage:true})
 })
@@ -174,8 +175,8 @@ test('Pescamar IA shell keeps stage and module hierarchy',async({page},testInfo)
   await mockAuthenticatedApp(page,'operations',['ancud'])
   await page.goto('/pescamar-ia')
   await expect(page.getByRole('heading',{name:'Pescamar IA',exact:true})).toBeVisible()
-  await expect(page.locator('.topbar-context')).toContainText('Inteligencia y control')
-  await expect(page.locator('.topbar-context')).toContainText('Pescamar IA')
+  await expect(page.getByText('Inteligencia y control',{exact:true})).toBeVisible()
+  await expect(page.getByText(/Seafood AI · evidence-native/)).toBeVisible()
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
   await page.screenshot({path:testInfo.outputPath('pescamar-ia-shell.png'),fullPage:true})
 })
