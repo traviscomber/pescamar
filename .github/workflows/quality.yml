@@ -52,6 +52,8 @@ jobs:
         run: node scripts/navigation-flow-smoke.mjs
       - name: Minimum-team operational flow contract
         run: node scripts/minimum-team-flow-smoke.mjs
+      - name: Cold sensor ingest contract
+        run: node scripts/cold-sensor-ingest-smoke.mjs
       - name: Seafood lineage contract
         run: node scripts/seafood-lineage-smoke.mjs
       - name: Lineage intelligence UI contract
