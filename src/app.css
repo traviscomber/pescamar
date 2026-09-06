@@ -1,4 +1,4 @@
-@layer base, premium, control, modules, auth, brand, responsive, system, avantgarde, accessibility;
+@layer base, premium, control, modules, auth, brand, responsive, system, accessibility;
 
 @import './styles.css' layer(base);
 @import './premium.css' layer(premium);
@@ -18,5 +18,5 @@
 @import './plant-execution-pass.css' layer(system);
 @import './control-tower-pass.css' layer(system);
 @import './urchin-focus.css' layer(system);
-@import './avant-garde.css' layer(avantgarde);
+@import './avant-garde.css' layer(system);
 @import './a11y.css' layer(accessibility);
