@@ -1,4 +1,4 @@
-import {activeOrganization} from './_organization.js'
+import {activeOrganization,type OrganizationContext} from './_organization.js'
 
 export const SEAFOOD_EVENT_SCHEMA='seafood.event.v1' as const
 
@@ -32,13 +32,14 @@ export type SeafoodEvent={
 type SeafoodEventInput=Omit<SeafoodEvent,'schemaVersion'|'organizationId'|'source'> & {
   source:{entityType:string;entityId:string}
 }
+type SeafoodEventOrganization=Pick<OrganizationContext,'organizationId'|'sourceSystem'>
 
-export function seafoodEvent(input:SeafoodEventInput):SeafoodEvent{
+export function seafoodEvent(input:SeafoodEventInput,organization:SeafoodEventOrganization=activeOrganization):SeafoodEvent{
   return {
     ...input,
     schemaVersion:SEAFOOD_EVENT_SCHEMA,
-    organizationId:activeOrganization.organizationId,
-    source:{system:activeOrganization.sourceSystem,...input.source},
+    organizationId:organization.organizationId,
+    source:{system:organization.sourceSystem,...input.source},
   }
 }
 
