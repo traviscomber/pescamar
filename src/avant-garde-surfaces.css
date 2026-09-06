@@ -4,7 +4,13 @@
 .inventory-workspace>.empty-state{min-height:210px;padding:34px 0}
 .inventory-ledger{margin-top:22px}
 
-.panel[aria-label="Siguiente acción recomendada"]{border:0!important;border-top:1px solid var(--line)!important;border-bottom:1px solid var(--line)!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;padding:22px 0!important}
+.canonical-inventory-evidence{border:0!important;border-top:1px solid var(--line)!important;border-bottom:1px solid var(--line)!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;padding:22px 0!important;margin:22px 0}
+.canonical-inventory-evidence>.section-heading{margin-bottom:12px}
+.canonical-inventory-evidence>.signal-grid{margin-bottom:14px}
+.canonical-inventory-evidence>.table-scroll{border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+
+.panel[aria-label="Siguiente acción recomendada"],.panel[aria-label="Siguiente acción de producción"]{border:0!important;border-top:1px solid var(--line)!important;border-bottom:1px solid var(--line)!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;padding:22px 0!important}
+.panel[aria-label="Siguiente acción de producción"]>.empty-state{min-height:210px;padding:34px 0}
 details.panel.list-panel{border:0!important;border-bottom:1px solid var(--line)!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
 details.panel.list-panel>summary{min-height:54px;padding:14px 0;list-style:none;cursor:pointer;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:18px}
 details.panel.list-panel>summary::-webkit-details-marker{display:none}
@@ -36,5 +42,5 @@ details.panel.list-panel[open]>summary{border-bottom:1px solid var(--line)}
   .corporate-plant-card,.corporate-plant-card:nth-child(2n),.corporate-plant-card:nth-child(3n){min-height:0!important;border-right:0!important;border-bottom:1px solid var(--line)!important}
   details.panel.list-panel>summary{align-items:flex-start;display:grid}
   details.panel.list-panel>summary>span:first-child{display:grid;gap:3px}
-  .inventory-workspace,.inventory-ledger,.panel[aria-label="Siguiente acción recomendada"]{padding:18px 0!important}
+  .inventory-workspace,.inventory-ledger,.canonical-inventory-evidence,.panel[aria-label="Siguiente acción recomendada"],.panel[aria-label="Siguiente acción de producción"]{padding:18px 0!important}
 }
