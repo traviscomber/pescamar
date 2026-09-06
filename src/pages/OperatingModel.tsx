@@ -25,10 +25,12 @@ const stages:Stage[]=[
 ]
 
 const workflowFacts:WorkflowFact[]=[
- {stage:'Recepción',state:'partial',automated:'Planta por alcance, fecha/hora, cálculo aceptado/merma y prellenado asistido desde evidencia.',human:'Confirmar proveedor maestro, documento y mediciones físicas reales: pesos y temperatura.',next:'Que el operador revise evidencia sugerida en vez de volver a digitar contexto documental.'},
- {stage:'Producción',state:'ready',automated:'Planning calcula la siguiente prioridad usando órdenes, lotes y disponibilidad.',human:'Ejecutar físicamente el proceso y confirmar el rendimiento observado.',next:'No exigir revisión del plan completo salvo bloqueo o excepción.'},
+ {stage:'Recepción',state:'partial',automated:'Planta por alcance, fecha/hora, cálculo aceptado/merma y propuesta de contexto documental desde evidencia.',human:'Confirmar contexto documental propuesto y medir físicamente bruto, tara, escurrido y temperatura.',next:'Reducir la corrección administrativa a diferencias; nunca promover mediciones físicas desde Vision.'},
+ {stage:'Producción',state:'ready',automated:'Planning calcula la siguiente prioridad usando órdenes, lotes y disponibilidad.',human:'Ejecutar físicamente el proceso y confirmar el rendimiento observado.',next:'El plan completo sólo reaparece ante bloqueo o excepción.'},
  {stage:'Packing',state:'ready',automated:'Scan identifica lote; planta y estación se heredan; escritura es idempotente y tolera offline.',human:'Escanear el lote y confirmar el peso físico del packing.',next:'Mantener Planta, Lote y Estación sólo como corrección manual, no como pasos normales.'},
  {stage:'Inventario',state:'ready',automated:'Disponibilidad, bloqueos y kilos sin ubicación se calculan desde estado operacional.',human:'Intervenir sólo para resolver bloqueo o una ubicación física faltante.',next:'Mantener inventario como consecuencia del flujo, nunca como segunda digitación.'},
+ {stage:'Cadena de frío',state:'partial',automated:'El sistema conserva ciclos, activo, planta, rangos, observaciones, desviaciones e identidad de sensor cuando la lectura llega.',human:'Registrar lectura manual cuando no exista telemetría y revisar cualquier desviación antes de liberar producto.',next:'Ingerir telemetría automáticamente desde sensores reales; mantener captura manual sólo como fallback auditado.'},
+ {stage:'Comercial',state:'partial',automated:'Órdenes calculan cobertura, lotes elegibles, kilos disponibles y máximo reservable sin sobreprometer.',human:'Confirmar cliente, compromiso económico y la reserva física que afecta disponibilidad comercial.',next:'Proponer lote y cantidad desde disponibilidad real, pero conservar confirmación humana del compromiso.'},
 ]
 
 const legend=[
