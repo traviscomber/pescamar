@@ -19,7 +19,7 @@ const header=(req:Request,name:string)=>{const value=req.headers?.[name]??req.he
 const authorized=(req:Request)=>{
  const expected=configuredSecret(),provided=header(req,'x-pescamar-sensor-key').trim()
  if(!expected||!provided)return false
- const a=Buffer.from(expected),b=Buffer.from(provided)
+ const a=Buffer.from(expected,'utf8'),b=Buffer.from(provided,'utf8')
  return a.length===b.length&&timingSafeEqual(a,b)
 }
 
