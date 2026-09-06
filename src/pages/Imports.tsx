@@ -9,11 +9,14 @@ import { createImportBatch, type ImportBatch, type PlantState, type ValidatedImp
 import { plants as configuredPlants } from '../plants'
 
 type CanonicalSource={file_hash:string;file_name:string;source_kind:string;period_start:string|null;period_end:string|null;record_count:number|string;notes:string|null}
-type CanonicalRow={rows:number|string;flagged:number|string;guide_kg?:number|string;received_kg?:number|string;inflow_clp?:number|string;outflow_clp?:number|string;final_balance_clp?:number|string;amount_clp?:number|string;kg?:number|string;product_family?:string;pack_format?:string}
+type CanonicalRow={rows:number|string;source_rows?:number|string;reference_rows?:number|string;flagged:number|string;guide_kg?:number|string;received_kg?:number|string;inflow_clp?:number|string;outflow_clp?:number|string;final_balance_clp?:number|string;amount_clp?:number|string;kg?:number|string;product_family?:string;pack_format?:string}
 type CanonicalStatus={sources?:CanonicalSource[];datasets?:{production?:CanonicalRow[];ledger?:CanonicalRow[];stock?:CanonicalRow[];transfers?:CanonicalRow[];packing?:CanonicalRow[]};error?:string}
 type CanonicalUploadResult={ok?:boolean;fileName?:string;fileHash?:string;result?:Record<string,number>;error?:string}
-type CanonicalConnection={target:string;mode:string;total?:number|string;reception_ready?:number|string;timing_ready?:number|string;quality_ready?:number|string;review_required?:number|string;non_unique_context_rows?:number|string;non_unique_contexts?:number|string;production_before_process?:number|string;date_sequence_inconsistent?:number|string;missing_received_kg?:number|string;missing_reception_date?:number|string;missing_process_date?:number|string;process_before_reception?:number|string;production_before_reception?:number|string;yield_formula_error?:number|string;missing_production_date?:number|string;missing_grade_breakdown?:number|string;suppliers?:number|string;exact?:number|string;missing?:number|string;ambiguous?:number|string;unmatched?:number|string;lots?:number|string;exact_lots?:number|string;unmatched_lots?:number|string;outside_coverage_lots?:number|string;unresolved_within_coverage_lots?:number|string;boxes?:number|string;lot_referenced_boxes?:number|string;unreferenced_boxes?:number|string;unreferenced_kg?:number|string;upstream_last_date?:string|null;packing_first_date?:string|null;packing_last_date?:string|null;product_family?:string|null;kg?:number|string;transfers?:number|string;direct_exact_transfers?:number|string;grouped_exact_transfers?:number|string;grouped_exact_groups?:number|string;matched_transfers?:number|string;rows?:number|string;flagged?:number|string}
+type CanonicalConnection={target:string;mode:string;total?:number|string;reception_ready?:number|string;timing_ready?:number|string;quality_ready?:number|string;review_required?:number|string;non_unique_context_rows?:number|string;non_unique_contexts?:number|string;production_before_process?:number|string;date_sequence_inconsistent?:number|string;missing_received_kg?:number|string;missing_reception_date?:number|string;missing_process_date?:number|string;process_before_reception?:number|string;production_before_reception?:number|string;yield_formula_error?:number|string;missing_production_date?:number|string;missing_grade_breakdown?:number|string;suppliers?:number|string;exact?:number|string;missing?:number|string;ambiguous?:number|string;unmatched?:number|string;lots?:number|string;exact_lots?:number|string;unmatched_lots?:number|string;outside_coverage_lots?:number|string;unresolved_within_coverage_lots?:number|string;boxes?:number|string;lot_referenced_boxes?:number|string;unreferenced_boxes?:number|string;unreferenced_kg?:number|string;upstream_last_date?:string|null;packing_first_date?:string|null;packing_last_date?:string|null;product_family?:string|null;kg?:number|string;transfers?:number|string;direct_exact_transfers?:number|string;grouped_exact_transfers?:number|string;grouped_exact_groups?:number|string;matched_transfers?:number|string;rows?:number|string;flagged?:number|string;ledger_source_rows?:number|string;ledger_movement_rows?:number|string;ledger_reference_rows?:number|string;ledger_summary_rows?:number|string}
 type CanonicalConnections={connections?:{production?:CanonicalConnection;parties?:CanonicalConnection;packing?:CanonicalConnection;finance?:CanonicalConnection;stock?:CanonicalConnection};governance?:{promotion?:string;writesLive?:boolean;rule?:string};error?:string}
+type CanonicalQuality={datasets?:{production?:Record<string,number|string>;ledger?:Record<string,number|string>;packing?:Record<string,number|string>};assessment?:{blockers?:string[];reviews?:string[];status?:string};readOnly?:boolean;error?:string}
+type CoverageSource={file_hash:string;file_name:string;source_kind:string;declared_start:string|null;declared_end:string|null;observed_start:string|null;observed_end:string|null;observed_records:number|string;start_status:string;end_status:string}
+type CanonicalCoverage={sources?:CoverageSource[];assessment?:{total:number;drifted:number;clean:boolean};readOnly?:boolean;error?:string}
 const nf=new Intl.NumberFormat('es-CL',{maximumFractionDigits:1})
 const clp=new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0})
 const approvedNames=new Set(['planilla de produccion 2026.xlsx','CUENTA2.xlsx','packing pulpo pescamar 2026-2.xlsx'])
@@ -23,6 +26,8 @@ export function Imports(){
   const [history,setHistory]=useState<ImportBatch[]>([])
   const [canonical,setCanonical]=useState<CanonicalStatus|null>(null)
   const [connections,setConnections]=useState<CanonicalConnections|null>(null)
+  const [quality,setQuality]=useState<CanonicalQuality|null>(null)
+  const [coverage,setCoverage]=useState<CanonicalCoverage|null>(null)
   const [open,setOpen]=useState(false)
   const [loading,setLoading]=useState(true)
   const [error,setError]=useState('')
@@ -35,16 +40,22 @@ export function Imports(){
   const load=async()=>{
     setLoading(true)
     try{
-      const [state,canonicalResponse,connectionsResponse]=await Promise.all([
+      const [state,canonicalResponse,connectionsResponse,qualityResponse,coverageResponse]=await Promise.all([
         fetchSharedPlantState(),
         fetch('/api/canonical-status',{cache:'no-store'}),
-        fetch('/api/canonical-connections',{cache:'no-store'})
+        fetch('/api/canonical-connections',{cache:'no-store'}),
+        fetch('/api/canonical-quality',{cache:'no-store'}),
+        fetch('/api/canonical-source-coverage',{cache:'no-store'})
       ])
       setPlants(state.plants?.length?state.plants:configuredPlants)
       setHistory(state.history??[])
       if(canonicalResponse.ok)setCanonical(await canonicalResponse.json() as CanonicalStatus)
       if(connectionsResponse.ok)setConnections(await connectionsResponse.json() as CanonicalConnections)
       else setConnections({error:(await connectionsResponse.json().catch(()=>({} as CanonicalConnections)) as CanonicalConnections).error??'Conexiones canónicas no disponibles'})
+      if(qualityResponse.ok)setQuality(await qualityResponse.json() as CanonicalQuality)
+      else setQuality({error:(await qualityResponse.json().catch(()=>({} as CanonicalQuality)) as CanonicalQuality).error??'Calidad canónica no disponible'})
+      if(coverageResponse.ok)setCoverage(await coverageResponse.json() as CanonicalCoverage)
+      else setCoverage({error:(await coverageResponse.json().catch(()=>({} as CanonicalCoverage)) as CanonicalCoverage).error??'Cobertura canónica no disponible'})
       setError('')
     }catch(cause){
       setError(cause instanceof Error?cause.message:'No fue posible cargar las importaciones')
@@ -83,6 +94,8 @@ export function Imports(){
   const production=canonical?.datasets?.production?.[0],ledger=canonical?.datasets?.ledger?.[0],transfers=canonical?.datasets?.transfers?.[0]
   const packingKg=(canonical?.datasets?.packing??[]).reduce((sum,row)=>sum+Number(row.kg??0),0)
   const productionReview=Number(connections?.connections?.production?.review_required??0)
+  const qualityProduction=quality?.datasets?.production,qualityLedger=quality?.datasets?.ledger,qualityPacking=quality?.datasets?.packing
+  const coverageDrift=(coverage?.sources??[]).filter(source=>source.start_status!=='aligned'||source.end_status!=='aligned')
   const connectionRows=useMemo(()=>{
     const value=connections?.connections
     if(!value)return []
@@ -136,6 +149,16 @@ export function Imports(){
     </section>
 
     <section className="panel import-history">
+      <header className="panel-header"><div><span className="overline teal">Calidad canónica</span><h2>Qué sabemos y qué falta validar</h2></div><span>{quality?.assessment?.status==='clean'?'Limpio':quality?.assessment?.status==='blocked'?'Bloqueado':'Revisión requerida'}</span></header>
+      {quality?.error?<div className="system-banner error"><AlertTriangle size={16}/>{quality.error}</div>:<div className="detail-alerts">
+        <div><ShieldCheck size={17}/><span><b>Cuenta corriente</b><small>{nf.format(Number(qualityLedger?.movement_rows??ledger?.rows??0))} movimientos · {nf.format(Number(qualityLedger?.reference_rows??ledger?.reference_rows??0))} filas preservadas como referencia · {nf.format(Number(qualityLedger?.canonical_balance_mismatch_rows??0))} discrepancias materiales de saldo canónico</small></span><em>{Number(qualityLedger?.canonical_balance_mismatch_rows??0)>0?'BLOQUEAR':'CONTROLADO'}</em></div>
+        <div><AlertTriangle size={17}/><span><b>Producción histórica</b><small>{nf.format(Number(qualityProduction?.missing_guide_price??0))} sin precio guía · {nf.format(Number(qualityProduction?.missing_or_nonstandard_guide??0))} sin guía estándar · {nf.format(Number(qualityProduction?.process_before_reception??0)+Number(qualityProduction?.production_before_process??0)+Number(qualityProduction?.production_before_reception??0))} señales de secuencia temporal</small></span><em>REVISAR</em></div>
+        <div><Database size={17}/><span><b>Packing histórico</b><small>{nf.format(Number(qualityPacking?.missing_lot_boxes??0))} cajas sin lote · {nf.format(Number(qualityPacking?.missing_lot_kg??0))} kg sin referencia de lote</small></span><em>{Number(qualityPacking?.missing_lot_boxes??0)>0?'TRAZABILIDAD':'CONTROLADO'}</em></div>
+      </div>}
+      {coverage?.error?<div className="system-banner error"><AlertTriangle size={16}/>{coverage.error}</div>:coverageDrift.length?<div className="governance-note"><AlertTriangle size={19}/><div><b>Cobertura declarada con drift</b><p>{coverageDrift.map(source=>`${source.file_name}: declarado ${formatDate(source.declared_end)} · observado ${formatDate(source.observed_end)}`).join(' · ')}</p><p>El OS usa la cobertura observada como diagnóstico y conserva la metadata declarada como evidencia; no la reescribe silenciosamente.</p></div></div>:<div className="governance-note"><CheckCircle2 size={19}/><div><b>Cobertura alineada</b><p>Las fechas declaradas de las fuentes coinciden con la evidencia fechada actualmente publicada.</p></div></div>}
+    </section>
+
+    <section className="panel import-history">
       <header className="panel-header"><div><span className="overline teal">Conexiones canónicas</span><h2>Qué alimenta cada módulo</h2></div><span>{connections?.governance?.writesLive===false?'Lectura segura':'Verificando'}</span></header>
       {connections?.error?<div className="system-banner error"><AlertTriangle size={16}/>{connections.error}</div>:connectionRows.length?<div className="detail-alerts">{connectionRows.map(row=><div key={row.key}>
         <Database size={17}/><span><b>{row.title}</b><small>{row.detail} · destino: {row.target??'—'}</small></span><em>{row.status}</em>
@@ -162,7 +185,7 @@ export function Imports(){
       <div className="detail-alerts">{(canonical?.sources??[]).map(source=><div key={source.file_hash}>
         <FileSpreadsheet size={17}/><span><b>{source.file_name}</b><small>{source.source_kind} · {Number(source.record_count)} filas declaradas · hash {source.file_hash.slice(0,10)}…</small></span><em>{datasetPublished(source.file_name,canonical)?'CANON':'REGISTRADO'}</em>
       </div>)}</div>
-      {ledger?<div className="governance-note"><ShieldCheck size={19}/><div><b>Cuenta corriente preservada como staging</b><p>Entradas {clp.format(Number(ledger.inflow_clp??0))} · salidas {clp.format(Number(ledger.outflow_clp??0))} · saldo recalculado {clp.format(Number(ledger.final_balance_clp??0))}. No se interpreta aún como caja, deuda o saldo bancario.</p></div></div>:null}
+      {ledger?<div className="governance-note"><ShieldCheck size={19}/><div><b>Cuenta corriente preservada como staging</b><p>{nf.format(Number(ledger.rows??0))} movimientos financieros · {nf.format(Number(ledger.reference_rows??0))} filas de referencia preservadas · entradas {clp.format(Number(ledger.inflow_clp??0))} · salidas {clp.format(Number(ledger.outflow_clp??0))} · saldo recalculado {clp.format(Number(ledger.final_balance_clp??0))}. No se interpreta aún como caja, deuda o saldo bancario.</p></div></div>:null}
     </section>
 
     <section className="import-layout">
@@ -192,3 +215,4 @@ export function Imports(){
 }
 
 function datasetPublished(fileName:string,status:CanonicalStatus|null){if(fileName==='planilla de produccion 2026.xlsx')return Number(status?.datasets?.production?.[0]?.rows??0)>0;if(fileName==='CUENTA2.xlsx')return Number(status?.datasets?.ledger?.[0]?.rows??0)>0||Number(status?.datasets?.stock?.[0]?.rows??0)>0;if(fileName==='packing pulpo pescamar 2026-2.xlsx')return (status?.datasets?.packing??[]).some(row=>Number(row.rows??0)>0);return false}
+function formatDate(value:string|null|undefined){if(!value)return '—';const date=new Date(value);return Number.isNaN(date.getTime())?'—':date.toLocaleDateString('es-CL')}
