@@ -1,14 +1,16 @@
-import {Activity, Building2, ClipboardCheck, Database, Eye, Factory, FileSpreadsheet, History, Link2, Settings2, ShieldCheck, UsersRound} from 'lucide-react'
-import {Link} from 'react-router-dom'
+import {Activity, ArrowLeft, Building2, ClipboardCheck, Database, Eye, Factory, FileSpreadsheet, History, Link2, Settings2, ShieldCheck, UsersRound} from 'lucide-react'
+import {Link,useSearchParams} from 'react-router-dom'
 import {canAccessPath} from '../access'
 import {useAuth} from '../auth'
 import {PageHeader} from '../components/PageHeader'
+import {OperatingModel} from './OperatingModel'
 
 type AdminItem={to:string;label:string;description:string;icon:typeof Settings2}
 type AdminGroup={label:string;description:string;items:AdminItem[]}
 
 const groups:AdminGroup[]=[
  {label:'Operación y planta',description:'Configura la estructura física y los puntos donde ocurre la operación.',items:[
+  {to:'/modulos?view=modelo-operativo',label:'Modelo operativo',description:'Tareas, responsables, automatización y escalamiento.',icon:UsersRound},
   {to:'/plantas',label:'Plantas',description:'Red operacional y estado de activación.',icon:Factory},
   {to:'/estaciones',label:'Estaciones y dispositivos',description:'Puestos, equipos y captura en planta.',icon:Activity},
   {to:'/rollout',label:'Activación',description:'Gates de UAT y habilitación por planta.',icon:ClipboardCheck},
@@ -34,7 +36,9 @@ const groups:AdminGroup[]=[
 
 export function Modules(){
  const {operator}=useAuth()
- const visibleGroups=operator?groups.map(group=>({...group,items:group.items.filter(item=>canAccessPath(operator.role,item.to))})).filter(group=>group.items.length):[]
+ const [searchParams]=useSearchParams()
+ if(searchParams.get('view')==='modelo-operativo')return <><Link className="admin-back-link" to="/modulos"><ArrowLeft size={15}/> Administración</Link><OperatingModel/></>
+ const visibleGroups=operator?groups.map(group=>({...group,items:group.items.filter(item=>canAccessPath(operator.role,item.to.split('?')[0]))})).filter(group=>group.items.length):[]
  return <>
   <PageHeader eyebrow="Administración" title="Configuración y control" description="Accesos poco frecuentes para administrar la instancia. El trabajo diario permanece en Hoy, Operación, Comercial e Inteligencia."/>
   <section className="admin-hub-grid" aria-label="Administración del sistema">
