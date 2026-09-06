@@ -17,7 +17,8 @@ const allowedMime=new Set(['image/jpeg','image/png','image/webp'])
 const text=(value:unknown,max=500)=>String(value??'').trim().replace(/\s+/g,' ').slice(0,max)
 const num=(value:unknown,min:number,max:number)=>{const parsed=Number(value);return Number.isFinite(parsed)&&parsed>=min&&parsed<=max?parsed:null}
 const int=(value:unknown,min:number,max:number)=>{const parsed=Number(value);return Number.isInteger(parsed)&&parsed>=min&&parsed<=max?parsed:null}
-const canWrite=(operator:SessionOperator)=>['admin','operations','quality'].includes(operator.role)
+const canCapture=(operator:SessionOperator)=>['admin','operations','quality'].includes(operator.role)
+const canConfirm=(operator:SessionOperator)=>['admin','quality'].includes(operator.role)
 const canManageReferences=(operator:SessionOperator)=>['admin','quality'].includes(operator.role)
 const visible=(operator:SessionOperator,plantId:unknown)=>operator.role==='admin'||typeof plantId!=='string'||!plantId||hasPlantAccess(operator,plantId)
 
@@ -83,16 +84,25 @@ async function list(req:Request,res:Response,operator:SessionOperator){
   run.plant_id?referencesForPlant(run.plant_id):Promise.resolve([])
  ])
  const captures=Array.isArray(capturesRaw)?capturesRaw.map(item=>({...item,seedMatch:seedSummary((item as {source_image_sha256?:unknown;image_sha256?:unknown}).source_image_sha256??(item as {image_sha256?:unknown}).image_sha256)})):[]
- return res.status(200).json({ok:true,run:{id:run.id,plantId:run.plant_id,grade:run.grade},captures,references,permissions:{canWrite:canWrite(operator),canManageReferences:canManageReferences(operator)}})
+ const capture=canCapture(operator),confirm=canConfirm(operator)
+ return res.status(200).json({ok:true,run:{id:run.id,plantId:run.plant_id,grade:run.grade},captures,references,permissions:{canWrite:capture,canCapture:capture,canConfirm:confirm,canManageReferences:canManageReferences(operator)}})
 }
 
 async function mutate(req:Request,res:Response,operator:SessionOperator){
- if(!canWrite(operator))return res.status(403).json({ok:false,error:'Tu rol no puede registrar control de color'})
  const input=(req.body??{}) as Input
  const action=text(input.action,40)
- if(action==='capture')return capture(input,res,operator)
- if(action==='reference')return createReference(input,res,operator)
- if(action==='confirm')return confirmCapture(input,res,operator)
+ if(action==='capture'){
+  if(!canCapture(operator))return res.status(403).json({ok:false,error:'Tu rol no puede registrar evidencia de color'})
+  return capture(input,res,operator)
+ }
+ if(action==='reference'){
+  if(!canManageReferences(operator))return res.status(403).json({ok:false,error:'Sólo Calidad o Administración puede fijar referencias'})
+  return createReference(input,res,operator)
+ }
+ if(action==='confirm'){
+  if(!canConfirm(operator))return res.status(403).json({ok:false,error:'Sólo Calidad o Administración puede confirmar Color / Grade'})
+  return confirmCapture(input,res,operator)
+ }
  return res.status(400).json({ok:false,error:'Acción inválida'})
 }
 
@@ -140,6 +150,7 @@ async function createReference(input:Input,res:Response,operator:SessionOperator
 }
 
 async function confirmCapture(input:Input,res:Response,operator:SessionOperator){
+ if(!canConfirm(operator))return res.status(403).json({ok:false,error:'Sólo Calidad o Administración puede confirmar Color / Grade'})
  const captureId=text(input.captureId,40),decision=text(input.decision,20),grade=text(input.grade,2)||null
  if(!uuid.test(captureId)||!['accepted','review','ng'].includes(decision)||grade&&!['A','B','C','D','E'].includes(grade))return res.status(400).json({ok:false,error:'Confirmación inválida'})
  const sql=getSql()
