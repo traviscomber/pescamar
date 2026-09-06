@@ -28,18 +28,22 @@ function production(ws:ExcelJS.Worksheet){
   const rec=dateCell(ws.getCell(r,1).value),proc=dateCell(ws.getCell(r,2).value),prod=dateCell(ws.getCell(r,3).value)
   const supplierOriginal=s(ws.getCell(r,6).value)||null,supplierName=supplierOriginal?aliases[supplierOriginal.toLowerCase()]??supplierOriginal:null
   const siteOriginal=s(ws.getCell(r,9).value)||null,siteName=siteOriginal?sites[siteOriginal.toLowerCase()]??siteOriginal:null
+  const guide=s(ws.getCell(r,5).value)||null,guidePriceClp=n(ws.getCell(r,8).value),guideKg=n(ws.getCell(r,11).value),receivedKg=n(ws.getCell(r,12).value)
   const flags:string[]=[]
+  if(!rec)flags.push('missing_reception_date')
+  if(!proc)flags.push('missing_process_date')
+  if(!prod)flags.push('missing_production_date')
   if(rec&&proc&&proc<rec)flags.push('process_before_reception')
   if(proc&&prod&&prod<proc)flags.push('production_before_process')
-  if(!rec)flags.push('missing_reception_date')
-  const guide=s(ws.getCell(r,5).value)||null
+  if(rec&&prod&&prod<rec)flags.push('production_before_reception')
   if(!guide||['s/g','sin guia'].includes(guide.toLowerCase()))flags.push('missing_or_nonstandard_guide')
+  if(guidePriceClp===null)flags.push('missing_guide_price')
+  if(receivedKg===null)flags.push('missing_received_kg')
   if(supplierOriginal&&supplierName!==supplierOriginal)flags.push('supplier_alias_candidate')
   if(siteOriginal&&siteName!==siteOriginal)flags.push('process_site_alias_candidate')
   const grade:Row={}
   for(const [name,a,b] of grades){const boxes=n(ws.getCell(r,a).value),kg=n(ws.getCell(r,b).value);if(boxes!==null||kg!==null)grade[name]={boxes,kg}}
-  const guideKg=n(ws.getCell(r,11).value),receivedKg=n(ws.getCell(r,12).value)
-  rows.push({sourceRow:r,recordStatus:'operational',eventDate:rec,receptionDate:rec,processDate:proc,productionDate:prod,guideNumber:guide,supplierOriginal,supplierName,extractionZone:s(ws.getCell(r,7).value)||null,guidePriceClp:n(ws.getCell(r,8).value),processSiteOriginal:siteName,lotCode:lot,guideKg,receivedKg,differenceKg:guideKg!==null&&receivedKg!==null?guideKg-receivedKg:null,qualityDiscount:n(ws.getCell(r,14).value),gradeBreakdown:grade,yields:{},client:s(ws.getCell(r,45).value)||null,observations:s(ws.getCell(r,46).value)||null,dataQualityFlags:flags,rawRecord:rawRow(ws,r,46)})
+  rows.push({sourceRow:r,recordStatus:'operational',eventDate:rec,receptionDate:rec,processDate:proc,productionDate:prod,guideNumber:guide,supplierOriginal,supplierName,extractionZone:s(ws.getCell(r,7).value)||null,guidePriceClp,processSiteOriginal:siteName,lotCode:lot,guideKg,receivedKg,differenceKg:guideKg!==null&&receivedKg!==null?guideKg-receivedKg:null,qualityDiscount:n(ws.getCell(r,14).value),gradeBreakdown:grade,yields:{},client:s(ws.getCell(r,45).value)||null,observations:s(ws.getCell(r,46).value)||null,dataQualityFlags:flags,rawRecord:rawRow(ws,r,46)})
  }
  return rows
 }
@@ -50,13 +54,17 @@ function account(wb:ExcelJS.Workbook){
  if(ws){
   let balance=0,prev:string|null=null
   for(let r=5;r<=ws.rowCount;r++){
-   const dt=dateCell(ws.getCell(r,3).value),desc=s(ws.getCell(r,4).value)||null,inflow=n(ws.getCell(r,5).value),outflow=n(ws.getCell(r,6).value)
-   if(!dt&&!desc&&inflow===null&&outflow===null)continue
+   const dt=dateCell(ws.getCell(r,3).value),desc=s(ws.getCell(r,4).value)||null,inflow=n(ws.getCell(r,5).value),outflow=n(ws.getCell(r,6).value),sourceBalance=n(ws.getCell(r,7).value)
+   if(!dt&&!desc&&inflow===null&&outflow===null&&sourceBalance===null)continue
    const flags:string[]=[]
-   if(!dt)flags.push('missing_date');else if(dt<'2024-01-01'||dt>'2026-12-31')flags.push('date_outlier')
+   const isMovement=Boolean(dt&&(inflow!==null||outflow!==null))
+   if(!isMovement)flags.push('reference_only_row')
+   if(!dt&&(inflow!==null||outflow!==null))flags.push('missing_date')
+   else if(dt&&(dt<'2024-01-01'||dt>'2026-12-31'))flags.push('date_outlier')
    if(prev&&dt&&dt<prev)flags.push('date_order_regression');if(dt)prev=dt
-   if(hasFormula(ws.getCell(r,5).value)||hasFormula(ws.getCell(r,6).value))flags.push('formula_value_extracted')
-   balance+=(inflow??0)-(outflow??0)
+   if(hasFormula(ws.getCell(r,5).value)||hasFormula(ws.getCell(r,6).value)||hasFormula(ws.getCell(r,7).value))flags.push('formula_value_extracted')
+   if(isMovement)balance+=(inflow??0)-(outflow??0)
+   if(isMovement&&sourceBalance!==null&&Math.abs(sourceBalance-balance)>0.01)flags.push('source_balance_discrepancy')
    ledger.push({sheetName:'CUENTA CORRIENTE',sourceRow:r,eventDate:dt,description:desc,inflowClp:inflow,outflowClp:outflow,balanceClp:balance,dataQualityFlags:flags,rawRecord:rawRow(ws,r,7)})
   }
  }
@@ -103,7 +111,8 @@ function packing(wb:ExcelJS.Workbook){
    for(let c=4;c<=6;c++){const v=n(ws.getCell(r,c).value);if(v!==null){weights[cfg.names[c-4]]=v;total+=v}}
    const lot=cfg.lot?s(ws.getCell(r,cfg.lot).value)||null:null
    const flags:string[]=[];if(!lot)flags.push('missing_lot_reference')
-   rows.push({sheetName:cfg.sheet,sourceRow:r,packFormat:cfg.format,boxNumber:box,lotCode:lot,productionDate:dateCell(ws.getCell(r,cfg.date).value),weightBreakdown:weights,totalKg:total,notes:null,dataQualityFlags:flags,rawRecord:rawRow(ws,r,Math.max(cfg.date,8))})
+   const productionDate=dateCell(ws.getCell(r,cfg.date).value);if(!productionDate)flags.push('missing_production_date')
+   rows.push({sheetName:cfg.sheet,sourceRow:r,packFormat:cfg.format,boxNumber:box,lotCode:lot,productionDate,weightBreakdown:weights,totalKg:total,notes:null,dataQualityFlags:flags,rawRecord:rawRow(ws,r,Math.max(cfg.date,8))})
   }
  }
  return rows
