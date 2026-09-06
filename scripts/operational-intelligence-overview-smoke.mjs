@@ -22,6 +22,8 @@ assert(endpoint.includes("boundary:{writesOperationalState:false,liveOnly:true,h
 assert(endpoint.includes('request.query?.plantId')&&endpoint.includes("return response.status(403).json({ok:false,error:'Planta fuera de alcance'})"),'overview plant scope must fail closed for non-admin operators')
 assert(endpoint.includes('where r.plant_id=${plantId}'),'overview must filter the graph by requested plant before ranking')
 assert(endpoint.includes('scope:{plantId,role:operator.role}'),'overview must expose the resolved plant scope')
+assert(endpoint.includes('r.created_by_operator_id')&&endpoint.includes('actor:text(reception.created_by_operator_id)'),'overview must use the production reception operator column rather than a non-existent created_by field')
+assert(!endpoint.includes('r.created_by,'),'overview must not regress to the non-existent receptions.created_by column')
 assert(!endpoint.includes('canonical_'),'live Control Tower overview must not mix canonical historical tables into operational priorities')
 assert(!/\b(insert|update|delete)\s+(into|from|[a-z_]+\s+set)\b/i.test(endpoint),'overview endpoint must not mutate operational state')
 assert(engine.includes("OPERATIONAL_INTELLIGENCE_SCHEMA='seafood.operational-intelligence.v1'"),'central Operational Intelligence schema must remain explicit')
@@ -50,4 +52,4 @@ if(failures.length){
  for(const failure of failures)console.error(`- ${failure}`)
  process.exit(1)
 }
-console.log('Operational Intelligence overview smoke PASS: one-source Event Graph priorities, confidence-aware supplier scoring, compact Today, useful green state and consistent secondary surfaces verified')
+console.log('Operational Intelligence overview smoke PASS: one-source Event Graph priorities, production-schema-safe provenance, confidence-aware supplier scoring, compact Today, useful green state and consistent secondary surfaces verified')
