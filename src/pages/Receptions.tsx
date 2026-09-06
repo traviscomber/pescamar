@@ -37,7 +37,7 @@ export function Receptions({lots,onNew}:{lots:Lot[];onNew:()=>void}){
         <div className="panel-header"><div><span className="overline teal">Ahora</span><h2>{filtered.length} recepción{filtered.length===1?'':'es'} activa{filtered.length===1?'':'s'}</h2><p>Abre un lote para ver estado, siguiente acción, balance y evidencia en una sola ficha.</p></div></div>
         <div className="toolbar"><div className="search-box"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Buscar lote o proveedor…" aria-label="Buscar recepciones"/></div></div>
         <LotTable lots={filtered} onOpen={lot=>{if(lot.receptionId)navigate(`/lotes/${encodeURIComponent(lot.receptionId)}`)}}/>
-      </>:<div className="empty-inline"><div><span className="overline teal">Ahora</span><b>{requestedPlantId?'Sin recepciones activas en esta planta':'Sin recepciones activas'}</b><small>{mayCreate?'Registra la siguiente entrada cuando llegue materia prima.':'No hay una acción pendiente en este momento.'}</small>{mayCreate?<button className="button primary" onClick={onNew}>Nueva recepción</button>:null}</div></div>}
+      </>:<div className="empty-inline"><div><span className="overline teal">Ahora</span><b>{requestedPlantId?'Sin recepciones activas en esta planta':'Sin recepciones activas'}</b><small>{mayCreate?'Registra la siguiente entrada cuando llegue materia prima.':'No hay una acción pendiente en este momento.'}</small></div></div>}
     </section>
 
     <details className="panel list-panel receptions-history">

@@ -28,7 +28,7 @@ async function stable(page:Page){expect(await page.evaluate(()=>document.documen
 async function noShadow(locator:ReturnType<Page['locator']>){expect(await locator.evaluate(el=>getComputedStyle(el).boxShadow)).toBe('none')}
 
 for(const scenario of [
-  {path:'/planificacion',heading:'Plan diario de producción',shot:'planning-execution.png'},
+  {path:'/planificacion',heading:'Planificación',shot:'planning-execution.png'},
   {path:'/floor/detalle',heading:'Estación de planta',shot:'floor-execution.png'},
   {path:'/pallets/detalle',heading:'Palletización',shot:'pallets-execution.png'},
   {path:'/frio/detalle',heading:'Cadena de frío',shot:'cold-execution.png'},
@@ -43,7 +43,11 @@ for(const scenario of [
     await expect(page.getByRole('heading',{name:scenario.heading,exact:true})).toBeVisible()
     await stable(page)
     if(scenario.path==='/planificacion'){
-      const workspace=page.locator('.planning-workspace');await expect(workspace).toBeVisible();await noShadow(workspace)
+      const next=page.getByRole('region',{name:'Siguiente acción recomendada'})
+      await expect(next).toBeVisible();await noShadow(next)
+      const detail=page.locator('details.panel.list-panel').first()
+      await expect(detail).toBeVisible()
+      await expect(detail).not.toHaveAttribute('open','')
     }
     if(scenario.path==='/floor/detalle'){
       const instruments=page.locator('.floor-status-strip>div');await expect(instruments).toHaveCount(4);await noShadow(instruments.first())
