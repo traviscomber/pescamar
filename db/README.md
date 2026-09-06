@@ -17,7 +17,13 @@ done
 
 Antes de producción se debe confirmar el esquema real del entorno objetivo. Que una API aplique compatibilidad aditiva o que el build esté verde no demuestra por sí solo que todas las migraciones canónicas estén aplicadas.
 
-Desde `041_schema_migration_baseline.sql`, Neon conserva un registro explícito en `schema_migrations`. Las migraciones 001–040 pueden quedar registradas como `baseline` sólo después de verificar la estructura requerida; eso no reconstruye ni inventa sus timestamps históricos. La 041 y toda migración posterior deben registrarse individualmente como `applied` con evidencia temporal real.
+Desde `041_schema_migration_baseline.sql`, Neon conserva un registro explícito en `schema_migrations` con tres tipos de evidencia:
+
+- `baseline`: sólo para la estructura histórica 001–040 verificada al crear 041. No inventa `applied_at` por archivo y conserva `baseline_through`.
+- `reconciled`: sólo cuando la estructura canónica de una migración se verifica directamente pero el timestamp original de ejecución no es demostrable. No lleva `applied_at` y nunca debe presentarse como ejecución histórica reconstruida.
+- `applied`: requiere un `applied_at` real del momento en que la migración se ejecuta dentro del registro vigente.
+
+`047_reconcile_post_baseline_migration_registry.sql` verifica explícitamente la estructura introducida por 042–046, registra esos cinco archivos como `reconciled` sin fabricar fechas históricas y se registra a sí misma como `applied`. Toda migración nueva posterior a 047 debe quedar registrada individualmente como `applied` con evidencia temporal real.
 
 ## Inventario canónico actual
 
@@ -67,8 +73,9 @@ Desde `041_schema_migration_baseline.sql`, Neon conserva un registro explícito 
 | `044_sea_urchin_sequence_fail_closed.sql` | secuencia fail-closed del proceso de erizo y bloqueo de estados de liberación si faltan etapas previas |
 | `045_japan_cold_chain_fail_closed.sql` | incorpora cadena de frío válida y sin desviaciones al gate fail-closed de liberación Japón |
 | `046_lot_operational_lifecycle.sql` | historial append-only y auditable de cierre/reapertura operacional por lote con fundamento, snapshot y operador |
+| `047_reconcile_post_baseline_migration_registry.sql` | verifica la estructura canónica de 042–046, reconcilia su provenance sin inventar timestamps y registra 047 como migración aplicada |
 
-El inventario anterior describe el repositorio actual. Si se agrega una migración, debe agregarse también a esta tabla; CI verifica esa correspondencia.
+El inventario anterior describe el repositorio actual. Si se agrega una migración, debe agregarse también a esta tabla; CI verifica esa correspondencia y que los landmarks del preflight sigan alineados con el manifiesto runtime.
 
 ## Invariantes de datos
 
@@ -97,7 +104,7 @@ El inventario anterior describe el repositorio actual. Si se agrega una migraci�
 - El gate regulatorio de despacho existe también en PostgreSQL sobre `lot_dispatches`; no depende de que la UI recuerde validar el hold.
 - Para destinos Japón, el despacho queda en fail-closed: proceso de erizo, etiquetas, holds regulatorios y los 10 requisitos Japan Release deben estar completos antes de confirmar la salida.
 - Una aprobación Japan Release requiere documento o evidencia, actor verificador y vigencia cuando corresponda; no se acepta una casilla sin provenance.
-- La integración Sernapesca XML/Siscomex no forma parte de 037–046 y sólo debe implementarse cuando exista contrato oficial de endpoint, autenticación y formato.
+- La integración Sernapesca XML/Siscomex no forma parte de 037–047 y sólo debe implementarse cuando exista contrato oficial de endpoint, autenticación y formato.
 
 ## Seguridad y tenancy operacional
 
