@@ -6,6 +6,7 @@ import {useAuth} from "../auth";
 import {usePlatformStatus} from "../hooks/usePlatformStatus";
 import {getOsModule} from "../os";
 import {seafoodProduct} from "../product";
+import "../navigation-groups.css";
 
 const primaryNavigation=[
  {to:"/",label:"Hoy",icon:LayoutDashboard},
