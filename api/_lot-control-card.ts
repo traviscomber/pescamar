@@ -34,7 +34,7 @@ function routeForNext(nextAction:string,isUrchin:boolean,receptionId:string){
  if(/packing|empaque|caja/.test(value))return `/floor${query}`
  if(/regulator|sernapesca|jap[oó]n|export|hold/.test(value))return `/control-regulatorio${query}`
  if(/despach/.test(value))return `/despachos-ventas${query}`
- if(isUrchin&&/color|grade|xray|rayos|proceso|calidad|process run/.test(value))return `/proceso-erizo/detalle${query}`
+ if(isUrchin&&/color|grade|xray|rayos|proceso|calidad|process run|digital twin/.test(value))return `/proceso-erizo/detalle${query}`
  return `/recepciones${query}&action=1`
 }
 
@@ -57,7 +57,7 @@ export async function buildLotControlCard(operator:SessionOperator,receptionId:u
  let erizo:Awaited<ReturnType<typeof buildSeaUrchinCopilotEvidence>>|null=null
  if(isUrchin){try{erizo=await buildSeaUrchinCopilotEvidence(operator,id)}catch{erizo=null}}
  const erizoData=record(erizo?.data),erizoDiagnosis=record(erizoData?.diagnosis),erizoJapan=record(erizoData?.japan),erizoProcess=record(erizoData?.process)
- if(erizoData&&erizoDiagnosis){
+ if(isUrchin&&erizoData&&erizoDiagnosis){
   blockers=strings(erizoDiagnosis.blockers)
   unknowns=strings(erizoDiagnosis.unknowns)
   nextAction=typeof erizoDiagnosis.nextAction==='string'?erizoDiagnosis.nextAction:'Revisar Digital Twin del lote.'
@@ -65,6 +65,12 @@ export async function buildLotControlCard(operator:SessionOperator,receptionId:u
   const japanKnown=erizoJapan!=null
   state=japanReleasable?{code:'japan_ready',label:'APTO JAPÓN',tone:'ready'}:japanKnown?{code:'japan_hold',label:'NO LIBERADO JAPÓN',tone:'attention'}:blockers.length?{code:'attention',label:'REQUIERE ATENCIÓN',tone:'attention'}:{code:'in_process',label:'LOTE EN CURSO',tone:'info'}
   release={label:japanReleasable?'PASS':japanKnown?'HOLD':'—',tone:japanReleasable?'ready':japanKnown?'attention':'pending',kind:'japan'}
+ }else if(isUrchin){
+  blockers=['Digital Twin de erizo no disponible']
+  unknowns=['Estado especializado de proceso y Japan Release no disponible']
+  state={code:'urchin_control_unavailable',label:'NO LIBERADO JAPÓN',tone:'attention'}
+  nextAction='Revisar proceso de erizo y evidencia antes de continuar.'
+  release={label:'HOLD',tone:'attention',kind:'japan'}
  }else{
   if(activeHolds.length)blockers.push(`${activeHolds.length} hold${activeHolds.length===1?'':'s'} regulatorio${activeHolds.length===1?'':'s'} vigente${activeHolds.length===1?'':'s'}`)
   if(qualityStatus==='Revisión'||qualityStatus==='Alerta calibre')blockers.push(`Calidad: ${qualityStatus}`)
@@ -76,7 +82,7 @@ export async function buildLotControlCard(operator:SessionOperator,receptionId:u
   else if(qualityStatus==='Revisión'||qualityStatus==='Alerta calibre'){state={code:'quality_attention',label:'REQUIERE CALIDAD',tone:'attention'};nextAction='Resolver criterio de Calidad y registrar la decisión.'}
   else if(qualityStatus!=='Clasificado'){state={code:'quality_pending',label:'PENDIENTE DE CALIDAD',tone:'pending'};nextAction='Completar clasificación de Calidad.'}
   else if(outputKg==null){state={code:'production_ready',label:'LISTO PARA PRODUCCIÓN',tone:'ready'};nextAction='Registrar producción del lote.'}
-  else if(confirmedDispatches.length){state={code:'dispatched',label:'DESPACHADO',tone:'ready'};nextAction='Revisar cierre comercial y memoria del lote.'}
+  else if(confirmedDispatches.length){state={code:'dispatch_recorded',label:'DESPACHO REGISTRADO',tone:'info'};nextAction='Revisar saldo físico y cierre comercial del lote.'}
   else{state={code:'in_process',label:'LOTE EN CURSO',tone:'info'};nextAction='Continuar packing, inventario o despacho según el plan.'}
   release={label:`${Number(reception.evidence_count??0)}`,tone:Number(reception.evidence_count??0)>0?'info':'pending',kind:'evidence'}
  }
