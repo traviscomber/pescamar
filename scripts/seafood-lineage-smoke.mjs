@@ -14,8 +14,9 @@ const [eventSource,organizationSource,lineageSource,historicalLineageSource,page
 ])
 
 assert(eventSource.includes("SEAFOOD_EVENT_SCHEMA='seafood.event.v1'"),'event envelope must expose seafood.event.v1')
-assert(eventSource.includes('organizationId:activeOrganization.organizationId'),'event organization must derive from the active organization boundary')
-assert(eventSource.includes('system:activeOrganization.sourceSystem'),'event provenance source must derive from organization context')
+assert(eventSource.includes('organizationId:organization.organizationId'),'event organization must derive from the organization context passed by the caller')
+assert(eventSource.includes('system:organization.sourceSystem'),'event provenance source must derive from the same organization context')
+assert(eventSource.includes('organization:SeafoodEventOrganization=activeOrganization'),'event builder must preserve a compatibility fallback without requiring callers to fabricate context')
 assert(organizationSource.includes("organizationId:'pescamar'"),'Implementation 01 organization id must remain explicit while legacy data is single-organization')
 assert(organizationSource.includes("isolationMode:'single_organization_legacy'"),'server must not claim organization-scoped isolation before schema support exists')
 assert(eventSource.includes("|'vision'"),'event envelope must support attributed vision evidence')
@@ -30,6 +31,7 @@ assert(lineageSource.includes('commercialRole?sql`select a.id allocation_id'),'c
 assert(lineageSource.includes('commercialRole?sql`select s.id,s.dispatch_id'),'sales must not be queried for unauthorized roles')
 assert(lineageSource.includes('from sea_urchin_color_captures c join sea_urchin_process_runs u'),'existing Uni Vision evidence must project into the graph without a duplicate vision store')
 assert(lineageSource.includes("source:{entityType:'sea_urchin_color_capture'"),'vision events must retain their originating capture identity')
+assert(lineageSource.includes('},organization))'),'live lineage events must receive the resolved organization context explicitly')
 assert(lineageSource.includes("schemaVersion:'seafood.lineage.v1'"),'live lineage response must be versioned')
 assert(lineageSource.includes("vision:has('vision')"),'live lineage coverage must make vision presence explicit')
 assert(lineageSource.includes('coverage:{reception:has(\'reception\')'),'live lineage response must distinguish present and missing stages')
@@ -38,6 +40,7 @@ assert(!/\b(insert|update|delete|create table|alter table|drop table)\b/i.test(l
 assert(historicalLineageSource.includes("request.method!=='GET'"),'historical lineage must remain read-only')
 assert(historicalLineageSource.includes('requireOperator(request)'),'historical lineage must require an authenticated operator')
 assert(historicalLineageSource.includes('resolveRequestOrganization(request.headers,operator.organizationId)'),'historical lineage must bind organization to authenticated context')
+assert(historicalLineageSource.includes('},organization))'),'historical events must receive the resolved organization context explicitly')
 assert(historicalLineageSource.includes("record_status='operational'"),'historical lineage index must exclude void/non-operational historical records')
 assert(historicalLineageSource.includes("mode:'canonical_historical'"),'historical lineage must declare canonical historical mode explicitly')
 assert(historicalLineageSource.includes('canonicalHistorical:true'),'historical lineage must declare canonical historical evidence boundary')
@@ -66,4 +69,4 @@ if(failures.length){
   for(const failure of failures)console.error(`- ${failure}`)
   process.exit(1)
 }
-console.log('Seafood lineage smoke PASS: versioned dual-mode Event Graph, simplified Trazabilidad UX, authenticated boundaries, canonical historical provenance, read-only/live separation and Vision provenance verified')
+console.log('Seafood lineage smoke PASS: versioned dual-mode Event Graph, resolved request organization provenance, authenticated boundaries, canonical historical provenance, read-only/live separation and Vision provenance verified')
