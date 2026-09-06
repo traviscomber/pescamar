@@ -14,10 +14,11 @@ const date=(value:string|null)=>value?new Intl.DateTimeFormat('es-CL',{day:'2-di
 
 export function Receptions({lots,onNew}:{lots:Lot[];onNew:()=>void}){
   const {operator}=useAuth()
-  const {records:history,summary,error:historyError,openRecord}=useLot360()
+  const {records:history,summary,error:historyError,openRecord,openLive}=useLot360()
   const navigate=useNavigate()
   const [params]=useSearchParams()
   const requestedReceptionId=params.get('receptionId')
+  const requestedAction=params.get('action')==='1'
   const requestedPlantId=params.get('plantId')??''
   const [query,setQuery]=useState('')
   const deferred=useDeferredValue(query.toLowerCase())
@@ -26,7 +27,7 @@ export function Receptions({lots,onNew}:{lots:Lot[];onNew:()=>void}){
   const historicalFiltered=useMemo(()=>history.filter(item=>`${item.lot_code} ${item.supplier_name??item.supplier_original??''} ${item.guide_number??''} ${item.extraction_zone??''} ${item.process_site_original??''} ${item.source_file}`.toLowerCase().includes(deferred)),[history,deferred])
   const mayCreate=operator?canCreateReception(operator.role):false
   const historyCount=Number(summary?.total??history.length)
-  useEffect(()=>{if(requestedReceptionId&&lots.some(l=>l.receptionId===requestedReceptionId))navigate(`/lotes/${encodeURIComponent(requestedReceptionId)}`,{replace:true})},[requestedReceptionId,lots,navigate])
+  useEffect(()=>{if(!requestedReceptionId||!lots.some(l=>l.receptionId===requestedReceptionId))return;if(requestedAction){openLive(requestedReceptionId);return}navigate(`/lotes/${encodeURIComponent(requestedReceptionId)}`,{replace:true})},[requestedReceptionId,requestedAction,lots,navigate,openLive])
 
   return <>
     <PageHeader eyebrow="Operación" title="Recepciones" description="Qué está entrando ahora. El histórico y la evidencia quedan disponibles cuando los necesitas." actions={<>{requestedPlantId?<Link className="button secondary" to={`/plantas/${encodeURIComponent(requestedPlantId)}`}>Volver a planta</Link>:null}{mayCreate?<button className="button primary" onClick={onNew}>+ Nueva recepción</button>:null}</>}/>
