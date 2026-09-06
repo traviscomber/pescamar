@@ -1,10 +1,48 @@
-import { ArrowRight, BrainCircuit, ClipboardCheck, Factory, PackageCheck, Scale, Sparkles, Truck } from 'lucide-react'
-import { Link } from 'react-router-dom'
-import { canAccessPath } from '../access'
-import { useAuth } from '../auth'
-import { PageHeader } from '../components/PageHeader'
-import { osStages } from '../os'
-import { seafoodProduct } from '../product'
-const stageIcons={intake:Scale,production:Factory,quality:ClipboardCheck,inventory:PackageCheck,commercial:Truck,control:BrainCircuit} as const
-const operators=['Jefe de planta','Encargado de calidad','Recepción y abastecimiento','Bodega y despacho','Administración y gerencia']
-export function Modules(){const {operator}=useAuth();const implementation=seafoodProduct.implementation;const visible=operator?osStages.map(stage=>({...stage,modules:stage.modules.filter(module=>canAccessPath(operator.role,module.path))})).filter(stage=>stage.modules.length):[];return <><PageHeader eyebrow={seafoodProduct.name} title="Un core operacional. Múltiples implementaciones." description="El producto reusable conecta lotes, producción, calidad, inventario, frío, comercial, evidencia e inteligencia. Cada implementación conserva sus usuarios, plantas, datos y reglas sin crear un fork del core." actions={operator?.role==='admin'?<Link className="button secondary" to="/estaciones">Estaciones y dispositivos</Link>:undefined}/><section className="panel"><div className="section-heading"><div><span className="overline teal">{implementation.label}</span><h2>{implementation.name}</h2></div><span className="status-badge ready">Tenant activo</span></div><p>{implementation.description}</p><div className="signal-grid"><Link className="signal-card" to="/plantas"><span><Factory size={16}/>Red operacional</span><b>6 plantas objetivo</b><small>Rollout Pescamar sobre el core reusable</small><em>Abrir plantas <ArrowRight size={13}/></em></Link><Link className="signal-card" to="/pescamar-ia"><span><Sparkles size={16}/>Pescamar IA</span><b>Evidence-native</b><small>Copiloto canónico y operacional del tenant</small><em>Abrir IA <ArrowRight size={13}/></em></Link><Link className="signal-card" to="/rollout"><span><ClipboardCheck size={16}/>Activación</span><b>UAT real</b><small>Gates por planta, datos y operación real</small><em>Abrir rollout <ArrowRight size={13}/></em></Link></div></section><section className="os-stage-grid" aria-label={`Mapa operativo de ${seafoodProduct.name}`}>{visible.map(stage=>{const Icon=stageIcons[stage.id as keyof typeof stageIcons];const entry=stage.modules.some(module=>module.path===stage.entry)?stage.entry:stage.modules[0].path;return <article className="panel os-stage" key={stage.id}><header><span className="os-module-step"><Icon size={19}/></span><div><small>Sistema {String(stage.order).padStart(2,'0')}</small><h2>{stage.label}</h2></div></header><p>{stage.description}</p><div className="os-stage-modules">{stage.modules.map(module=><Link to={module.path} key={module.path}><span>{module.label}</span><small>{module.description}</small><ArrowRight size={13}/></Link>)}</div><footer><span>{stage.owner}</span><Link to={entry}>Abrir sistema <ArrowRight size={14}/></Link></footer></article>})}</section><section className="panel five-team"><div><span className="overline teal">Modelo operativo</span><h2>El sistema coordina; las personas deciden</h2><p>La operación normal fluye entre módulos sin recaptura. Diferencias de peso, bloqueos regulatorios, alertas de calidad y decisiones comerciales quedan visibles, asignadas y auditadas.</p><div className="row-actions"><Link className="button primary" to="/">Abrir control de hoy</Link><Link className="button secondary" to="/aprobaciones">Ver decisiones</Link><Link className="button secondary" to="/auditoria">Ver auditoría</Link></div></div><ol>{operators.map((operatorName,index)=><li key={operatorName}><span>{index+1}</span>{operatorName}</li>)}</ol></section></>}
+import {Activity, Building2, ClipboardCheck, Database, Factory, FileSpreadsheet, History, Link2, Settings2, ShieldCheck, UsersRound} from 'lucide-react'
+import {Link} from 'react-router-dom'
+import {canAccessPath} from '../access'
+import {useAuth} from '../auth'
+import {PageHeader} from '../components/PageHeader'
+
+type AdminItem={to:string;label:string;description:string;icon:typeof Settings2}
+type AdminGroup={label:string;description:string;items:AdminItem[]}
+
+const groups:AdminGroup[]=[
+ {label:'Operación y planta',description:'Configura la estructura física y los puntos donde ocurre la operación.',items:[
+  {to:'/plantas',label:'Plantas',description:'Red operacional y estado de activación.',icon:Factory},
+  {to:'/estaciones',label:'Estaciones y dispositivos',description:'Puestos, equipos y captura en planta.',icon:Activity},
+  {to:'/rollout',label:'Activación',description:'Gates de UAT y habilitación por planta.',icon:ClipboardCheck},
+ ]},
+ {label:'Control y cumplimiento',description:'Revisa evidencia, decisiones y trazabilidad administrativa.',items:[
+  {to:'/auditoria',label:'Auditoría operacional',description:'Quién hizo qué, cuándo y sobre qué registro.',icon:ShieldCheck},
+  {to:'/control-regulatorio',label:'Control regulatorio',description:'Estados y bloqueos de cumplimiento.',icon:ClipboardCheck},
+  {to:'/observabilidad',label:'Observabilidad',description:'Salud técnica y señales del sistema.',icon:Activity},
+  {to:'/timeline',label:'Línea de tiempo',description:'Secuencia histórica de eventos relevantes.',icon:History},
+ ]},
+ {label:'Datos e integración',description:'Administra fuentes, conectores y contexto de la organización.',items:[
+  {to:'/importaciones',label:'Fuentes canónicas',description:'Archivos auditados y cobertura histórica.',icon:FileSpreadsheet},
+  {to:'/integrations',label:'Integraciones',description:'Conectores y plano de intercambio de datos.',icon:Link2},
+  {to:'/organization',label:'Organización',description:'Contexto de implementación y aislamiento.',icon:Building2},
+  {to:'/identidades-plantas',label:'Identidades históricas',description:'Equivalencias y referencias heredadas.',icon:Database},
+ ]},
+ {label:'Usuarios y sistema',description:'Gestiona acceso y configuración de la instancia.',items:[
+  {to:'/operadores',label:'Operadores',description:'Usuarios, roles y alcance operacional.',icon:UsersRound},
+  {to:'/comunicaciones',label:'Comunicaciones',description:'Canales y mensajes operacionales.',icon:Settings2},
+ ]},
+]
+
+export function Modules(){
+ const {operator}=useAuth()
+ const visibleGroups=operator?groups.map(group=>({...group,items:group.items.filter(item=>canAccessPath(operator.role,item.to))})).filter(group=>group.items.length):[]
+ return <>
+  <PageHeader eyebrow="Administración" title="Configuración y control" description="Accesos poco frecuentes para administrar la instancia. El trabajo diario permanece en Hoy, Operación, Comercial e Inteligencia."/>
+  <section className="admin-hub-grid" aria-label="Administración del sistema">
+   {visibleGroups.map(group=><article className="panel admin-hub-group" key={group.label}>
+    <header><h2>{group.label}</h2><p>{group.description}</p></header>
+    <div className="admin-hub-links">
+     {group.items.map(({to,label,description,icon:Icon})=><Link to={to} key={to}><Icon size={17}/><span><b>{label}</b><small>{description}</small></span></Link>)}
+    </div>
+   </article>)}
+  </section>
+ </>
+}
