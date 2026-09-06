@@ -44,6 +44,21 @@
   text-align:right;
 }
 
+/* Canonical imports are evidence/governance infrastructure, not a stack of independent cards. */
+.main-content:has(>.platform-strip)>.signal-grid{
+  margin-block:16px 22px!important;
+}
+.main-content:has(>.platform-strip)>.import-history.panel{
+  padding:22px 0!important;
+  border:0!important;
+  border-top:1px solid var(--line)!important;
+  border-bottom:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.main-content:has(>.platform-strip)>.import-history.panel>.panel-header{margin-bottom:14px}
+
 /* Communications: six signals read as a 3x2 instrumentation matrix with real row boundaries. */
 .communication-overview{
   grid-template-columns:repeat(3,minmax(0,1fr))!important;
@@ -132,39 +147,41 @@
 .operational-health.expanded .operational-check{border-radius:7px!important}
 
 /* Hoy: one reading, one priority, one action. Depth is progressive disclosure. */
+.main-content:has(>.daily-cockpit)>.page-header{padding-bottom:18px!important;margin-bottom:12px!important}
+.main-content:has(>.daily-cockpit)>.page-header h1{font-size:clamp(3rem,6.4vw,5.6rem)!important;line-height:.88!important}
 .daily-cockpit{
   display:grid;
   grid-template-columns:minmax(0,1fr) auto;
-  gap:28px;
+  gap:24px;
   align-items:end;
-  padding:34px 0 30px;
+  padding:24px 0 22px;
   border-top:1px solid var(--line);
   border-bottom:1px solid var(--line);
 }
 .daily-cockpit-copy{max-width:720px}
 .daily-cockpit h2{
-  margin:7px 0 8px;
-  font-size:clamp(2.35rem,6vw,4.8rem);
-  line-height:.94;
-  letter-spacing:-.055em;
+  margin:6px 0 7px;
+  font-size:clamp(2.05rem,5vw,4.2rem);
+  line-height:.95;
+  letter-spacing:-.05em;
   font-weight:500;
 }
 .daily-cockpit p{
-  max-width:620px;
+  max-width:640px;
   margin:0;
   color:var(--text-muted);
-  font-size:1rem;
-  line-height:1.65;
+  font-size:.96rem;
+  line-height:1.58;
 }
 .daily-cockpit-actions{
   display:flex;
   align-items:center;
-  gap:18px;
+  gap:16px;
   flex-wrap:wrap;
-  margin-top:22px;
+  margin-top:17px;
 }
 .daily-status-mark{
-  width:116px;
+  width:98px;
   aspect-ratio:1;
   border:1px solid var(--line);
   border-radius:50%;
@@ -175,16 +192,16 @@
   text-align:center;
 }
 .daily-status-mark span{
-  font-size:2.15rem;
+  font-size:1.9rem;
   line-height:1;
   font-weight:500;
 }
 .daily-status-mark small{
-  margin-top:7px;
+  margin-top:6px;
   color:var(--text-muted);
   text-transform:uppercase;
   letter-spacing:.12em;
-  font-size:.61rem;
+  font-size:.58rem;
 }
 .daily-cockpit.has-attention .daily-status-mark{border-color:var(--warning,#9f8f60)}
 .daily-cockpit.is-clear .daily-status-mark{border-color:var(--success,#5d8d7a)}
@@ -207,7 +224,7 @@
 }
 .daily-signal-grid{margin:0!important}
 .daily-priority{
-  padding:26px 0;
+  padding:22px 0;
   border-bottom:1px solid var(--line);
 }
 .daily-priority-head{
@@ -226,9 +243,9 @@
 .daily-priority-detail{
   display:block;
   max-width:760px;
-  margin-top:12px;
+  margin-top:10px;
   color:var(--text-muted);
-  line-height:1.55;
+  line-height:1.5;
 }
 .daily-more{margin-top:16px}
 .daily-more-list{margin-top:14px}
@@ -236,16 +253,28 @@
   display:flex;
   align-items:flex-start;
   gap:12px;
-  padding:24px 0;
-  border-bottom:1px solid var(--line);
+  padding:18px 0 14px;
 }
 .daily-clear-note b,.daily-clear-note small{display:block}
 .daily-clear-note small{margin-top:3px;color:var(--text-muted)}
+.daily-clear-context{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+}
+.daily-clear-context>div{min-width:0;padding:16px 18px;border-right:1px solid var(--line)}
+.daily-clear-context>div:first-child{padding-left:0}
+.daily-clear-context>div:last-child{border-right:0}
+.daily-clear-context small,.daily-clear-context b,.daily-clear-context span{display:block}
+.daily-clear-context small{text-transform:uppercase;letter-spacing:.11em;font-size:.64rem;color:var(--text-muted)}
+.daily-clear-context b{margin-top:5px;font-size:1.08rem;font-weight:600}
+.daily-clear-context span{margin-top:3px;font-size:.76rem;line-height:1.4;color:var(--text-muted)}
 .daily-footer-actions{
   display:flex;
   align-items:center;
   gap:22px;
-  padding:18px 0 4px;
+  padding:16px 0 4px;
 }
 
 @media(max-width:900px){
@@ -264,13 +293,17 @@
   .communication-overview>.signal-card:first-child{border-top:0!important}
   .communications-directory-grid{grid-template-columns:1fr!important}
   .communications-channels,.communications-inbox,.audit-panel.panel{padding:18px 0!important}
-  .daily-cockpit{grid-template-columns:1fr;gap:22px;padding:26px 0 24px;align-items:start}
-  .daily-cockpit h2{font-size:clamp(2.5rem,15vw,4rem)}
-  .daily-status-mark{width:84px;grid-row:1;justify-self:end;margin-bottom:-98px}
-  .daily-status-mark span{font-size:1.6rem}
+  .main-content:has(>.daily-cockpit)>.page-header{padding-bottom:12px!important;margin-bottom:8px!important}
+  .daily-cockpit{grid-template-columns:1fr;gap:18px;padding:20px 0 18px;align-items:start}
+  .daily-cockpit h2{font-size:clamp(2.2rem,13vw,3.5rem)}
+  .daily-status-mark{width:74px;grid-row:1;justify-self:end;margin-bottom:-84px}
+  .daily-status-mark span{font-size:1.45rem}
   .daily-cockpit-copy{padding-right:0}
-  .daily-cockpit-copy>p{max-width:78%}
-  .daily-cockpit-actions{gap:14px}
+  .daily-cockpit-copy>p{max-width:80%}
+  .daily-cockpit-actions{gap:12px;margin-top:14px}
   .daily-priority-head{grid-template-columns:1fr;gap:10px}
+  .daily-clear-context{grid-template-columns:1fr}
+  .daily-clear-context>div{padding:13px 0;border-right:0;border-bottom:1px solid var(--line)}
+  .daily-clear-context>div:last-child{border-bottom:0}
   .daily-footer-actions{justify-content:space-between}
 }
