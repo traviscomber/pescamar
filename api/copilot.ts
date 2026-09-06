@@ -91,7 +91,7 @@ export default async function handler(req:Request,res:Response){
    buildHistoricalLineageEvidence(operator),
    buildCanonicalBusinessIntelligence(operator),
    buildSeaUrchinCopilotEvidence(operator,body.receptionId),
-   inspectPhotos(imageData,question).catch(error=>{console.warn('copilot_photo_degraded',error instanceof Error?error.message:'unknown');return null}),
+   inspectPhotos(imageData,question).catch(error=>{console.error('copilot_photo_degraded',error instanceof Error?error.message:'unknown');return null}),
   ])
   const graphData=urchinGraph?.data??null,visualComparison=compareVisualToLot(visualTwinMeasurements,graphData)
   const hasPhotoEvidence=imageData.length>0||visualTwinMeasurements.length>0
@@ -113,7 +113,7 @@ export default async function handler(req:Request,res:Response){
    const suggestions=seniorUrchin?await buildSuggestions(answer,question,Boolean(urchinGraph),Boolean(hasPhotoEvidence)):[]
    return res.status(200).json({ok:true,answer,suggestedQuestions:suggestions,engine:seniorUrchin?'Asistente Senior de Erizo':'Seafood AI',implementation:activeOrganization.implementationName,policyVersion:SEAFOOD_AI_POLICY_VERSION,model:MODEL,generatedAt:context.generatedAt,scope:scopedContext.scope,sources,photoAnalysis:Boolean(photoObservation),visualTwin:visualTwinMeasurements.length>0,degraded:false})
   }catch(modelError){
-   console.warn('copilot_model_degraded',modelError instanceof Error?modelError.message:'unknown')
+   console.error('copilot_model_degraded',modelError instanceof Error?modelError.message:'unknown')
    const answer=deterministicUrchinAnswer(question,graphData,visualTwinMeasurements,visualComparison)
    return res.status(200).json({ok:true,answer,suggestedQuestions:fallbackSuggestions(Boolean(urchinGraph),hasPhotoEvidence),engine:seniorUrchin?'IA Erizo · modo canónico':'Seafood AI · modo canónico',implementation:activeOrganization.implementationName,policyVersion:SEAFOOD_AI_POLICY_VERSION,model:'deterministic-canonical-fallback',generatedAt:context.generatedAt,scope:scopedContext.scope,sources,photoAnalysis:Boolean(photoObservation),visualTwin:visualTwinMeasurements.length>0,degraded:true})
   }
