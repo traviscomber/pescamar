@@ -56,7 +56,7 @@ export async function buildLotControlCard(operator:SessionOperator,receptionId:u
  const events=rows(eventRaw),holds=rows(holdRaw),dispatches=rows(dispatchRaw),qualityStatus=String(reception.quality_status??''),species=String(reception.species??''),isUrchin=/eriz|urchin/i.test(species)
  const latestProduction=events.find(event=>event.event_type==='production'&&num(record(event.metrics)?.outputKg)!=null),inputKg=num(reception.accepted_kg),outputKg=latestProduction?num(record(latestProduction.metrics)?.outputKg):null,yieldPct=inputKg!=null&&inputKg>0&&outputKg!=null?Number((outputKg/inputKg*100).toFixed(2)):null,lossKg=inputKg!=null&&outputKg!=null?Math.max(0,inputKg-outputKg):null
  const activeHolds=holds.filter(row=>['open','rejected'].includes(String(row.status??''))),confirmedDispatches=dispatches.filter(row=>String(row.status)==='confirmed')
- let blockers:string[]=[],unknowns:string[]=[],nextAction='',state:{code:string;label:string;tone:LotControlTone},release:{label:string;tone:LotControlTone;kind:'japan'|'evidence'}
+ let blockers:string[]=[],unknowns:string[]=[],nextAction:string,state:{code:string;label:string;tone:LotControlTone},release:{label:string;tone:LotControlTone;kind:'japan'|'evidence'}
  let erizo:Awaited<ReturnType<typeof buildSeaUrchinCopilotEvidence>>|null=null
  if(isUrchin){try{erizo=await buildSeaUrchinCopilotEvidence(operator,id)}catch{erizo=null}}
  const erizoData=record(erizo?.data),erizoDiagnosis=record(erizoData?.diagnosis),erizoJapan=record(erizoData?.japan),erizoProcess=record(erizoData?.process)
