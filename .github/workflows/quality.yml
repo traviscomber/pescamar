@@ -48,6 +48,8 @@ jobs:
           exit 1
       - name: Release smoke
         run: node scripts/release-smoke.mjs
+      - name: Navigation flow contract
+        run: node scripts/navigation-flow-smoke.mjs
       - name: Seafood lineage contract
         run: node scripts/seafood-lineage-smoke.mjs
       - name: Lineage intelligence UI contract
