@@ -2,9 +2,10 @@ import {readFile} from 'node:fs/promises'
 
 const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
-const [endpoint,engine,brief,css,today,passCss]=await Promise.all([
+const [endpoint,engine,copilot,brief,css,today,passCss]=await Promise.all([
  readFile(new URL('../api/operational-intelligence-overview.ts',import.meta.url),'utf8'),
  readFile(new URL('../api/_operational-intelligence.ts',import.meta.url),'utf8'),
+ readFile(new URL('../api/_copilot-operational-intelligence.ts',import.meta.url),'utf8'),
  readFile(new URL('../src/components/ExecutiveDecisionBrief.tsx',import.meta.url),'utf8'),
  readFile(new URL('../src/components/executive-decision-brief.css',import.meta.url),'utf8'),
  readFile(new URL('../src/pages/DailyClose.tsx',import.meta.url),'utf8'),
@@ -13,7 +14,10 @@ const [endpoint,engine,brief,css,today,passCss]=await Promise.all([
 
 assert(endpoint.includes("schemaVersion:'seafood.operational-intelligence.overview.v1'"),'Control Tower operational overview must be versioned')
 assert(endpoint.includes("import {buildOperationalIntelligence,type OperationalSignal} from './_operational-intelligence.js'"),'overview must reuse the central Operational Intelligence engine')
-assert(endpoint.includes('buildOperationalIntelligence(ordered)'),'each live lot graph must be evaluated by the central engine')
+assert(endpoint.includes('buildOperationalIntelligence(ordered,intelligenceCapabilities)'),'each live lot graph must be evaluated by the central engine with evidence-assessment capabilities')
+assert(endpoint.includes("const intelligenceCapabilities={canAssessCommercialCommitment:commercialRole,canAssessSalesDispatch:commercialRole}"),'overview must derive commercial assessment capability from the authenticated role')
+assert(endpoint.includes("commercialRole?sql`select a.reception_id")&&endpoint.includes("commercialRole?sql`select s.reception_id"),'overview must not fetch restricted commercial allocation/sale evidence for roles without commercial visibility')
+assert(endpoint.includes('reglas que requieren evidencia oculta por rol se suprimen')||endpoint.includes('Reglas que requieren evidencia oculta por rol se suprimen'),'overview boundary must state that permission-hidden evidence is not interpreted as factual absence')
 assert(endpoint.includes('reception_id=any(${ids}::uuid[])'),'overview must use batch event retrieval instead of per-lot queries')
 assert(endpoint.includes('limit 30'),'overview must bound the live lot scan')
 assert(endpoint.includes('optionalVisionRows(ids)'),'overview must include Vision evidence when available')
@@ -27,6 +31,14 @@ assert(!endpoint.includes('r.created_by,'),'overview must not regress to the non
 assert(!endpoint.includes('canonical_'),'live Control Tower overview must not mix canonical historical tables into operational priorities')
 assert(!/\b(insert|update|delete)\s+(into|from|[a-z_]+\s+set)\b/i.test(endpoint),'overview endpoint must not mutate operational state')
 assert(engine.includes("OPERATIONAL_INTELLIGENCE_SCHEMA='seafood.operational-intelligence.v1'"),'central Operational Intelligence schema must remain explicit')
+assert(engine.includes('type OperationalIntelligenceCapabilities')||engine.includes('export type OperationalIntelligenceCapabilities'),'central engine must model evidence-assessment capability explicitly')
+assert(engine.includes('capabilities.canAssessCommercialCommitment&&dispatches.length&&!commitments.length'),'missing commercial commitment signal must require permission to assess commitments')
+assert(engine.includes('capabilities.canAssessSalesDispatch&&sales.length&&!dispatches.length'),'missing dispatch signal must require permission to assess sale/dispatch evidence')
+assert(engine.includes('capabilities.canAssessCommercialCommitment&&commitments.length&&!inventory.length'),'availability signal based on commitments must require commercial assessment capability')
+assert(engine.includes('ausencia por permisos nunca se convierte en ausencia factual'),'central engine boundary must explicitly prohibit permission absence from becoming factual absence')
+assert(copilot.includes("const intelligenceCapabilities={canAssessCommercialCommitment:commercialRole,canAssessSalesDispatch:commercialRole}"),'Seafood AI lot intelligence must derive the same assessment capabilities')
+assert(copilot.includes('buildOperationalIntelligence(ordered,intelligenceCapabilities)'),'Seafood AI must use permission-aware Operational Intelligence')
+assert(copilot.includes("commercialRole?sql`select a.id allocation_id")&&copilot.includes("commercialRole?sql`select s.id,s.dispatch_id"),'Seafood AI must not retrieve restricted commercial evidence merely to suppress a false positive')
 assert(brief.includes("fetch('/api/operational-intelligence-overview'"),'Executive Decision Brief must consume the live overview')
 assert(brief.includes('Prioridad operacional')&&brief.includes('topOperational.signal.action'),'Control Tower must surface one dominant operational priority and next action')
 assert(brief.includes('ownerForPath')&&brief.includes('Responsable sugerido:'),'Control Tower must route the dominant exception to one responsible role without pretending an individual assignment')
@@ -54,4 +66,4 @@ if(failures.length){
  for(const failure of failures)console.error(`- ${failure}`)
  process.exit(1)
 }
-console.log('Operational Intelligence overview smoke PASS: one-source Event Graph priorities, responsible-role routing, production-schema-safe provenance, confidence-aware supplier scoring, compact Today, useful green state and consistent secondary surfaces verified')
+console.log('Operational Intelligence overview smoke PASS: one-source Event Graph priorities, permission-aware evidence assessment, responsible-role routing, production-schema-safe provenance, confidence-aware supplier scoring, compact Today and useful green state verified')
