@@ -18,7 +18,7 @@ async function commonRoute(route:import('@playwright/test').Route,writesEnabled:
 test('Floor remains read-only and never queries station tables while Plant Execution gate is disabled',async({page})=>{
  const stationCalls={value:0}
  await page.route('**/api/**',async route=>{if(await commonRoute(route,false,stationCalls))return;await route.fulfill({status:200,contentType:'application/json',body:'{}'})})
- await page.goto('/floor')
+ await page.goto('/floor/detalle')
  await expect(page.getByText('Modo seguro',{exact:true})).toBeVisible()
  await page.getByLabel('Peso de estación').fill('2,50')
  await expect(page.getByRole('button',{name:/Crear packing unit/})).toBeDisabled()
@@ -37,7 +37,7 @@ test('Floor creates one idempotent packing request when gate and a real station 
   }
   await route.fulfill({status:200,contentType:'application/json',body:'{}'})
  })
- await page.goto('/floor')
+ await page.goto('/floor/detalle')
  await expect(page.getByText('Escritura habilitada',{exact:true})).toBeVisible()
  await expect(page.getByLabel('Estación de planta')).toHaveValue(station.id)
  await page.getByLabel('Peso de estación').fill('2,50')
@@ -65,7 +65,7 @@ test('a network failure queues the same packing identity and replays it once con
   }
   await route.fulfill({status:200,contentType:'application/json',body:'{}'})
  })
- await page.goto('/floor')
+ await page.goto('/floor/detalle')
  await page.getByLabel('Peso de estación').fill('1,75')
  await page.getByRole('button',{name:/Crear packing unit/}).click()
  await expect(page.getByRole('status')).toContainText('pendiente de sincronización')
@@ -91,7 +91,7 @@ test('a queued request rejected by contract moves to attention and leaves the au
   }
   await route.fulfill({status:200,contentType:'application/json',body:'{}'})
  })
- await page.goto('/floor')
+ await page.goto('/floor/detalle')
  await page.getByLabel('Peso de estación').fill('9,99')
  await page.getByRole('button',{name:/Crear packing unit/}).click()
  await expect(page.getByRole('status')).toContainText('pendiente de sincronización')

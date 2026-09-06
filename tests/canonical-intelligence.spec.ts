@@ -67,7 +67,7 @@ async function mockApp(page:Page,role:'admin'|'quality'='admin'){
 
 test('canonical intelligence distinguishes roll-forward capture without inventing yield',async({page},testInfo)=>{
  await mockApp(page,'admin')
- await page.goto('/')
+ await page.goto('/inicio/detalle')
  await expect(page.getByRole('heading',{name:'Resultado de la data subida'})).toBeVisible()
  await expect(page.getByText('planilla de produccion 2026.xlsx',{exact:false})).toBeVisible()
  await expect(page.getByText('49.183,6 kg',{exact:true})).toBeVisible()
@@ -97,7 +97,7 @@ test('canonical intelligence distinguishes roll-forward capture without inventin
 
 test('quality role does not receive financial canonical cards',async({page})=>{
  await mockApp(page,'quality')
- await page.goto('/')
+ await page.goto('/inicio/detalle')
  await expect(page.getByRole('heading',{name:'Resultado de la data subida'})).toBeVisible()
  await expect(page.getByText('Entradas cuenta',{exact:true})).toHaveCount(0)
  await expect(page.getByText('Transferencias recibidas',{exact:true})).toHaveCount(0)

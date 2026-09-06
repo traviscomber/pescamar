@@ -17,7 +17,7 @@ async function mockAdmin(page:Page){
 test('profitability renders source date ranges as locale dates rather than raw ISO',async({page},testInfo)=>{
  test.skip(testInfo.project.name!=='desktop-chromium','Management visual contract is exercised once on Chromium')
  await mockAdmin(page)
- await page.goto('/rentabilidad')
+ await page.goto('/rentabilidad/detalle')
  await expect(page.getByText('Proveedor QA',{exact:true})).toBeVisible()
  const row=page.getByText('Proveedor QA',{exact:true}).locator('xpath=ancestor::tr')
  await expect(row).not.toContainText('T00:00:00')

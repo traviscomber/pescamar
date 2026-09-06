@@ -65,7 +65,7 @@ test('settlement summary and calculation avoid nested metric cards',async({page}
 })
 
 test('transformation costs use a control bar and ledger surface',async({page},testInfo)=>{
-  await mockFinanceApp(page);await page.goto('/costos-transformacion')
+  await mockFinanceApp(page);await page.goto('/costos-transformacion/detalle')
   await expect(page.getByRole('heading',{name:'Transformación',exact:true})).toBeVisible()
   const selector=page.locator('.main-content>.panel').filter({has:page.locator('.inline-field')}).first();await expect(selector).toBeVisible()
   expect(await selector.evaluate(el=>getComputedStyle(el).boxShadow)).toBe('none')
@@ -74,7 +74,7 @@ test('transformation costs use a control bar and ledger surface',async({page},te
 })
 
 test('profitability reads as report sections rather than stacked cards',async({page},testInfo)=>{
-  await mockFinanceApp(page);await page.goto('/rentabilidad')
+  await mockFinanceApp(page);await page.goto('/rentabilidad/detalle')
   await expect(page.getByRole('heading',{name:'Desempeño y rentabilidad',exact:true})).toBeVisible()
   const reports=page.locator('.event-kind-tabs ~ .panel');await expect(reports).toHaveCount(3)
   expect(await reports.first().evaluate(el=>getComputedStyle(el).boxShadow)).toBe('none')

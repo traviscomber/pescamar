@@ -41,7 +41,7 @@ test('partners directory reads as a master-data ledger',async({page},testInfo)=>
 })
 
 test('communications use an instrumentation matrix and continuous source surfaces',async({page},testInfo)=>{
-  await mockControlTower(page);await page.goto('/comunicaciones')
+  await mockControlTower(page);await page.goto('/comunicaciones/detalle')
   await expect(page.getByRole('heading',{name:'Comunicaciones',exact:true})).toBeVisible()
   const signals=page.locator('.communication-overview>.signal-card');await expect(signals).toHaveCount(6)
   if(testInfo.project.name==='desktop-chromium'){

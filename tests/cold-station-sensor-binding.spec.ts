@@ -44,7 +44,7 @@ test('cold page renders physical station and its sensor without overflow',async(
  const errors:string[]=[]
  page.on('console',message=>{if(message.type()==='error')errors.push(message.text())})
  await mock(page,true)
- await page.goto('/frio')
+ await page.goto('/frio/detalle')
  await expect(page.getByRole('heading',{name:'Cadena de frío',exact:true})).toBeVisible()
  await selectAncud(page)
  const assetPanel=panel(page,'Activo de frío'),runPanel=panel(page,'Operar ciclo')
@@ -59,7 +59,7 @@ test('cold page renders physical station and its sensor without overflow',async(
 
 test('cold controls respect the shared write gate',async({page})=>{
  await mock(page,false)
- await page.goto('/frio')
+ await page.goto('/frio/detalle')
  await selectAncud(page)
  const assetPanel=panel(page,'Activo de frío')
  await selectByLabel(assetPanel,'Estación de frío').selectOption('11111111-1111-4111-8111-111111111111')

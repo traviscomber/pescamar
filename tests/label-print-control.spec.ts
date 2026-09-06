@@ -21,6 +21,7 @@ test('physical Label Engine preserves validated-label, printer and idempotency g
  expect(options).toContain("d.device_type='printer'")
  expect(access).toContain('"/impresion-etiquetas":["admin","operations","quality"]')
  expect(vercel).toContain('"source": "/impresion-etiquetas"')
+ expect(vercel).toContain('"source": "/impresion-etiquetas/detalle"')
 })
 
 async function mock(page:Page,writesEnabled=true){
@@ -51,7 +52,7 @@ test('quality can prepare a physical print job without overflow',async({page})=>
  const errors:string[]=[]
  page.on('console',message=>{if(message.type()==='error')errors.push(message.text())})
  await mock(page,true)
- await page.goto('/impresion-etiquetas')
+ await page.goto('/impresion-etiquetas/detalle')
  await expect(page.getByRole('heading',{name:'Impresión de etiquetas',exact:true})).toBeVisible()
  await selectPrintIntent(page)
  await expect(page.getByRole('button',{name:'Encolar impresión'})).toBeEnabled()
@@ -61,7 +62,7 @@ test('quality can prepare a physical print job without overflow',async({page})=>
 
 test('physical print mutations disable with the shared kill switch',async({page})=>{
  await mock(page,false)
- await page.goto('/impresion-etiquetas')
+ await page.goto('/impresion-etiquetas/detalle')
  await selectPrintIntent(page)
  await expect(page.getByRole('button',{name:'Encolar impresión'})).toBeDisabled()
 })

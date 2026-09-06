@@ -35,7 +35,7 @@ test('receptions reads as one continuous operational workspace',async({page},tes
 
 test('production puts current lots before analytical context',async({page},testInfo)=>{
   await mockOperationalApp(page)
-  await page.goto('/lineas')
+  await page.goto('/lineas/detalle')
   await expect(page.getByRole('heading',{name:'Producción por lote',exact:true})).toBeVisible()
   const workspace=page.locator('.production-workspace'),balance=page.locator('.balance-panel')
   await expect(workspace).toBeVisible();await expect(balance).toBeVisible()
@@ -63,7 +63,7 @@ test('commercial KPIs form a continuous rail',async({page},testInfo)=>{
 
 test('quality process selector behaves as a control bar',async({page},testInfo)=>{
   await mockOperationalApp(page)
-  await page.goto('/proceso-erizo')
+  await page.goto('/proceso-erizo/detalle')
   await expect(page.getByRole('heading',{name:'Erizo · Control de proceso',exact:true})).toBeVisible()
   const selector=page.locator('.signal-grid + .panel').first()
   await expect(selector).toBeVisible()

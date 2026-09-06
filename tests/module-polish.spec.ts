@@ -30,7 +30,7 @@ test('820px shell uses the navigation drawer instead of an icon-only rail',async
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
   await trigger.click()
   await expect(sidebar).toHaveClass(/is-open/)
-  await expect(page.getByRole('link',{name:'Recepciones'})).toBeVisible()
+  await expect(page.getByRole('link',{name:'Operación',exact:true})).toBeVisible()
   await expect(page.getByRole('button',{name:'Cerrar menú'})).toBeVisible()
   await page.screenshot({path:testInfo.outputPath('tablet-production-drawer.png'),fullPage:true})
 })
@@ -38,7 +38,7 @@ test('820px shell uses the navigation drawer instead of an icon-only rail',async
 test('production live workspace precedes analytical balance and nested KPI framing is flat',async({page},testInfo)=>{
   test.skip(testInfo.project.name!=='desktop-chromium','Visual hierarchy contract is exercised once on Chromium')
   await mockOperations(page)
-  await page.goto('/lineas')
+  await page.goto('/lineas/detalle')
   const workspace=page.locator('.production-workspace'),balance=page.locator('.balance-panel')
   await expect(workspace).toBeVisible()
   await expect(balance).toBeVisible()
@@ -54,7 +54,7 @@ test('production live workspace precedes analytical balance and nested KPI frami
 test('inventory live position precedes one canonical read-only evidence section',async({page},testInfo)=>{
   test.skip(testInfo.project.name!=='desktop-chromium','Visual hierarchy contract is exercised once on Chromium')
   await mockOperations(page)
-  await page.goto('/inventario')
+  await page.goto('/inventario/detalle')
   const workspace=page.locator('.inventory-workspace'),evidence=page.locator('.canonical-inventory-evidence')
   await expect(workspace).toBeVisible()
   await expect(evidence).toHaveCount(1)

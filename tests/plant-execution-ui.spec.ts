@@ -29,13 +29,13 @@ async function noShadow(locator:ReturnType<Page['locator']>){expect(await locato
 
 for(const scenario of [
   {path:'/planificacion',heading:'Plan diario de producción',shot:'planning-execution.png'},
-  {path:'/floor',heading:'Estación de planta',shot:'floor-execution.png'},
-  {path:'/pallets',heading:'Palletización',shot:'pallets-execution.png'},
-  {path:'/frio',heading:'Cadena de frío',shot:'cold-execution.png'},
+  {path:'/floor/detalle',heading:'Estación de planta',shot:'floor-execution.png'},
+  {path:'/pallets/detalle',heading:'Palletización',shot:'pallets-execution.png'},
+  {path:'/frio/detalle',heading:'Cadena de frío',shot:'cold-execution.png'},
   {path:'/control-regulatorio',heading:'Control regulatorio',shot:'regulatory-execution.png'},
-  {path:'/inventario-materiales',heading:'Materias primas e insumos',shot:'materials-execution.png'},
+  {path:'/inventario-materiales/detalle',heading:'Materias primas e insumos',shot:'materials-execution.png'},
   {path:'/etiquetas',heading:'Etiquetas Pescamar',shot:'labels-execution.png'},
-  {path:'/impresion-etiquetas',heading:'Impresión de etiquetas',shot:'label-print-execution.png'},
+  {path:'/impresion-etiquetas/detalle',heading:'Impresión de etiquetas',shot:'label-print-execution.png'},
 ]){
   test(`${scenario.heading} keeps task-first hierarchy`,async({page},testInfo)=>{
     await mockPlantExecution(page)
@@ -45,18 +45,18 @@ for(const scenario of [
     if(scenario.path==='/planificacion'){
       const workspace=page.locator('.planning-workspace');await expect(workspace).toBeVisible();await noShadow(workspace)
     }
-    if(scenario.path==='/floor'){
+    if(scenario.path==='/floor/detalle'){
       const instruments=page.locator('.floor-status-strip>div');await expect(instruments).toHaveCount(4);await noShadow(instruments.first())
       const gate=page.locator('.floor-next-gate');await expect(gate).toBeVisible();await noShadow(gate)
     }
-    if(['/pallets','/frio','/control-regulatorio'].includes(scenario.path)){
+    if(['/pallets/detalle','/frio/detalle','/control-regulatorio'].includes(scenario.path)){
       const nav=page.locator('.page-header .row-actions').filter({has:page.getByRole('link',{name:'Pallets'})});await expect(nav).toBeVisible()
       const trace=page.locator('.signal-grid ~ .panel').filter({has:page.locator('.compact-ledger')}).last();await expect(trace).toBeVisible();await noShadow(trace)
     }
-    if(scenario.path==='/inventario-materiales'){
+    if(scenario.path==='/inventario-materiales/detalle'){
       const ledger=page.locator('.signal-grid + .panel').first();await expect(ledger).toBeVisible();await noShadow(ledger)
     }
-    if(['/etiquetas','/impresion-etiquetas'].includes(scenario.path)){
+    if(['/etiquetas','/impresion-etiquetas/detalle'].includes(scenario.path)){
       const trace=page.locator('.signal-grid ~ .panel').filter({has:page.locator('.compact-ledger')}).last();await expect(trace).toBeVisible();await noShadow(trace)
     }
     await page.screenshot({path:testInfo.outputPath(scenario.shot),fullPage:true})

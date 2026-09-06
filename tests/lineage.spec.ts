@@ -61,7 +61,7 @@ test('Trazabilidad histórica exposes canonical evidence without presenting it a
   await expect(page.getByText('Recepción histórica · guía 90')).toBeVisible()
   await expect(page.getByText('Fuente canónica · planilla de produccion 2026.xlsx')).toBeVisible()
   await expect(page.getByText('Sin evento')).toHaveCount(5)
-  await expect(page.getByText('inventario live',{exact:false})).toBeVisible()
+  await expect(page.getByText(/No modifica ni completa artificialmente la operación live/)).toBeVisible()
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
   await page.screenshot({path:testInfo.outputPath('trazabilidad-historica.png'),fullPage:true})
 })

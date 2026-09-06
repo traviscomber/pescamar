@@ -42,7 +42,7 @@ async function mockApp(page:Page,role:'admin'|'quality'='admin',resolutions:Reso
 
 test('roll-forward workspace links support evidence and leaves contradictions for human review',async({page},testInfo)=>{
  await mockApp(page)
- await page.goto('/')
+ await page.goto('/inicio/detalle')
  await expect(page.getByRole('heading',{name:'Lote → grado → destino'})).toBeVisible()
  await expect(page.getByText('74,2%',{exact:true})).toBeVisible()
  await expect(page.getByText('66/89 bloques sin contradicción',{exact:true})).toBeVisible()
@@ -72,7 +72,7 @@ test('roll-forward workspace links support evidence and leaves contradictions fo
 test('quality sees effective coverage after an audited human resolution',async({page})=>{
  const candidateSnapshot:CandidateSnapshotMock={version:'rollforward-resolution-snapshot-v2',support:{sheetName:'Isla Guafo',sourceBlock:7,familyKey:'IG',supplier:'Eugenio Mardones',guide:'3346',lotReference:'ig05'},guideCandidates:[{sourceRow:7,eventDate:'2026-04-08',guide:'3346',lot:'IG-04',supplier:'Eugenio Mardones',site:'Curanue',guideKg:400,receivedKg:390,guideMatch:true,lotMatch:false}],lotCandidates:[{sourceRow:8,eventDate:'2026-04-09',guide:'3347',lot:'IG-05',supplier:'Eugenio Mardones',site:'Curanue',guideKg:410,receivedKg:405.2,guideMatch:false,lotMatch:true}],selected:{sourceRow:7,eventDate:'2026-04-08',guide:'3346',lot:'IG-04',supplier:'Eugenio Mardones',site:'Curanue',guideKg:400,receivedKg:390,guideMatch:true,lotMatch:false}}
  await mockApp(page,'quality',[{sheet_name:'Isla Guafo',source_block:7,selected_main_source_row:7,resolution_status:'linked',resolution_basis:'guide',review_note:'Guía física verificada por Calidad',candidate_snapshot:candidateSnapshot,reviewed_at:'2026-08-27T22:00:00Z',reviewed_by:'QA quality'}])
- await page.goto('/')
+ await page.goto('/inicio/detalle')
  const queue=page.getByRole('region',{name:'Revisión humana de conflictos roll-forward'})
  await expect(queue).toBeVisible()
  await expect(queue.getByText('0 pendientes',{exact:true})).toBeVisible()
@@ -90,7 +90,7 @@ test('quality sees effective coverage after an audited human resolution',async({
 
 test('admin can republish exact canonical workbook into support staging',async({page})=>{
  await mockApp(page,'admin')
- await page.goto('/')
+ await page.goto('/inicio/detalle')
  await expect(page.getByRole('button',{name:'Publicar evidencia auxiliar'})).toBeVisible()
  await page.locator('input[type=file]').last().setInputFiles({name:'planilla de produccion 2026.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:Buffer.from('fixture')})
  await expect(page.getByText('89 bloques / 332 observaciones auxiliares publicadas.')).toBeVisible()
@@ -98,7 +98,7 @@ test('admin can republish exact canonical workbook into support staging',async({
 
 test('quality can inspect support evidence but cannot publish it',async({page})=>{
  await mockApp(page,'quality')
- await page.goto('/')
+ await page.goto('/inicio/detalle')
  await expect(page.getByRole('heading',{name:'Vínculo determinístico contra producción'})).toBeVisible()
  await expect(page.getByRole('button',{name:'Publicar evidencia auxiliar'})).toHaveCount(0)
 })

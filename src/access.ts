@@ -4,6 +4,7 @@ const access:Record<string,AppRole[]|"all">={
   "/":"all",
   "/timeline":"all",
   "/lineage":"all",
+  "/lotes":"all",
   "/edgevision":"all",
   "/organization":["admin","operations"],
   "/integrations":["admin","operations"],
