@@ -3,81 +3,75 @@
 -- structures first, records those migrations as structurally reconciled, and
 -- records 047 itself as applied with a real timestamp.
 
-do $$
-begin
-  if to_regclass('public.japan_export_release_evidence') is null
-    or to_regclass('public.japan_export_release_evidence_reception_gate_idx') is null
-    or to_regclass('public.japan_export_release_evidence_current_unique') is null
-    or to_regprocedure('public.japan_destination_matches(text)') is null
-    or to_regprocedure('public.japan_dispatch_is_allowed(uuid,text,text)') is null
-    or to_regprocedure('public.japan_reception_is_released(uuid)') is null
-    or to_regprocedure('public.japan_reception_has_valid_cold_chain(uuid)') is null
-    or to_regclass('public.lot_lifecycle_events') is null
-    or to_regclass('public.lot_lifecycle_events_reception_time_idx') is null then
-    raise exception 'No se puede reconciliar 042-046: faltan objetos canónicos requeridos';
-  end if;
-
-  if not exists(
-      select 1 from pg_constraint
-      where conrelid='public.lot_dispatches'::regclass
-        and conname='lot_dispatches_japan_release_check'
-    )
-    or not exists(
-      select 1 from pg_constraint
-      where conrelid='public.sea_urchin_stage_checks'::regclass
-        and conname='sea_urchin_stage_sequence_mapping_check'
-    )
-    or not exists(
-      select 1 from pg_constraint
-      where conrelid='public.sea_urchin_stage_checks'::regclass
-        and conname='sea_urchin_stage_sequence_pass_unique'
-    )
-    or not exists(
-      select 1 from pg_constraint
-      where conrelid='public.sea_urchin_stage_checks'::regclass
-        and conname='sea_urchin_stage_previous_pass_fk'
-    )
-    or not exists(
-      select 1 from pg_constraint
-      where conrelid='public.sea_urchin_process_runs'::regclass
-        and conname='sea_urchin_run_release_classification_check'
-    )
-    or not exists(
-      select 1 from pg_constraint
-      where conrelid='public.sea_urchin_process_runs'::regclass
-        and conname='sea_urchin_run_terminal_stage_fk'
-    ) then
-    raise exception 'No se puede reconciliar 042-046: faltan gates o constraints canónicos';
-  end if;
-
-  if not exists(
-      select 1 from information_schema.columns
-      where table_schema='public' and table_name='sea_urchin_stage_checks'
-        and column_name='sequence_pass' and is_generated='ALWAYS'
-    )
-    or not exists(
-      select 1 from information_schema.columns
-      where table_schema='public' and table_name='sea_urchin_stage_checks'
-        and column_name='required_previous_sequence_no' and is_generated='ALWAYS'
-    )
-    or not exists(
-      select 1 from information_schema.columns
-      where table_schema='public' and table_name='sea_urchin_stage_checks'
-        and column_name='required_previous_pass' and is_generated='ALWAYS'
-    )
-    or not exists(
-      select 1 from information_schema.columns
-      where table_schema='public' and table_name='sea_urchin_process_runs'
-        and column_name='required_terminal_sequence_no' and is_generated='ALWAYS'
-    )
-    or not exists(
-      select 1 from information_schema.columns
-      where table_schema='public' and table_name='sea_urchin_process_runs'
-        and column_name='required_terminal_pass' and is_generated='ALWAYS'
-    ) then
-    raise exception 'No se puede reconciliar 042-046: faltan columnas generadas canónicas';
-  end if;
-end $$;
+-- Fail closed with pure SQL so the migration is accepted by the migration
+-- runner while still refusing reconciliation when any canonical landmark is
+-- missing. Division by zero intentionally aborts the transaction on failure.
+select 1 / case when
+  to_regclass('public.japan_export_release_evidence') is not null
+  and to_regclass('public.japan_export_release_evidence_reception_gate_idx') is not null
+  and to_regclass('public.japan_export_release_evidence_current_unique') is not null
+  and to_regprocedure('public.japan_destination_matches(text)') is not null
+  and to_regprocedure('public.japan_dispatch_is_allowed(uuid,text,text)') is not null
+  and to_regprocedure('public.japan_reception_is_released(uuid)') is not null
+  and to_regprocedure('public.japan_reception_has_valid_cold_chain(uuid)') is not null
+  and to_regclass('public.lot_lifecycle_events') is not null
+  and to_regclass('public.lot_lifecycle_events_reception_time_idx') is not null
+  and exists(
+    select 1 from pg_constraint
+    where conrelid=to_regclass('public.lot_dispatches')
+      and conname='lot_dispatches_japan_release_check'
+  )
+  and exists(
+    select 1 from pg_constraint
+    where conrelid=to_regclass('public.sea_urchin_stage_checks')
+      and conname='sea_urchin_stage_sequence_mapping_check'
+  )
+  and exists(
+    select 1 from pg_constraint
+    where conrelid=to_regclass('public.sea_urchin_stage_checks')
+      and conname='sea_urchin_stage_sequence_pass_unique'
+  )
+  and exists(
+    select 1 from pg_constraint
+    where conrelid=to_regclass('public.sea_urchin_stage_checks')
+      and conname='sea_urchin_stage_previous_pass_fk'
+  )
+  and exists(
+    select 1 from pg_constraint
+    where conrelid=to_regclass('public.sea_urchin_process_runs')
+      and conname='sea_urchin_run_release_classification_check'
+  )
+  and exists(
+    select 1 from pg_constraint
+    where conrelid=to_regclass('public.sea_urchin_process_runs')
+      and conname='sea_urchin_run_terminal_stage_fk'
+  )
+  and exists(
+    select 1 from information_schema.columns
+    where table_schema='public' and table_name='sea_urchin_stage_checks'
+      and column_name='sequence_pass' and is_generated='ALWAYS'
+  )
+  and exists(
+    select 1 from information_schema.columns
+    where table_schema='public' and table_name='sea_urchin_stage_checks'
+      and column_name='required_previous_sequence_no' and is_generated='ALWAYS'
+  )
+  and exists(
+    select 1 from information_schema.columns
+    where table_schema='public' and table_name='sea_urchin_stage_checks'
+      and column_name='required_previous_pass' and is_generated='ALWAYS'
+  )
+  and exists(
+    select 1 from information_schema.columns
+    where table_schema='public' and table_name='sea_urchin_process_runs'
+      and column_name='required_terminal_sequence_no' and is_generated='ALWAYS'
+  )
+  and exists(
+    select 1 from information_schema.columns
+    where table_schema='public' and table_name='sea_urchin_process_runs'
+      and column_name='required_terminal_pass' and is_generated='ALWAYS'
+  )
+then 1 else 0 end as canonical_structure_verified;
 
 alter table schema_migrations
   drop constraint if exists schema_migrations_evidence_kind_check;
