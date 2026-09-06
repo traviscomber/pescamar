@@ -1,0 +1,43 @@
+import type {SessionOperator} from './_auth.js'
+import {getSql} from './_db.js'
+import {resolveRequestOrganization} from './_organization.js'
+import {seafoodEvent,sortSeafoodEvents,type SeafoodEvent} from './_seafood-event.js'
+import {buildOperationalIntelligence} from './_operational-intelligence.js'
+
+const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const rows=(value:unknown)=>Array.isArray(value)?value as Record<string,unknown>[]:[]
+const text=(value:unknown)=>value==null?null:String(value)
+const numberOrNull=(value:unknown)=>{const parsed=Number(value);return Number.isFinite(parsed)?parsed:null}
+
+export async function buildCopilotOperationalIntelligence(operator:SessionOperator,receptionId:unknown){
+ const id=typeof receptionId==='string'?receptionId.trim():''
+ if(!uuid.test(id))return null
+ const organization=resolveRequestOrganization({},operator.organizationId)
+ if(!organization)return null
+ const sql=getSql(),admin=operator.role==='admin',commercialRole=['admin','operations','finance'].includes(operator.role)
+ const access=admin?await sql`select id,plant_id from receptions where id=${id}::uuid limit 1`:await sql`select id,plant_id from receptions where id=${id}::uuid and plant_id=any(${operator.plantIds}::text[]) limit 1`
+ const accessible=rows(access)[0]
+ if(!accessible)return null
+ const siteId=text(accessible.plant_id)
+ const [receptionRaw,evidenceRaw,lotEventsRaw,movementsRaw,ordersRaw,dispatchRaw,salesRaw]=await Promise.all([
+  sql`select r.id,r.reception_number,r.species,r.extraction_zone,r.source_reference,r.source,r.guide_kg,r.gross_kg,r.tare_kg,r.drained_kg,r.accepted_kg,r.received_at,r.created_at,r.created_by,p.legal_name supplier from receptions r join parties p on p.id=r.supplier_id where r.id=${id}::uuid limit 1`,
+  sql`select id,kind,label,note,created_by,created_at from reception_evidence where reception_id=${id}::uuid order by created_at`,
+  sql`select id,event_type,title,detail,metrics,created_by,occurred_at from lot_events where reception_id=${id}::uuid order by occurred_at`,
+  sql`select m.id,m.movement_type,m.moved_kg,m.reason,m.occurred_at,m.created_by,fl.name from_location,tl.name to_location from inventory_movements m left join inventory_locations fl on fl.id=m.from_location_id left join inventory_locations tl on tl.id=m.to_location_id where m.reception_id=${id}::uuid order by m.occurred_at`,
+  commercialRole?sql`select a.id allocation_id,a.allocated_kg,a.created_at,a.created_by,o.id order_id,o.order_number,o.product,o.delivery_date,o.status,c.legal_name customer from sales_order_allocations a join sales_orders o on o.id=a.order_id join parties c on c.id=o.customer_id where a.reception_id=${id}::uuid order by a.created_at`:Promise.resolve([]),
+  sql`select d.id,d.dispatch_number,d.destination,d.dispatched_kg,d.document_ref,d.vehicle_ref,d.status,d.dispatched_at,d.created_by,c.legal_name customer from lot_dispatches d left join parties c on c.id=d.customer_id where d.reception_id=${id}::uuid order by d.dispatched_at`,
+  commercialRole?sql`select s.id,s.dispatch_id,s.sold_kg,s.price_per_kg_clp,s.invoice_ref,s.status,s.sold_at,s.created_by,c.legal_name customer from lot_sales s join parties c on c.id=s.customer_id where s.reception_id=${id}::uuid order by s.sold_at`:Promise.resolve([]),
+ ])
+ const reception=rows(receptionRaw)[0]
+ if(!reception)return null
+ const events:SeafoodEvent[]=[]
+ events.push(seafoodEvent({id:`reception:${id}`,siteId,lotId:id,type:'reception',occurredAt:text(reception.received_at)??text(reception.created_at),title:`Recepción ${text(reception.reception_number)??id.slice(0,8)}`,detail:text(reception.species),actor:text(reception.created_by),metrics:{species:text(reception.species),supplier:text(reception.supplier),extractionZone:text(reception.extraction_zone),sourceReference:text(reception.source_reference),source:text(reception.source),guideKg:numberOrNull(reception.guide_kg),grossKg:numberOrNull(reception.gross_kg),tareKg:numberOrNull(reception.tare_kg),drainedKg:numberOrNull(reception.drained_kg),acceptedKg:numberOrNull(reception.accepted_kg)},source:{entityType:'reception',entityId:id}},organization))
+ for(const row of rows(evidenceRaw)){const eventId=String(row.id);events.push(seafoodEvent({id:`evidence:${eventId}`,siteId,lotId:id,type:'evidence',occurredAt:text(row.created_at),title:`Evidencia · ${text(row.label)??text(row.kind)??'Documento'}`,detail:text(row.note),actor:text(row.created_by),metrics:{kind:text(row.kind),label:text(row.label)},source:{entityType:'reception_evidence',entityId:eventId}},organization))}
+ for(const row of rows(lotEventsRaw)){const eventId=String(row.id),rawType=String(row.event_type??'note'),type=rawType==='quality'||rawType==='production'?rawType:'note';events.push(seafoodEvent({id:`lot_event:${eventId}`,siteId,lotId:id,type,occurredAt:text(row.occurred_at),title:text(row.title)??'Evento operacional',detail:text(row.detail),actor:text(row.created_by),metrics:row.metrics&&typeof row.metrics==='object'&&!Array.isArray(row.metrics)?row.metrics as Record<string,unknown>:{},source:{entityType:'lot_event',entityId:eventId}},organization))}
+ for(const row of rows(movementsRaw)){const eventId=String(row.id),movementType=text(row.movement_type)??'movimiento';events.push(seafoodEvent({id:`inventory:${eventId}`,siteId,lotId:id,type:'inventory',occurredAt:text(row.occurred_at),title:`Inventario · ${movementType}`,detail:text(row.reason),actor:text(row.created_by),metrics:{movementType,movedKg:numberOrNull(row.moved_kg),fromLocation:text(row.from_location),toLocation:text(row.to_location)},source:{entityType:'inventory_movement',entityId:eventId}},organization))}
+ for(const row of rows(ordersRaw)){const eventId=String(row.allocation_id);events.push(seafoodEvent({id:`commercial_commitment:${eventId}`,siteId,lotId:id,type:'commercial_commitment',occurredAt:text(row.created_at),title:`Compromiso · ${text(row.order_number)??eventId.slice(0,8)}`,detail:text(row.product),actor:text(row.created_by),metrics:{orderId:text(row.order_id),orderNumber:text(row.order_number),customer:text(row.customer),product:text(row.product),allocatedKg:numberOrNull(row.allocated_kg),deliveryDate:text(row.delivery_date),status:text(row.status)},source:{entityType:'sales_order_allocation',entityId:eventId}},organization))}
+ for(const row of rows(dispatchRaw)){const eventId=String(row.id);events.push(seafoodEvent({id:`dispatch:${eventId}`,siteId,lotId:id,type:'dispatch',occurredAt:text(row.dispatched_at),title:`Despacho · ${text(row.dispatch_number)??eventId.slice(0,8)}`,detail:text(row.destination),actor:text(row.created_by),metrics:{customer:text(row.customer),destination:text(row.destination),dispatchedKg:numberOrNull(row.dispatched_kg),documentRef:text(row.document_ref),vehicleRef:text(row.vehicle_ref),status:text(row.status)},source:{entityType:'lot_dispatch',entityId:eventId}},organization))}
+ for(const row of rows(salesRaw)){const eventId=String(row.id);events.push(seafoodEvent({id:`sale:${eventId}`,siteId,lotId:id,type:'sale',occurredAt:text(row.sold_at),title:`Venta · ${text(row.invoice_ref)??text(row.customer)??eventId.slice(0,8)}`,detail:text(row.customer),actor:text(row.created_by),metrics:{dispatchId:text(row.dispatch_id),customer:text(row.customer),soldKg:numberOrNull(row.sold_kg),pricePerKgClp:numberOrNull(row.price_per_kg_clp),invoiceRef:text(row.invoice_ref),status:text(row.status)},source:{entityType:'lot_sale',entityId:eventId}},organization))}
+ const ordered=sortSeafoodEvents(events),intelligence=buildOperationalIntelligence(ordered)
+ return {source:{id:'operational_intelligence',label:'Operational Intelligence · Seafood Event Graph',path:`/trazabilidad?mode=live&receptionId=${encodeURIComponent(id)}`,rows:intelligence.signals.length,freshness:ordered.at(-1)?.occurredAt??null},data:{...intelligence,evidenceEvents:ordered.map(event=>({id:event.id,type:event.type,occurredAt:event.occurredAt,title:event.title,source:event.source}))}}
+}
