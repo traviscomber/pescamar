@@ -17,4 +17,5 @@
 @import './finance-pass.css' layer(system);
 @import './plant-execution-pass.css' layer(system);
 @import './control-tower-pass.css' layer(system);
+@import './urchin-focus.css' layer(system);
 @import './a11y.css' layer(accessibility);
