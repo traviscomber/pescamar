@@ -4,7 +4,7 @@ import {buildLotControlCard} from './_lot-control-card.js'
 
 export async function buildCopilotContextWithLot(operator:SessionOperator,plantId:string|null,receptionId:unknown):Promise<CopilotContext>{
  const [context,card]=await Promise.all([buildCopilotContext(operator,plantId),buildLotControlCard(operator,receptionId)])
- if(!card)return context
+ if(!card||plantId&&card.reception.plantId!==plantId)return context
  const {source,...lotControl}=card
  return {...context,sources:[...context.sources,source],data:{...context.data,lot_control:lotControl}}
 }
