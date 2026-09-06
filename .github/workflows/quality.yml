@@ -52,6 +52,8 @@ jobs:
         run: node scripts/seafood-lineage-smoke.mjs
       - name: Lineage intelligence UI contract
         run: node scripts/lineage-intelligence-ui-smoke.mjs
+      - name: Operational Intelligence overview contract
+        run: node scripts/operational-intelligence-overview-smoke.mjs
       - name: EdgeVision foundation contract
         run: node scripts/edgevision-foundation-smoke.mjs
       - name: Organization context contract
