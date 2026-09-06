@@ -21,9 +21,11 @@ assert(!reception.includes('useState(100)')&&!reception.includes('useState(4.2)'
 assert(reception.includes('setEvidence([])')&&reception.includes('setSupplier("")'),'reception capture must reset between openings')
 assert(reception.includes('aria-labelledby="reception-modal-title"')&&reception.includes('event.key==="Escape"'),'reception capture must remain keyboard-safe')
 assert(receptionVision.includes('setProposal(payload.vision)'),'reception vision must stage extracted fields as a proposal')
-assert(receptionVision.includes('function applyProposal()')&&receptionVision.includes('onExtract(proposal)'),'reception vision must apply proposed fields only after explicit confirmation')
+assert(receptionVision.includes('function applyProposal()')&&receptionVision.includes('onExtract(documentaryFields(proposal))'),'reception vision must apply only confirmed documentary context')
+assert(receptionVision.includes('gross:null,tare:null,drained:null,temperature:null'),'reception vision must never promote document-derived physical measurements into live capture')
 assert(!receptionVision.includes('if(payload.vision){onExtract(payload.vision)'),'reception vision must never silently apply probabilistic extraction')
 assert(receptionVision.includes('La evidencia queda guardada en ambos casos'),'reception vision must preserve evidence when a proposal is rejected')
+assert(receptionVision.includes('Estas mediciones deben confirmarse físicamente en planta'),'reception vision must make the physical-confirmation boundary explicit')
 
 assert(!credits.includes('requestedBy'),'credit requester must come from authenticated server context')
 assert(credits.includes("setSupplier('')")&&credits.includes('setRecoveryValue(0)'),'credit capture must reset between openings')
@@ -63,4 +65,4 @@ if(failures.length){
   for(const failure of failures)console.error(`- ${failure}`)
   process.exit(1)
 }
-console.log('Operational form safety PASS: real-data defaults, explicit human confirmation of AI evidence proposals, stable authenticated identity, mastered counterparties, bounded financial inputs, UUID dual control, reset behavior and keyboard-safe modals verified')
+console.log('Operational form safety PASS: real-data defaults, explicit human confirmation of AI documentary context, physical measurements kept human-confirmed, stable authenticated identity, mastered counterparties, bounded financial inputs, UUID dual control, reset behavior and keyboard-safe modals verified')
