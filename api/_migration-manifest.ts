@@ -42,7 +42,8 @@ export const expectedMigrations=[
   '043_japan_dispatch_fail_closed.sql',
   '044_sea_urchin_sequence_fail_closed.sql',
   '045_japan_cold_chain_fail_closed.sql',
-  '046_lot_operational_lifecycle.sql'
+  '046_lot_operational_lifecycle.sql',
+  '047_reconcile_post_baseline_migration_registry.sql'
 ] as const
 
 export const migrationLandmarks=[
