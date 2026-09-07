@@ -39,7 +39,7 @@ test('Packing creates one idempotent request when gate and a real station are av
  })
  await page.goto('/floor/detalle')
  await expect(page.getByText('Escritura habilitada',{exact:true})).toBeVisible()
- await expect(page.getByText('Packing 01',{exact:true})).toBeVisible()
+ await expect(page.getByLabel('Contexto heredado').getByText('Packing 01',{exact:true})).toBeVisible()
  await page.getByLabel('Peso de estación').fill('2,50')
  await page.getByRole('button',{name:/Confirmar packing/}).click()
  await expect(page.getByRole('status')).toContainText('registrada')
