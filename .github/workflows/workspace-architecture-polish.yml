@@ -1,0 +1,44 @@
+name: Guarded workspace architecture polish
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/workspace-architecture-polish.yml']
+permissions:
+  contents: write
+jobs:
+  polish:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Apply exact workspace polish
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs')
+          const path='src/components/AppShell.tsx'
+          let s=fs.readFileSync(path,'utf8')
+          function once(from,to){const n=s.split(from).length-1;if(n!==1)throw new Error(`Expected one match, got ${n}: ${from}`);s=s.replace(from,to)}
+          once('const intelligencePaths=["/pescamar-ia","/lineage","/rentabilidad","/edgevision","/timeline"];','const intelligencePaths=["/pescamar-ia","/lineage","/rentabilidad"];')
+          once(' commercial:[\n  {to:"/ordenes-venta",label:"Órdenes",step:1},\n  {to:"/proveedores-clientes",label:"Proveedores",step:2},\n  {to:"/despachos-ventas",label:"Despacho",step:3},\n  {to:"/liquidaciones",label:"Liquidación",step:4},\n ],',' commercial:[\n  {to:"/ordenes-venta",label:"Órdenes",step:1},\n  {to:"/despachos-ventas",label:"Despacho",step:2},\n  {to:"/liquidaciones",label:"Liquidación",step:3},\n ],')
+          fs.writeFileSync(path,s)
+          const test='tests/os-architecture.spec.ts'
+          let t=fs.readFileSync(test,'utf8')
+          const anchor=" expect(shell).toContain('{to:\"/frio\",label:\"Frío\",step:6}')"
+          if(!t.includes(anchor)) throw new Error('test anchor missing')
+          t=t.replace(anchor,anchor+"\n expect(shell).not.toContain('{to:\"/proveedores-clientes\",label:\"Proveedores\"')\n expect(shell).toContain('{to:\"/despachos-ventas\",label:\"Despacho\",step:2}')\n expect(shell).toContain('const intelligencePaths=[\"/pescamar-ia\",\"/lineage\",\"/rentabilidad\"]')")
+          fs.writeFileSync(test,t)
+          NODE
+      - run: npm run quality
+      - name: Commit verified architecture polish
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/components/AppShell.tsx tests/os-architecture.spec.ts
+          git commit -m 'refactor: simplify commercial and admin workspace ownership'
+          git push origin HEAD:main
