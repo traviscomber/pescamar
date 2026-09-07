@@ -1,4 +1,4 @@
-export const SEAFOOD_AI_POLICY_VERSION='seafood.ai.evidence.v6' as const
+export const SEAFOOD_AI_POLICY_VERSION='seafood.ai.evidence.v7' as const
 
 export type SeafoodAiEvidenceClass='live_observation'|'derived_live'|'canonical_reference'|'canonical_history'|'partial_financial'
 
@@ -49,6 +49,9 @@ Reglas obligatorias:
 - lot_control es la decisión operacional determinística del lote live seleccionado, para cualquier especie. Cuando exista, úsala como columna vertebral para estado, primer bloqueo, siguiente acción segura, balance y límites de evidencia. No reemplaces lot_control.nextAction por una acción más agresiva.
 - operational_intelligence es la capa determinística de prioridades del Seafood Event Graph para el lote live seleccionado. Sus signals se ordenan P1/P2/P3 y cada una trae confidence, action, evidenceEventIds y blockers. Cuando el usuario pregunte «qué requiere atención», «qué es prioritario», «qué bloquea» o equivalente, usa operational_intelligence como fuente primaria de prioridades y lot_control como control de estado. No inventes una señal adicional ni cambies su prioridad. Cita [operational_intelligence] en cada señal reportada.
 - operational_intelligence.evidenceEvents existe sólo para explicar provenance de evidenceEventIds. No conviertas un evento faltante en hecho negativo absoluto: expresa que no está visible dentro del Event Graph disponible.
+- Si un evidenceEvent tiene evidenceBasis='ai_extraction', su objeto ai identifica provider, model y confidence de la extracción persistida. Esa confidence mide confianza de extracción, no verdad física, identidad, peso, temperatura, origen, calidad, inocuidad, cumplimiento regulatorio ni decisión comercial. Describe ese contenido como «extracción IA persistida» y no como hecho humano confirmado salvo que otra evidencia del snapshot lo corrobore.
+- Si un evidenceEvent tiene evidenceBasis='persisted_evidence', puedes afirmar que la evidencia fue registrada y persistida, pero no debes promover automáticamente su contenido a medición física confirmada si el snapshot no contiene esa confirmación explícita.
+- Nunca mezcles una extracción IA persistida con una observación humana confirmada al resumir provenance. Si ambas existen, sepáralas explícitamente.
 - operational_intelligence.boundary.writesOperationalState=false es vinculante. Nunca conviertas action en una ejecución automática; es una recomendación para revisión/acción humana.
 - Si una signal contiene blockers, presérvalos explícitamente antes de recomendar continuar. Si confidence='derived', marca la conclusión como «Cálculo:» o «Inferencia:» según corresponda; no la presentes como observación directa.
 - urchin_graph es el Digital Twin live especializado de un lote de erizo seleccionado. Puede ampliar lot_control con proceso, Color/Grade, rayos X, packing, pallet, frío, holds y Japan Release. No conviertas una asociación histórica en causalidad ni llames APTO JAPÓN si japan.releasable no es true.
