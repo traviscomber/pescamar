@@ -1,4 +1,3 @@
-import {URL} from 'node:url'
 import {requireOperator} from './_auth.js'
 import {getSql} from './_db.js'
 
@@ -11,7 +10,15 @@ type ReferenceRow={image_url:string|null;source_page:string|null}
 
 function queryValue(req:Request,key:string){const value=req.query?.[key];return Array.isArray(value)?value[0]:value}
 function isImage(contentType:string|null){return Boolean(contentType&&contentType.toLowerCase().startsWith('image/'))}
-function absoluteUrl(value:string,base:string){try{return new URL(value,base).toString()}catch{return null}}
+function absoluteUrl(value:string,base:string){
+  const v=value.trim()
+  if(/^https?:\/\//i.test(v))return v
+  const origin=base.match(/^(https?:\/\/[^/]+)/i)?.[1]
+  if(v.startsWith('//'))return `${base.startsWith('https:')?'https:':'http:'}${v}`
+  if(v.startsWith('/')&&origin)return `${origin}${v}`
+  const dir=base.replace(/[?#].*$/,'').replace(/\/[^/]*$/,'/')
+  return `${dir}${v.replace(/^\.\//,'')}`
+}
 function htmlImageCandidates(html:string,base:string){
   const found:string[]=[]
   const patterns=[
@@ -29,8 +36,7 @@ async function fetchImage(url:string,referer?:string|null){
     'Accept':'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
   }
   if(referer)headers.Referer=referer
-  const response=await fetch(url,{headers,redirect:'follow'})
-  return response
+  return fetch(url,{headers,redirect:'follow'})
 }
 
 export default async function handler(req:Request,res:Response){
