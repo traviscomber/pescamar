@@ -29,7 +29,7 @@ async function noShadow(locator:ReturnType<Page['locator']>){expect(await locato
 
 for(const scenario of [
   {path:'/planificacion',heading:'Planificación',shot:'planning-execution.png'},
-  {path:'/floor/detalle',heading:'Estación de planta',shot:'floor-execution.png'},
+  {path:'/floor/detalle',heading:'Packing',shot:'floor-execution.png'},
   {path:'/pallets/detalle',heading:'Palletización',shot:'pallets-execution.png'},
   {path:'/frio/detalle',heading:'Cadena de frío',shot:'cold-execution.png'},
   {path:'/control-regulatorio',heading:'Control regulatorio',shot:'regulatory-execution.png'},
@@ -52,6 +52,8 @@ for(const scenario of [
     if(scenario.path==='/floor/detalle'){
       const instruments=page.locator('.floor-status-strip>div');await expect(instruments).toHaveCount(4);await noShadow(instruments.first())
       const gate=page.locator('.floor-next-gate');await expect(gate).toBeVisible();await noShadow(gate)
+      await expect(page.getByText('Escanear lote',{exact:true})).toBeVisible()
+      await expect(page.getByText('Confirmar peso',{exact:true})).toBeVisible()
     }
     if(['/pallets/detalle','/frio/detalle','/control-regulatorio'].includes(scenario.path)){
       const nav=page.locator('.page-header .row-actions').filter({has:page.getByRole('link',{name:'Pallets'})});await expect(nav).toBeVisible()
