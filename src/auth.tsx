@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { organizationContext } from "./organization";
+import {useLocale} from './i18n';
 
 type Operator = {
   id: string;
@@ -103,9 +104,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (response.status === 429) {
         const retryAfter = Number(response.headers.get("Retry-After") ?? "0");
         const minutes = retryAfter > 0 ? Math.max(1, Math.ceil(retryAfter / 60)) : null;
-        throw new Error(minutes ? `Demasiados intentos. Intenta nuevamente en ${minutes} min.` : payload.error || "Demasiados intentos. Intenta nuevamente más tarde.");
+        throw new Error(minutes ? `AUTH_RATE_LIMIT:${minutes}` : "AUTH_RATE_LIMIT");
       }
-      throw new Error(payload.error || "No fue posible iniciar sesión");
+      throw new Error(payload.error || "AUTH_FAILED");
     }
     setOperator(normalizeOperator(payload.operator));
   }, []);
@@ -127,12 +128,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const value = useContext(AuthContext);
-  if (!value) throw new Error("AuthProvider requerido");
+  if (!value) throw new Error("AuthProvider required");
   return value;
 }
 
 export function LoginScreen() {
   const { login } = useAuth();
+  const {t}=useLocale();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -145,7 +147,8 @@ export function LoginScreen() {
     try {
       await login(email.trim(), password);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "No fue posible iniciar sesión");
+      const message=cause instanceof Error?cause.message:'AUTH_FAILED';
+      setError(message.startsWith('AUTH_RATE_LIMIT:')?t('auth.retryMinutes',{minutes:message.split(':')[1]}):message==='AUTH_RATE_LIMIT'?t('auth.tooMany'):message==='AUTH_FAILED'?t('auth.failed'):message);
     } finally {
       setSubmitting(false);
     }
@@ -154,19 +157,19 @@ export function LoginScreen() {
   return (
     <main className="login-shell">
       <section className="login-card panel" aria-labelledby="login-title">
-        <div className="eyebrow">PESCAMAR · CONTROL OPERACIONAL</div>
-        <h1 id="login-title">Acceso</h1>
-        <p>Ingresa con tu identidad operacional. El sistema limita automáticamente la información y las acciones según tu rol y plantas autorizadas.</p>
+        <div className="eyebrow">{t('auth.eyebrow')}</div>
+        <h1 id="login-title">{t('auth.title')}</h1>
+        <p>{t('auth.description')}</p>
         <form onSubmit={submit}>
           <label>
-            Correo
+            {t('auth.email')}
             <input
               type="email"
               autoComplete="username"
               inputMode="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              placeholder="nombre@pescamarchile.cl"
+              placeholder="name@pescamarchile.cl"
               required
               maxLength={254}
               disabled={submitting}
@@ -174,7 +177,7 @@ export function LoginScreen() {
             />
           </label>
           <label>
-            Contraseña
+            {t('auth.password')}
             <input
               type="password"
               autoComplete="current-password"
@@ -189,7 +192,7 @@ export function LoginScreen() {
           </label>
           {error ? <p className="form-error" role="alert" aria-live="polite">{error}</p> : null}
           <button className="button primary" type="submit" disabled={submitting}>
-            {submitting ? "Validando…" : "Entrar"}
+            {submitting ? t('auth.validating') : t('auth.enter')}
           </button>
         </form>
       </section>
