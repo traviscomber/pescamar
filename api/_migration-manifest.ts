@@ -45,7 +45,8 @@ export const expectedMigrations=[
   '046_lot_operational_lifecycle.sql',
   '047_reconcile_post_baseline_migration_registry.sql',
   '048_reception_vision_provenance.sql',
-  '049_reception_vision_file_provenance.sql'
+  '049_reception_vision_file_provenance.sql',
+  '050_uni_vision_quality_feedback.sql'
 ] as const
 
 export const migrationLandmarks=[
