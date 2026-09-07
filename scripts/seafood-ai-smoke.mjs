@@ -14,7 +14,7 @@ const [handler,context,contextWithLot,operationalContext,policy,intelligence,pag
   readFile(new URL('../src/auth.tsx',import.meta.url),'utf8'),
 ])
 
-assert(policy.includes("SEAFOOD_AI_POLICY_VERSION='seafood.ai.evidence.v6'"),'Seafood AI policy must be explicitly versioned at v6')
+assert(policy.includes("SEAFOOD_AI_POLICY_VERSION='seafood.ai.evidence.v7'"),'Seafood AI policy must be explicitly versioned at v7')
 for(const [source,evidenceClass] of Object.entries({receptions:'live_observation',production:'derived_live',quality:'live_observation',inventory:'derived_live',orders:'live_observation',canonical_sources:'canonical_reference',canonical_inventory:'canonical_history',finance:'partial_financial',operational_intelligence:'derived_live'}))assert(policy.includes(`${source}:'${evidenceClass}'`),`${source} must have evidence class ${evidenceClass}`)
 assert(policy.includes('Cálculo:')&&policy.includes('Inferencia:')&&policy.includes('Dato faltante:'),'Seafood AI must distinguish calculation, inference and missing evidence')
 assert(policy.includes('Nunca afirmes que ejecutaste, aprobaste o modificaste algo'),'Seafood AI must remain read-only in its policy')
@@ -24,6 +24,9 @@ assert(policy.includes('referenceRows son las demás filas preservadas'),'Seafoo
 assert(policy.includes('Nunca llames transacción a referenceRows'),'Seafood AI must never promote reference rows into financial movements')
 assert(policy.includes('operational_intelligence es la capa determinística de prioridades del Seafood Event Graph'),'Seafood AI must use Event Graph operational intelligence as its priority layer')
 assert(policy.includes('No inventes una señal adicional ni cambies su prioridad'),'Seafood AI must preserve deterministic signal priority')
+assert(policy.includes("evidenceBasis='ai_extraction'")&&policy.includes('extracción IA persistida'),'Seafood AI policy must identify persisted AI extraction provenance')
+assert(policy.includes("evidenceBasis='persisted_evidence'")&&policy.includes('medición física confirmada'),'Seafood AI policy must keep persisted evidence separate from physical confirmation')
+assert(policy.includes('Nunca mezcles una extracción IA persistida con una observación humana confirmada'),'Seafood AI must preserve the human-vs-AI provenance boundary')
 assert(policy.includes('boundary.writesOperationalState=false es vinculante'),'Seafood AI must preserve the read-only operational intelligence boundary')
 assert(handler.includes('requireOperator(req)'),'Seafood AI implementation must require authenticated operator')
 assert(handler.includes('operator.organizationId!==activeOrganization.organizationId'),'Seafood AI must enforce organization boundary before context retrieval')
@@ -43,6 +46,10 @@ assert(operationalContext.includes("id:'operational_intelligence'"),'copilot bri
 assert(operationalContext.includes('writesOperationalState')===false,'copilot bridge must not introduce an independent write boundary')
 assert(operationalContext.includes('optionalVisionRows')&&operationalContext.includes("type:'vision'"),'copilot Event Graph bridge must include the same Vision evidence needed by lineage intelligence')
 assert(operationalContext.includes('suggestedGrade:text(row.suggested_grade)')&&operationalContext.includes('operatorGrade:text(row.operator_grade)')&&operationalContext.includes('confirmedBy:text(row.confirmed_by)'),'copilot Vision evidence must preserve human-review fields used by operational intelligence')
+assert(operationalContext.includes('ai_provider,ai_model,ai_confidence'),'persisted reception evidence query must include AI provenance fields')
+assert(operationalContext.includes("evidenceBasis=aiProvider?'ai_extraction':'persisted_evidence'"),'Event Graph must classify persisted reception evidence basis')
+assert(operationalContext.includes('provider:aiProvider,model:aiModel,confidence:aiConfidence'),'Event Graph must preserve provider, model and confidence')
+assert(operationalContext.includes('evidenceBasis:typeof event.metrics.evidenceBasis')&&operationalContext.includes('ai:event.metrics.ai??null'),'Seafood AI snapshot must expose evidence provenance summaries')
 assert(intelligence.includes("LEDGER_MOVEMENT_RULE='event_date is not null and (inflow_clp is not null or outflow_clp is not null)'"),'canonical intelligence must use dated monetary rows only as financial movements')
 assert(intelligence.includes('reference_rows'),'canonical intelligence must expose preserved non-movement ledger rows')
 assert(intelligence.includes("movementRule:'dated_monetary_row_only'"),'canonical intelligence must expose the finance grain contract')
@@ -60,4 +67,4 @@ if(failures.length){
  for(const failure of failures)console.error(`- ${failure}`)
  process.exit(1)
 }
-console.log('Seafood AI smoke PASS: evidence classes, organization scope, Event Graph operational priorities including Vision review, canonical production gaps, audited ledger grain, read-only policy and source validation verified')
+console.log('Seafood AI smoke PASS: evidence classes, organization scope, persisted Vision provenance, Event Graph operational priorities, canonical production gaps, audited ledger grain, read-only policy and source validation verified')
