@@ -46,7 +46,8 @@ export const expectedMigrations=[
   '047_reconcile_post_baseline_migration_registry.sql',
   '048_reception_vision_provenance.sql',
   '049_reception_vision_file_provenance.sql',
-  '050_uni_vision_quality_feedback.sql'
+  '050_uni_vision_quality_feedback.sql',
+  '051_sea_urchin_external_references.sql'
 ] as const
 
 export const migrationLandmarks=[
@@ -62,5 +63,6 @@ export const migrationLandmarks=[
   'cold_runs',
   'regulatory_holds',
   'japan_export_release_evidence',
-  'lot_lifecycle_events'
+  'lot_lifecycle_events',
+  'sea_urchin_external_references'
 ] as const
