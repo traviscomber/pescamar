@@ -4,6 +4,8 @@
 .workspace-nav a.active{position:relative;background:rgba(118,166,199,.10);color:#F3F8FA}
 .workspace-nav a.active:before,.settings-link.active:before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:2px;border-radius:2px;background:#76A6C7}
 .settings-link.active{position:relative;background:rgba(118,166,199,.08);color:#F3F8FA}
+.powered-by-link{display:block;margin:10px 10px 2px;padding-top:10px;border-top:1px solid color-mix(in srgb,var(--line) 72%,transparent);font-size:9px;line-height:1.2;letter-spacing:.04em;color:color-mix(in srgb,var(--muted) 72%,transparent);text-decoration:none}
+.powered-by-link:hover{color:var(--text)}
 .workspace-tabs{display:flex;align-items:center;gap:4px;min-height:48px;padding:0 clamp(20px,2.8vw,40px);border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--surface) 96%,transparent);overflow-x:auto;scrollbar-width:none}
 .workspace-tabs::-webkit-scrollbar{display:none}
 .workspace-tabs a{position:relative;display:inline-flex;align-items:center;min-height:48px;padding:0 11px;white-space:nowrap;font-size:11px;font-weight:600;color:var(--muted);text-decoration:none}
@@ -45,4 +47,5 @@
  .topbar .compact-operator{min-width:40px;padding:3px 5px}
  .topbar .compact-operator>svg{display:none}
  .admin-hub-group{padding:16px}
+ .powered-by-link{margin-bottom:8px}
 }
