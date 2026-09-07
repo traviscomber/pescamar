@@ -14,6 +14,8 @@ export function UniVisionQaBench(){
  const [error,setError]=useState('')
  const [cameraOn,setCameraOn]=useState(false)
  const [cameraBusy,setCameraBusy]=useState(false)
+ const [cameraCycleOk,setCameraCycleOk]=useState(false)
+ const [analysisNotice,setAnalysisNotice]=useState('')
 
  useEffect(()=>()=>stopCamera(),[])
 
@@ -21,6 +23,7 @@ export function UniVisionQaBench(){
   const file=event.target.files?.[0]
   if(!file)return
   if(!['image/jpeg','image/png','image/webp'].includes(file.type)){setError('Usa JPG, PNG o WebP');return}
+  setCameraCycleOk(false);setAnalysisNotice('')
   try{
    const image=await readImage(file),canvas=drawToCanvas(image,image.naturalWidth,image.naturalHeight)
    analyzeCanvas(canvas,file.name)
@@ -34,11 +37,12 @@ export function UniVisionQaBench(){
   setResult(segmentation)
   setFileName(sourceName)
   setError('')
+  setAnalysisNotice('')
  }
 
  async function startCamera(){
   if(!navigator.mediaDevices?.getUserMedia){setError('Este navegador no permite acceso directo a la cámara.');return}
-  setCameraBusy(true);setError('')
+  setCameraBusy(true);setError('');setCameraCycleOk(false);setAnalysisNotice('')
   try{
    stopCamera()
    let stream:MediaStream
@@ -63,8 +67,12 @@ export function UniVisionQaBench(){
   if(!video||video.readyState<2||!video.videoWidth||!video.videoHeight){setError('La cámara todavía no está lista para capturar.');return}
   try{
    const canvas=drawToCanvas(video,video.videoWidth,video.videoHeight)
-   analyzeCanvas(canvas,`captura-camara-${new Date().toISOString()}`)
-  }catch(cause){clearResult();setError(cause instanceof Error?cause.message:'No fue posible analizar la captura')}
+   setCameraCycleOk(true)
+   setFileName(`captura-camara-${new Date().toISOString()}`)
+   setError('')
+   try{analyzeCanvas(canvas,`captura-camara-${new Date().toISOString()}`)}
+   catch(cause){clearResult();setAnalysisNotice(cause instanceof Error?cause.message:'Uni no pudo aislar producto en esta captura')}
+  }catch(cause){clearResult();setCameraCycleOk(false);setError(cause instanceof Error?cause.message:'No fue posible capturar el frame de cámara')}
  }
 
  function clearResult(){setPreview('');setResult(null)}
@@ -74,7 +82,9 @@ export function UniVisionQaBench(){
  return <section className="panel" aria-label="Banco QA Uni Vision">
   <div className="section-heading"><div><span className="overline teal">Validación visual asistida · scan v4.1</span><h2>Revisar producto con cámara o foto</h2></div><ScanLine size={20}/></div>
   <div className="notice"><ShieldCheck size={16}/><div><b>Vision mide. Calidad decide.</b><small>Esta prueba valida el ciclo cámara → captura → scan Uni. No crea evidencia operacional, Grade ni conformidad del producto.</small></div></div>
-  {error?<div className="notice error"><AlertTriangle size={16}/><div><b>No fue posible completar la prueba</b><small>{error}</small></div></div>:null}
+  {cameraCycleOk?<div className="notice"><CheckCircle2 size={16}/><div><b>Ciclo de cámara OK</b><small>La cámara abrió y el navegador capturó un frame correctamente. La detección de uni se evalúa por separado.</small></div></div>:null}
+  {analysisNotice?<div className="notice warning"><AlertTriangle size={16}/><div><b>Captura OK · no se detectó suficiente uni</b><small>{analysisNotice}</small></div></div>:null}
+  {error?<div className="notice error"><AlertTriangle size={16}/><div><b>No fue posible completar la captura</b><small>{error}</small></div></div>:null}
   <div className="row-actions">
    <button type="button" className="button primary" disabled={cameraBusy} onClick={()=>void startCamera()}><Camera size={15}/>{cameraBusy?'Abriendo cámara…':cameraOn?'Reiniciar cámara':'Abrir cámara'}</button>
    {cameraOn?<><button type="button" className="button primary" onClick={captureCamera}><ScanLine size={15}/>Capturar y analizar</button><button type="button" className="button" onClick={stopCamera}><VideoOff size={15}/>Cerrar cámara</button></>:null}
