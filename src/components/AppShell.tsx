@@ -11,7 +11,7 @@ import "../navigation-groups.css";
 
 type Workspace="today"|"operation"|"commercial"|"intelligence"|"admin";
 type WorkspaceTab={to:string;labelKey:'nav.overview'|'nav.reception'|'nav.production'|'nav.process'|'nav.packing'|'nav.inventory'|'nav.cold'|'nav.orders'|'nav.dispatch'|'nav.settlement'|'nav.ask'|'nav.investigate'|'nav.decide'|'nav.history';step?:number};
-const operationPaths=["/plantas","/recepciones","/lineas","/floor","/inventario","/frio","/proceso-erizo","/pallets","/planificacion","/inventario-materiales","/etiquetas","/impresion-etiquetas","/estaciones"];
+const operationPaths=["/plantas","/recepciones","/lineas","/floor","/inventario","/frio","/proceso","/proceso-erizo","/pallets","/planificacion","/inventario-materiales","/etiquetas","/impresion-etiquetas","/estaciones"];
 const commercialPaths=["/ordenes-venta","/proveedores-clientes","/despachos-ventas","/liquidaciones","/creditos","/costos-transformacion"];
 const intelligencePaths=["/pescamar-ia","/lineage","/rentabilidad"];
 const workspaceForPath=(pathname:string):Workspace=>{
@@ -49,7 +49,11 @@ export function AppShell({children,onNewReception}:{children:ReactNode;onNewRece
  useEffect(()=>{setMobileOpen(false);window.scrollTo({top:0,left:0,behavior:"auto"});document.querySelector<HTMLElement>("#main-content")?.focus({preventScroll:true})},[pathname]);
  useEffect(()=>{if(!mobileOpen)return;const previous=document.body.style.overflow,drawer=drawerRef.current,menuButton=menuButtonRef.current;document.body.style.overflow="hidden";const focusable=()=>drawer?[...drawer.querySelectorAll<HTMLElement>('a[href],button:not([disabled]),[tabindex]:not([tabindex="-1"])')].filter(node=>!node.hasAttribute("aria-hidden")):[];requestAnimationFrame(()=>focusable()[0]?.focus());const onKeyDown=(event:KeyboardEvent)=>{if(event.key==="Escape"){event.preventDefault();setMobileOpen(false);return}if(event.key!=="Tab")return;const items=focusable();if(!items.length)return;const first=items[0],last=items[items.length-1];if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}};window.addEventListener("keydown",onKeyDown);return()=>{document.body.style.overflow=previous;window.removeEventListener("keydown",onKeyDown);menuButton?.focus()}},[mobileOpen]);
  const implementation=seafoodProduct.implementation;
- const currentModule=getOsModule(pathname),context=pathname==="/"?t('shell.todayContext'):currentModule?.label??seafoodProduct.shortName,contextStage=pathname==="/"?`${implementation.name} · ${implementation.label}`:currentModule?.stageLabel&&currentModule.stageLabel!==context?currentModule.stageLabel:`${implementation.name} · ${implementation.label}`;
+ const currentModule=getOsModule(pathname);
+ const plantName=plantContextId?plantContextId.split('-').map(part=>part?part[0].toUpperCase()+part.slice(1):part).join(' '):'';
+ const plantContextLabel=plantName?`${locale==='en'?'Plant':'Planta'} ${plantName}`:'';
+ const context=plantContextId?plantContextLabel:pathname==="/"?t('shell.todayContext'):currentModule?.label??seafoodProduct.shortName;
+ const contextStage=plantContextId?t('shell.plantFlow'):pathname==="/"?`${implementation.name} · ${implementation.label}`:currentModule?.stageLabel&&currentModule.stageLabel!==context?currentModule.stageLabel:`${implementation.name} · ${implementation.label}`;
  const initials=operator?.fullName.split(" ").map(part=>part[0]).slice(0,2).join("").toUpperCase()||"PS";
  const roleKey=operator?.role?(`role.${operator.role}` as const):'role.viewer';
  const mayCreate=operator?canCreateReception(operator.role):false,platformLabel=!status?t('shell.checking'):status.ok?t('shell.active'):t('shell.review'),databaseLabel=!status?t('shell.syncing'):status.persistence.database?`${implementation.name} · ${t('shell.databaseConnected')}`:`${implementation.name} · ${t('shell.databasePending')}`;
@@ -58,7 +62,7 @@ export function AppShell({children,onNewReception}:{children:ReactNode;onNewRece
  const plantTabs:WorkspaceTab[]=plantContextId?[
   {to:`/plantas/${encodeURIComponent(plantContextId)}`,labelKey:'nav.overview',step:1},
   {to:`/recepciones?${plantQuery}`,labelKey:'nav.reception',step:2},
-  {to:`/proceso-erizo?${plantQuery}`,labelKey:'nav.process',step:3},
+  {to:`/proceso?${plantQuery}`,labelKey:'nav.process',step:3},
   {to:`/pallets?${plantQuery}`,labelKey:'nav.packing',step:4},
   {to:`/inventario?${plantQuery}`,labelKey:'nav.inventory',step:5},
   {to:`/frio?${plantQuery}`,labelKey:'nav.cold',step:6},
