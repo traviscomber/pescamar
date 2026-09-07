@@ -26,7 +26,19 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
       - name: Apply ESLint safe fixes
-        run: npx eslint . --fix
+        run: |
+          npx eslint . --fix
+          git diff --binary > /tmp/eslint-fixes.patch
+      - name: Rebase fixes onto latest main
+        run: |
+          if [ ! -s /tmp/eslint-fixes.patch ]; then
+            echo 'No autofixable lint changes.'
+            exit 0
+          fi
+          git reset --hard
+          git fetch origin main
+          git checkout -B main origin/main
+          git apply /tmp/eslint-fixes.patch
       - name: Verify build
         run: npm run build
       - name: Commit safe fixes
