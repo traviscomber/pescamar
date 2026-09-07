@@ -39,13 +39,14 @@ assert(segmentation.includes('isFocusedRoeCandidate'),'Uni Vision must have a fo
 assert(segmentation.includes("maskMode:'focused'")&&segmentation.includes("maskMode:'broad'"),'Uni Vision must preserve focused segmentation with a broad fallback for real sample diversity')
 assert(segmentation.includes('they never encode Grade A-E, species, origin or acceptance')||segmentation.includes('never encode Grade A-E, species, origin or acceptance'),'segmentation thresholds must remain explicitly non-authoritative')
 assert(segmentation.includes("focused>=100&&focusedRatio>=0.02"),'focused segmentation must require enough observed pixels before replacing the broad fallback')
-assert(qaBench.includes('QA externo · no persistente')&&qaBench.includes('La imagen no se guarda'),'QA bench must state that test images never create operational evidence')
+assert(qaBench.includes('La IA ayuda. Calidad decide.')&&qaBench.includes('La imagen de prueba no crea datos operacionales'),'QA bench must be simple, human-centered and non-persistent')
 assert(!qaBench.includes("fetch('/api/")&&!qaBench.includes('saveMeasurement'),'QA bench must remain browser-local and must not persist test data')
-assert(qaBench.includes('Dentro de la banda QA MAFF')&&qaBench.includes('No es una especificación de calidad ni un Grade'),'MAFF comparison must remain a regression band rather than a product grade rule')
+assert(qaBench.includes('Muestra visualmente consistente')&&qaBench.includes('Puede pasar a validación de Calidad'),'QA result must translate measurements into an operator-facing recommendation')
+assert(qaBench.includes('Decisión final: pendiente de Calidad')&&qaBench.includes('no define Grade, origen, inocuidad ni liberación del producto'),'human quality authority must remain explicit')
 
 if(failures.length){
  console.error('EdgeVision foundation smoke FAILED')
  for(const failure of failures)console.error(`- ${failure}`)
  process.exit(1)
 }
-console.log('EdgeVision foundation smoke PASS: tenant-neutral capability registry, human authority, mixed-scene segmentation, non-persistent real-image QA and Vision→Event Graph provenance verified')
+console.log('EdgeVision foundation smoke PASS: tenant-neutral capability registry, human authority, mixed-scene segmentation, simple non-persistent product validation and Vision→Event Graph provenance verified')
