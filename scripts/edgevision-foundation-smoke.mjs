@@ -2,7 +2,7 @@ import {readFile} from 'node:fs/promises'
 
 const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
-const [registry,organization,page,app,access,os,shell,modules,lineage,segmentation]=await Promise.all([
+const [registry,organization,page,app,access,os,shell,modules,lineage,segmentation,qaBench]=await Promise.all([
   readFile(new URL('../src/edgevision.ts',import.meta.url),'utf8'),
   readFile(new URL('../src/organization.ts',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/EdgeVision.tsx',import.meta.url),'utf8'),
@@ -13,6 +13,7 @@ const [registry,organization,page,app,access,os,shell,modules,lineage,segmentati
   readFile(new URL('../src/pages/Modules.tsx',import.meta.url),'utf8'),
   readFile(new URL('../api/lot-lineage.ts',import.meta.url),'utf8'),
   readFile(new URL('../src/lib/uniVisionSegmentation.ts',import.meta.url),'utf8'),
+  readFile(new URL('../src/components/UniVisionQaBench.tsx',import.meta.url),'utf8'),
 ])
 
 for(const capability of ['count','calibre','size','color','defects','classification','biomass','process_control','anomaly'])assert(registry.includes(`id:'${capability}'`),`EdgeVision registry must include ${capability}`)
@@ -27,6 +28,7 @@ assert(page.includes('No se presentan como operativas')||page.includes('no se pr
 assert(page.includes("canAccessPath(operator.role,'/estaciones')"),'station configuration link must obey role access')
 assert(page.includes('organizationContext.implementationName'),'EdgeVision labels must render from active organization context')
 assert(page.includes('revisión humana obligatoria'),'EdgeVision page must preserve human review for the current adapter')
+assert(page.includes('<UniVisionQaBench/>'),'EdgeVision must expose the local non-persistent Uni Vision QA bench')
 assert(app.includes('path="/edgevision"'),'EdgeVision page must be mounted')
 assert(access.includes('"/edgevision":"all"'),'EdgeVision route must have an explicit access contract')
 assert(os.includes("{path:'/edgevision',label:'EdgeVision'"),'OS map must expose EdgeVision')
@@ -37,10 +39,13 @@ assert(segmentation.includes('isFocusedRoeCandidate'),'Uni Vision must have a fo
 assert(segmentation.includes("maskMode:'focused'")&&segmentation.includes("maskMode:'broad'"),'Uni Vision must preserve focused segmentation with a broad fallback for real sample diversity')
 assert(segmentation.includes('they never encode Grade A-E, species, origin or acceptance')||segmentation.includes('never encode Grade A-E, species, origin or acceptance'),'segmentation thresholds must remain explicitly non-authoritative')
 assert(segmentation.includes("focused>=100&&focusedRatio>=0.02"),'focused segmentation must require enough observed pixels before replacing the broad fallback')
+assert(qaBench.includes('QA externo · no persistente')&&qaBench.includes('La imagen no se guarda'),'QA bench must state that test images never create operational evidence')
+assert(!qaBench.includes("fetch('/api/")&&!qaBench.includes('saveMeasurement'),'QA bench must remain browser-local and must not persist test data')
+assert(qaBench.includes('Dentro de la banda QA MAFF')&&qaBench.includes('No es una especificación de calidad ni un Grade'),'MAFF comparison must remain a regression band rather than a product grade rule')
 
 if(failures.length){
  console.error('EdgeVision foundation smoke FAILED')
  for(const failure of failures)console.error(`- ${failure}`)
  process.exit(1)
 }
-console.log('EdgeVision foundation smoke PASS: tenant-neutral capability registry, implementation adapter ownership, human authority, mixed-scene Uni Vision segmentation, simplified navigation and Vision→Event Graph provenance verified')
+console.log('EdgeVision foundation smoke PASS: tenant-neutral capability registry, human authority, mixed-scene segmentation, non-persistent real-image QA and Vision→Event Graph provenance verified')
