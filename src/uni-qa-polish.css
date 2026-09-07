@@ -1,22 +1,37 @@
+.uni-page{
+  display:grid;
+  gap:clamp(28px,2.4vw,38px);
+}
+
+.uni-page>.page-header,
+.uni-page>.signal-grid,
+.uni-page>.panel{
+  margin-block:0;
+}
+
+.uni-page>.page-header{
+  padding-bottom:4px;
+}
+
 [aria-label="Banco QA Uni Vision"]{
-  padding:clamp(24px,2.2vw,32px);
+  padding:clamp(28px,2.5vw,36px);
 }
 
 [aria-label="Banco QA Uni Vision"] .section-heading{
-  margin-bottom:22px;
+  margin-bottom:24px;
 }
 
 [aria-label="Banco QA Uni Vision"] .section-heading>div{
-  gap:6px;
+  gap:7px;
 }
 
 [aria-label="Banco QA Uni Vision"] .section-heading h2{
   margin:0;
-  line-height:1.15;
+  line-height:1.18;
 }
 
 [aria-label="Banco QA Uni Vision"] .notice{
-  margin-top:12px;
+  margin-top:14px;
 }
 
 [aria-label="Banco QA Uni Vision"] .notice:first-of-type{
@@ -30,75 +45,98 @@
 [aria-label="Banco QA Uni Vision"] .notice small{
   display:block;
   max-width:78ch;
-  margin-top:5px;
-  line-height:1.55;
+  margin-top:6px;
+  line-height:1.6;
 }
 
 [aria-label="Banco QA Uni Vision"] .row-actions{
-  position:static;
-  inset:auto;
-  display:flex;
-  align-items:center;
-  justify-content:flex-start;
-  flex-wrap:wrap;
-  gap:10px;
-  width:100%;
-  margin:24px 0 20px;
+  position:static!important;
+  inset:auto!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  flex-wrap:wrap!important;
+  gap:12px!important;
+  width:100%!important;
+  max-width:none!important;
+  margin:28px 0 22px!important;
+  padding:0!important;
 }
 
 [aria-label="Banco QA Uni Vision"] .row-actions .button{
-  position:static;
-  inset:auto;
-  flex:0 0 auto;
-  min-height:42px;
-  padding:10px 15px;
-  white-space:nowrap;
+  position:static!important;
+  inset:auto!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  flex:0 0 auto!important;
+  width:auto!important;
+  min-width:132px!important;
+  max-width:none!important;
+  min-height:44px!important;
+  height:auto!important;
+  padding:11px 16px!important;
+  font-size:11px!important;
+  line-height:1.2!important;
+  letter-spacing:.02em!important;
+  white-space:nowrap!important;
+  overflow:visible!important;
 }
 
 [aria-label="Banco QA Uni Vision"] .row-actions .source-note{
-  flex:1 0 100%;
+  flex:1 0 100%!important;
+  width:100%;
   min-width:0;
-  margin-top:2px;
+  margin-top:4px;
   overflow-wrap:anywhere;
-  line-height:1.45;
+  line-height:1.5;
 }
 
 [aria-label="Banco QA Uni Vision"] video,
 [aria-label="Banco QA Uni Vision"] img[alt="Producto aislado por Uni Vision"]{
   display:block;
+  margin-top:22px!important;
 }
 
 @media (max-width:900px){
+  .uni-page{
+    gap:28px;
+  }
+
   [aria-label="Banco QA Uni Vision"]{
-    padding:22px;
+    padding:24px;
   }
 
   [aria-label="Banco QA Uni Vision"] .row-actions{
-    align-items:stretch;
+    align-items:stretch!important;
   }
 
   [aria-label="Banco QA Uni Vision"] .row-actions .button{
-    flex:1 1 200px;
-    min-width:0;
+    flex:1 1 210px!important;
+    min-width:0!important;
   }
 }
 
 @media (max-width:520px){
+  .uni-page{
+    gap:22px;
+  }
+
   [aria-label="Banco QA Uni Vision"]{
-    padding:18px;
+    padding:20px;
   }
 
   [aria-label="Banco QA Uni Vision"] .section-heading{
-    margin-bottom:18px;
+    margin-bottom:20px;
   }
 
   [aria-label="Banco QA Uni Vision"] .row-actions{
-    gap:8px;
-    margin:20px 0 16px;
+    gap:10px!important;
+    margin:24px 0 18px!important;
   }
 
   [aria-label="Banco QA Uni Vision"] .row-actions .button{
-    flex-basis:100%;
-    width:100%;
+    flex-basis:100%!important;
+    width:100%!important;
   }
 }
