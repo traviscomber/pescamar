@@ -17,7 +17,7 @@ export function Planning(){
  const {openLive}=useLot360();const [params]=useSearchParams();const plantId=params.get('plantId')??''
  const [data,setData]=useState<Payload|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState('')
  useEffect(()=>{let active=true;const q=plantId?`?plantId=${encodeURIComponent(plantId)}`:'';setLoading(true);void fetch(`/api/planning${q}`,{cache:'no-store'}).then(async r=>{const p=await r.json() as Payload;if(!r.ok)throw new Error(p.error??'No fue posible construir el plan');if(active){setData(p);setError('')}}).catch(e=>{if(active)setError(e instanceof Error?e.message:'No fue posible construir el plan')}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[plantId])
- const recs=data?.recommendations??[],blocked=data?.blockedLots??[],daily=data?.dailyPlan??[]
+ const recs=useMemo(()=>data?.recommendations??[],[data?.recommendations]),blocked=data?.blockedLots??[],daily=useMemo(()=>data?.dailyPlan??[],[data?.dailyPlan])
  const pendingKg=useMemo(()=>recs.reduce((sum,rec)=>sum+rec.remainingKg,0),[recs]);const plannedKg=useMemo(()=>daily.reduce((sum,row)=>sum+row.recommendedKg,0),[daily])
  const first=daily[0]??null,firstBlocked=blocked[0]??null
  const actions=plantId?<Link className="button secondary" to={`/plantas/${plantId}`}>Volver a planta</Link>:undefined;const scope=plantId?`&plantId=${encodeURIComponent(plantId)}`:''
