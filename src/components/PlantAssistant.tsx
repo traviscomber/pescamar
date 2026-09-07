@@ -1,6 +1,7 @@
 import {Camera,ChevronRight,ExternalLink,Link2,Send,Sparkles,X} from 'lucide-react'
 import {useCallback,useEffect,useMemo,useRef,useState,type ChangeEvent,type FormEvent} from 'react'
 import {Link,useLocation,useSearchParams} from 'react-router-dom'
+import {canAccessPath} from '../access'
 import {useAuth} from '../auth'
 import {useLocale} from '../i18n'
 import {useLots} from '../store'
@@ -12,6 +13,7 @@ type Scope={plantId:string|null;plantIds:string[];role:string;organizationId?:st
 type Turn={id:string;question:string;answer:string;sources:Source[];generatedAt:string;scope:Scope;engine:string;policyVersion:string;suggestedQuestions:string[]}
 type Payload={answer?:string;engine?:string;policyVersion?:string;generatedAt?:string;scope?:Scope;sources?:Source[];suggestedQuestions?:string[];error?:string}
 type Photo={id:string;name:string;dataUrl:string}
+type AgentAction={id:string;labelEs:string;labelEn:string;path:string;route:string}
 
 function Answer({text,sources}:{text:string;sources:Source[]}){
  const lookup=new Map(sources.map(source=>[source.id,source]))
@@ -37,11 +39,30 @@ export function PlantAssistant(){
  const selectedLot=lots.find(lot=>lot.receptionId===receptionId)
  const isUrchin=Boolean(selectedLot&&/eriz|urchin/i.test(String(selectedLot.species)))
  const plantId=selectedLot?.plantId??params.get('plantId')??null
+ const lotQuery=receptionId?`receptionId=${encodeURIComponent(receptionId)}`:''
+ const plantQuery=plantId?`plantId=${encodeURIComponent(plantId)}`:''
+ const join=(base:string,...parts:string[])=>{const query=parts.filter(Boolean).join('&');return query?`${base}?${query}`:base}
  const copy=locale==='en'?{
-  name:'Plant Agent',tag:'Seafood AI',subtitle:'Pescamar data and operations',close:'Close assistant',lot:'Link lot',linked:'Lot linked',noLot:'No lot',photo:'Photo',send:'Send',placeholder:'Ask about Pescamar operations…',emptyTitle:'Ask about the plant',emptyText:'I can work across receptions, process, quality, packing, inventory, cold chain, commercial, finance and historical Pescamar data. I keep plant and role permissions.',thinking:'Analyzing…',evidence:'View evidence',allOps:'What needs attention now?',trace:'Trace this lot end to end',commercial:'What is committed and at risk?',inventory:'What product is available and where?',urchin:'Analyze this sea urchin lot',photoOnly:'Photos are enabled for sea urchin lots.',error:'Could not consult the plant agent.'
+  name:'Plant Agent',tag:'Seafood AI',subtitle:'Pescamar data and operations',close:'Close assistant',lot:'Link lot',linked:'Lot linked',noLot:'No lot',photo:'Photo',send:'Send',placeholder:'Ask about Pescamar operations…',emptyTitle:'Ask about the plant',emptyText:'I can work across receptions, process, quality, packing, inventory, cold chain, commercial, finance and historical Pescamar data. I keep plant and role permissions.',thinking:'Analyzing…',evidence:'View evidence',allOps:'What needs attention now?',trace:'Trace this lot end to end',commercial:'What is committed and at risk?',inventory:'What product is available and where?',urchin:'Analyze this sea urchin lot',photoOnly:'Photos are enabled for sea urchin lots.',error:'Could not consult the plant agent.',actions:'Actions',actionsNote:'Opens the corresponding operating flow with current plant or lot context. Material quality, regulatory and commercial decisions still require human confirmation.'
  }:{
-  name:'Agente de Planta',tag:'Seafood AI',subtitle:'Datos y operación de Pescamar',close:'Cerrar asistente',lot:'Vincular lote',linked:'Lote vinculado',noLot:'Sin lote',photo:'Foto',send:'Enviar',placeholder:'Pregunta sobre la operación de Pescamar…',emptyTitle:'Pregunta por la planta',emptyText:'Puedo trabajar sobre recepciones, proceso, calidad, packing, inventario, frío, comercial, finanzas y la historia de Pescamar. Respeto el alcance de planta y rol.',thinking:'Analizando…',evidence:'Ver evidencia',allOps:'¿Qué requiere atención ahora?',trace:'Traza este lote de punta a punta',commercial:'¿Qué está comprometido y en riesgo?',inventory:'¿Qué producto hay disponible y dónde?',urchin:'Analiza este lote de erizo',photoOnly:'Las fotos se habilitan para lotes de erizo.',error:'No fue posible consultar al agente de planta.'
+  name:'Agente de Planta',tag:'Seafood AI',subtitle:'Datos y operación de Pescamar',close:'Cerrar asistente',lot:'Vincular lote',linked:'Lote vinculado',noLot:'Sin lote',photo:'Foto',send:'Enviar',placeholder:'Pregunta sobre la operación de Pescamar…',emptyTitle:'Pregunta por la planta',emptyText:'Puedo trabajar sobre recepciones, proceso, calidad, packing, inventario, frío, comercial, finanzas y la historia de Pescamar. Respeto el alcance de planta y rol.',thinking:'Analizando…',evidence:'Ver evidencia',allOps:'¿Qué requiere atención ahora?',trace:'Traza este lote de punta a punta',commercial:'¿Qué está comprometido y en riesgo?',inventory:'¿Qué producto hay disponible y dónde?',urchin:'Analiza este lote de erizo',photoOnly:'Las fotos se habilitan para lotes de erizo.',error:'No fue posible consultar al agente de planta.',actions:'Acciones',actionsNote:'Abre el flujo operativo correspondiente con el contexto actual de planta o lote. Las decisiones materiales de calidad, regulación y comercial siguen requiriendo confirmación humana.'
  }
+ const actions=useMemo<AgentAction[]>(()=>{
+  if(!operator)return[]
+  const candidates:AgentAction[]=[
+   {id:'process',labelEs:'Proceso',labelEn:'Process',path:'/lineas',route:join('/lineas/detalle',lotQuery,plantQuery)},
+   {id:'quality',labelEs:'Calidad',labelEn:'Quality',path:'/control-regulatorio',route:join('/control-regulatorio',lotQuery,plantQuery)},
+   {id:'packing',labelEs:'Packing',labelEn:'Packing',path:'/pallets',route:join('/pallets/detalle',lotQuery,plantQuery)},
+   {id:'inventory',labelEs:'Inventario',labelEn:'Inventory',path:'/inventario',route:join('/inventario/detalle',lotQuery,plantQuery)},
+   {id:'cold',labelEs:'Frío',labelEn:'Cold chain',path:'/frio',route:join('/frio/detalle',lotQuery,plantQuery)},
+   {id:'orders',labelEs:'Orden comercial',labelEn:'Sales order',path:'/ordenes-venta',route:join('/ordenes-venta',lotQuery,plantQuery)},
+   {id:'dispatch',labelEs:'Despacho / venta',labelEn:'Dispatch / sale',path:'/despachos-ventas',route:join('/despachos-ventas',lotQuery,plantQuery)},
+   {id:'costs',labelEs:'Costos',labelEn:'Costs',path:'/costos-transformacion',route:join('/costos-transformacion/detalle',lotQuery,plantQuery)},
+   {id:'close',labelEs:'Cierre',labelEn:'Close',path:'/',route:'/'},
+   {id:'history',labelEs:'Historia',labelEn:'History',path:'/timeline',route:join('/timeline',plantQuery)}
+  ]
+  return candidates.filter(action=>action.path==='/'||canAccessPath(operator.role,action.path))
+ },[operator,lotQuery,plantQuery])
  useEffect(()=>{if(requestedLot&&lots.some(lot=>lot.receptionId===requestedLot)&&requestedLot!==receptionId){setReceptionId(requestedLot);setTurns([])}},[requestedLot,lots,receptionId])
  useEffect(()=>{const onOpen=(event:Event)=>{const target=String((event as CustomEvent<{receptionId?:string}>).detail?.receptionId??'');if(target&&lots.some(lot=>lot.receptionId===target)){setReceptionId(target);setTurns([])}setOpen(true)};window.addEventListener('pescamar:open-urchin-ai',onOpen);window.addEventListener('pescamar:open-plant-ai',onOpen);return()=>{window.removeEventListener('pescamar:open-urchin-ai',onOpen);window.removeEventListener('pescamar:open-plant-ai',onOpen)}},[lots])
  useEffect(()=>{if(open)requestAnimationFrame(()=>inputRef.current?.focus())},[open])
@@ -60,6 +81,7 @@ export function PlantAssistant(){
    <header className="urchin-assistant-head"><div><span className="urchin-assistant-icon"><Sparkles size={18}/></span><div><small>{copy.tag}</small><b>{copy.name}</b></div></div><button type="button" onClick={()=>setOpen(false)} aria-label={copy.close}><X size={18}/></button></header>
    <div className="urchin-assistant-tools"><button type="button" className={selectedLot?'is-linked':''} onClick={()=>setShowLots(value=>!value)}><Link2 size={15}/>{selectedLot?copy.linked:copy.lot}</button>{isUrchin?<><button type="button" onClick={()=>photoInputRef.current?.click()} disabled={photos.length>=3||photoLoading}><Camera size={16}/>{photoLoading?'…':copy.photo}</button><input ref={photoInputRef} className="sr-only" type="file" accept="image/*" capture="environment" multiple onChange={addPhotos}/></>:null}</div>
    {showLots?<div className="urchin-assistant-lot-picker"><select autoFocus value={receptionId} onChange={event=>changeLot(event.target.value)}><option value="">{copy.noLot}</option>{lots.map(lot=><option key={lot.receptionId} value={lot.receptionId}>{lot.id} · {lot.species} · {lot.supplier}</option>)}</select></div>:null}
+   <details className="urchin-visual-twin" open={false}><summary><Sparkles size={14}/><span>{copy.actions}</span><b>{actions.length}</b></summary><div><div className="urchin-assistant-prompts">{actions.map(action=><Link key={action.id} to={action.route} onClick={()=>setOpen(false)}>{locale==='en'?action.labelEn:action.labelEs}<ChevronRight size={13}/></Link>)}</div><small>{copy.actionsNote}</small></div></details>
    {photos.length?<div className="urchin-assistant-photos">{photos.map(photo=><figure key={photo.id}><img src={photo.dataUrl} alt={photo.name}/><button type="button" onClick={()=>setPhotos(current=>current.filter(item=>item.id!==photo.id))} aria-label="Remove"><X size={12}/></button></figure>)}<small>{copy.photoOnly}</small></div>:null}
    <div ref={threadRef} className="urchin-assistant-thread" aria-live="polite">{turns.length?turns.map(turn=><article className="urchin-assistant-turn" key={turn.id}><div className="urchin-assistant-user">{turn.question}</div><div className="urchin-assistant-response"><span><Sparkles size={15}/></span><div><Answer text={turn.answer} sources={turn.sources}/>{turn.sources.length?<details><summary>{copy.evidence}</summary><div className="urchin-assistant-sources">{turn.sources.map(source=><Link key={source.id} to={source.path}>{source.label}<ExternalLink size={12}/></Link>)}</div></details>:null}</div></div></article>):<div className="urchin-assistant-empty"><h3>{copy.emptyTitle}</h3><p>{copy.emptyText}</p></div>}{loading?<div className="urchin-assistant-thinking"><span/><span/><span/>{copy.thinking}</div>:null}{error?<div className="urchin-assistant-error" role="alert">{error}</div>:null}</div>
    <div className="urchin-assistant-prompts">{prompts.map(prompt=><button type="button" key={prompt} onClick={()=>void ask(prompt)} disabled={loading}>{prompt}<ChevronRight size={13}/></button>)}</div>
