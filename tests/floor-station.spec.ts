@@ -2,7 +2,7 @@ import {expect,test} from '@playwright/test'
 
 const reception=(id:string,number:number,plantId:string,supplier:string)=>({id,reception_number:number,plant_id:plantId,supplier,species:'Erizo',extraction_zone:'Zona QA',source_reference:null,guide_kg:120,gross_kg:118,tare_kg:5,drained_kg:110,accepted_kg:108,temperature_c:8,quality_status:'Clasificado',evidence_count:1,evidence:[],received_at:'2026-09-02T12:00:00.000Z'})
 
-test('Floor Station is scoped to operator plants and remains read-only while the write gate is off',async({page})=>{
+test('Packing is scoped to operator plants and remains read-only while the write gate is off',async({page})=>{
  let stationCalls=0
  await page.route('**/api/**',async route=>{
   const path=new URL(route.request().url()).pathname
@@ -15,12 +15,12 @@ test('Floor Station is scoped to operator plants and remains read-only while the
   return json({})
  })
  await page.goto('/floor/detalle')
- await expect(page.getByRole('heading',{name:'Estación de planta'})).toBeVisible()
+ await expect(page.getByRole('heading',{name:'Packing',exact:true})).toBeVisible()
  await expect(page.getByText('REC-101',{exact:true})).toBeVisible()
  await expect(page.getByText('Erizo · Proveedor Ancud',{exact:true})).toBeVisible()
  await expect(page.getByText(/Proveedor Quellón/)).toHaveCount(0)
  await expect(page.getByText('Sin escrituras DB')).toBeVisible()
- const confirm=page.getByRole('button',{name:/Crear packing unit/})
+ const confirm=page.getByRole('button',{name:/Confirmar packing/})
  await expect(confirm).toBeDisabled()
  await page.getByLabel('Peso de estación').fill('12,48')
  await expect(confirm).toBeDisabled()
