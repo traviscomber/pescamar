@@ -22,6 +22,7 @@ const access:Record<string,AppRole[]|"all">={
   "/impresion-etiquetas":["admin","operations","quality"],
   "/planificacion":["admin","operations","finance","viewer"],
   "/etiquetas":["admin","operations","quality","viewer"],
+  "/proceso":["admin","operations","quality","viewer"],
   "/proceso-erizo":["admin","operations","quality","viewer"],
   "/plantas":"all",
   "/identidades-plantas":["admin","operations"],
