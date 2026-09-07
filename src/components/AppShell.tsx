@@ -12,7 +12,7 @@ type Workspace="today"|"operation"|"commercial"|"intelligence"|"admin";
 type WorkspaceTab={to:string;label:string;step?:number};
 const operationPaths=["/recepciones","/lineas","/floor","/inventario","/frio","/proceso-erizo","/pallets","/planificacion","/inventario-materiales","/etiquetas","/impresion-etiquetas","/estaciones"];
 const commercialPaths=["/ordenes-venta","/proveedores-clientes","/despachos-ventas","/liquidaciones","/creditos","/costos-transformacion"];
-const intelligencePaths=["/pescamar-ia","/lineage","/rentabilidad","/edgevision","/timeline"];
+const intelligencePaths=["/pescamar-ia","/lineage","/rentabilidad"];
 const workspaceForPath=(pathname:string):Workspace=>{
  if(pathname==="/"||pathname.startsWith("/inicio/"))return "today";
  if(operationPaths.some(path=>pathname===path||pathname.startsWith(`${path}/`)))return "operation";
@@ -31,9 +31,8 @@ const workspaceTabs:Record<Exclude<Workspace,"today"|"admin">,WorkspaceTab[]>={
  ],
  commercial:[
   {to:"/ordenes-venta",label:"Órdenes",step:1},
-  {to:"/proveedores-clientes",label:"Proveedores",step:2},
-  {to:"/despachos-ventas",label:"Despacho",step:3},
-  {to:"/liquidaciones",label:"Liquidación",step:4},
+  {to:"/despachos-ventas",label:"Despacho",step:2},
+  {to:"/liquidaciones",label:"Liquidación",step:3},
  ],
  intelligence:[
   {to:"/pescamar-ia",label:"Preguntar",step:1},
