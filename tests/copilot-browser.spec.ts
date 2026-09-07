@@ -11,10 +11,10 @@ async function mockCopilot(page:Page){
  })
 }
 
-test('Pescamar IA exposes Seafood AI evidence policy with scoped navigable evidence without overflow',async({page},testInfo)=>{
+test('Seafood AI exposes evidence policy with scoped navigable evidence without overflow',async({page},testInfo)=>{
  await mockCopilot(page)
  await page.goto('/pescamar-ia')
- await expect(page.getByRole('heading',{name:'Pescamar IA',exact:true})).toBeVisible()
+ await expect(page.getByRole('heading',{name:'Seafood AI',exact:true})).toBeVisible()
  await expect(page.getByText('Ir al contenido principal')).not.toBeVisible()
  await expect(page.getByText('Seafood AI · evidence-native')).toBeVisible()
  await expect(page.getByText('Sin escrituras ni acciones')).toBeVisible()
@@ -28,5 +28,5 @@ test('Pescamar IA exposes Seafood AI evidence policy with scoped navigable evide
  await expect(page.getByText(/Evidencia canónica de inventario · histórico canónico/)).toBeVisible()
  await expect(page.getByText(/seafood\.ai\.evidence\.v1/)).toBeVisible()
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true)
- await page.screenshot({path:testInfo.outputPath('pescamar-ia.png'),fullPage:true})
+ await page.screenshot({path:testInfo.outputPath('seafood-ai.png'),fullPage:true})
 })
