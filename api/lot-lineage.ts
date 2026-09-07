@@ -31,7 +31,7 @@ export default async function handler(request:Request,response:Response){
     const sql=getSql(),commercialRole=['admin','operations','finance'].includes(operator.role),siteId=access.plant_id??null
     const [receptionRaw,evidenceRaw,lotEventsRaw,visionRaw,movementsRaw,ordersRaw,dispatchRaw,salesRaw]=await Promise.all([
       sql`select r.id,r.reception_number,r.plant_id,r.species,r.extraction_zone,r.source_reference,r.source,r.guide_kg,r.gross_kg,r.tare_kg,r.drained_kg,r.accepted_kg,r.received_at,r.created_at,r.created_by,p.legal_name supplier from receptions r join parties p on p.id=r.supplier_id where r.id=${receptionId}::uuid limit 1`,
-      sql`select id,kind,label,url,note,created_by,created_at from reception_evidence where reception_id=${receptionId}::uuid order by created_at`,
+      sql`select id,kind,label,url,note,ai_provider,ai_model,ai_confidence,created_by,created_at from reception_evidence where reception_id=${receptionId}::uuid order by created_at`,
       sql`select id,event_type,title,detail,metrics,created_by,occurred_at from lot_events where reception_id=${receptionId}::uuid order by occurred_at`,
       optionalVisionRows(receptionId),
       sql`select m.id,m.movement_type,m.moved_kg,m.reason,m.occurred_at,m.created_by,fl.name from_location,tl.name to_location from inventory_movements m left join inventory_locations fl on fl.id=m.from_location_id left join inventory_locations tl on tl.id=m.to_location_id where m.reception_id=${receptionId}::uuid order by m.occurred_at`,
@@ -46,8 +46,8 @@ export default async function handler(request:Request,response:Response){
     events.push(seafoodEvent({id:`reception:${receptionId}`,siteId,lotId:receptionId,type:'reception',occurredAt:text(reception.received_at)??text(reception.created_at),title:`Recepción ${text(reception.reception_number)??receptionId.slice(0,8)}`,detail:text(reception.species),actor:text(reception.created_by),metrics:{species:text(reception.species),supplier:text(reception.supplier),extractionZone:text(reception.extraction_zone),sourceReference:text(reception.source_reference),source:text(reception.source),guideKg:numberOrNull(reception.guide_kg),grossKg:numberOrNull(reception.gross_kg),tareKg:numberOrNull(reception.tare_kg),drainedKg:numberOrNull(reception.drained_kg),acceptedKg:numberOrNull(reception.accepted_kg)},source:{entityType:'reception',entityId:receptionId}},organization))
 
     for(const row of rows(evidenceRaw)){
-      const id=String(row.id)
-      events.push(seafoodEvent({id:`evidence:${id}`,siteId,lotId:receptionId,type:'evidence',occurredAt:text(row.created_at),title:`Evidencia · ${text(row.label)??text(row.kind)??'Documento'}`,detail:text(row.note),actor:text(row.created_by),metrics:{kind:text(row.kind),label:text(row.label),url:text(row.url)},source:{entityType:'reception_evidence',entityId:id}},organization))
+      const id=String(row.id),aiProvider=text(row.ai_provider),aiModel=text(row.ai_model),aiConfidence=numberOrNull(row.ai_confidence)
+      events.push(seafoodEvent({id:`evidence:${id}`,siteId,lotId:receptionId,type:'evidence',occurredAt:text(row.created_at),title:`Evidencia · ${text(row.label)??text(row.kind)??'Documento'}`,detail:text(row.note),actor:text(row.created_by),metrics:{kind:text(row.kind),label:text(row.label),url:text(row.url),aiEvidenceClass:aiProvider||aiModel||aiConfidence!=null?'ai_extraction':'persisted_evidence',aiProvider,aiModel,aiConfidence},source:{entityType:'reception_evidence',entityId:id}},organization))
     }
 
     for(const row of rows(lotEventsRaw)){
