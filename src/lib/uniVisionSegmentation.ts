@@ -1,12 +1,12 @@
 export type UniVisionMetrics={pixelCount:number;rMean:number;gMean:number;bMean:number;lMean:number;aMean:number;labBMean:number;lStd:number;aStd:number;bStd:number;chroma:number;hueDeg:number}
 export type SegmentationConfidence='good'|'review'
 export type UniVisionMaskMode='focused'|'broad'
-export type UniVisionSegmentation={metrics:UniVisionMetrics;usableRatio:number;borderCandidateRatio:number;confidence:SegmentationConfidence;maskMode:UniVisionMaskMode;previewDataUrl:string;retainedComponents:number}
+export type UniVisionSegmentation={metrics:UniVisionMetrics;usableRatio:number;borderCandidateRatio:number;confidence:SegmentationConfidence;maskMode:UniVisionMaskMode;previewDataUrl:string;retainedComponents:number;suppressedFramePixels:number}
 
 type Lab=readonly[number,number,number]
 type Candidate=(lab:Lab)=>boolean
 type Selection={candidate:Candidate;seed:Candidate;maskMode:UniVisionMaskMode}
-type GridMask={cols:number;rows:number;stride:number;originX:number;originY:number;mask:Uint8Array;retainedComponents:number}
+type GridMask={cols:number;rows:number;stride:number;originX:number;originY:number;mask:Uint8Array;retainedComponents:number;suppressedFramePixels:number}
 
 export function rgbToLab(r:number,g:number,b:number):Lab{
  const linear=(value:number)=>{const v=value/255;return v<=0.04045?v/12.92:((v+0.055)/1.055)**2.4}
@@ -57,10 +57,45 @@ function smoothMask(input:Uint8Array,cols:number,rows:number){
  return current
 }
 
+// Tray rims tend to create long, nearly straight warm-colour runs that can be
+// chromatically similar to uni. Product masses are much more irregular. Remove
+// only thin straight bands near the outside of the working ROI; do not change
+// the colour model or infer quality from this geometry cleanup.
+function suppressFrameGeometry(input:Uint8Array,cols:number,rows:number){
+ const out=new Uint8Array(input)
+ const horizontalRuns:Array<Array<[number,number]>>=Array.from({length:rows},()=>[])
+ const verticalRuns:Array<Array<[number,number]>>=Array.from({length:cols},()=>[])
+ const minHorizontal=Math.max(10,Math.round(cols*0.38)),minVertical=Math.max(10,Math.round(rows*0.38))
+ for(let y=0;y<rows;y++){
+  let start=-1
+  for(let x=0;x<=cols;x++){
+   const on=x<cols&&input[y*cols+x]===1
+   if(on&&start<0)start=x
+   if((!on||x===cols)&&start>=0){const end=x-1;if(end-start+1>=minHorizontal)horizontalRuns[y].push([start,end]);start=-1}
+  }
+ }
+ for(let x=0;x<cols;x++){
+  let start=-1
+  for(let y=0;y<=rows;y++){
+   const on=y<rows&&input[y*cols+x]===1
+   if(on&&start<0)start=y
+   if((!on||y===rows)&&start>=0){const end=y-1;if(end-start+1>=minVertical)verticalRuns[x].push([start,end]);start=-1}
+  }
+ }
+ const rowFlag=horizontalRuns.map((runs,y)=>runs.length>0&&(y<rows*0.30||y>rows*0.70))
+ const colFlag=verticalRuns.map((runs,x)=>runs.length>0&&(x<cols*0.25||x>cols*0.75))
+ let suppressed=0
+ function clear(i:number){if(out[i]){out[i]=0;suppressed++}}
+ const maxRowBand=Math.max(2,Math.round(rows*0.10)),maxColBand=Math.max(2,Math.round(cols*0.10))
+ for(let y=0;y<rows;){if(!rowFlag[y]){y++;continue}let end=y;while(end+1<rows&&rowFlag[end+1])end++;if(end-y+1<=maxRowBand){for(let yy=y;yy<=end;yy++){for(const[startX,endX] of horizontalRuns[yy])for(let x=startX;x<=endX;x++)clear(yy*cols+x)}}y=end+1}
+ for(let x=0;x<cols;){if(!colFlag[x]){x++;continue}let end=x;while(end+1<cols&&colFlag[end+1])end++;if(end-x+1<=maxColBand){for(let xx=x;xx<=end;xx++){for(const[startY,endY] of verticalRuns[xx])for(let y=startY;y<=endY;y++)clear(y*cols+xx)}}x=end+1}
+ return{mask:out,suppressed}
+}
+
 function spatialMask(full:ImageData,canvas:HTMLCanvasElement,selection:Selection,marginX:number,marginY:number,stride:number):GridMask{
  const cols=Math.max(1,Math.ceil((canvas.width-marginX*2)/stride)),rows=Math.max(1,Math.ceil((canvas.height-marginY*2)/stride)),raw=new Uint8Array(cols*rows),seed=new Uint8Array(cols*rows)
  for(let gy=0;gy<rows;gy++){const y=Math.min(canvas.height-marginY-1,marginY+gy*stride);for(let gx=0;gx<cols;gx++){const x=Math.min(canvas.width-marginX-1,marginX+gx*stride),index=(y*canvas.width+x)*4;if(full.data[index+3]<200)continue;const lab=rgbToLab(full.data[index],full.data[index+1],full.data[index+2]),i=gy*cols+gx;if(selection.candidate(lab))raw[i]=1;if(selection.seed(lab))seed[i]=1}}
- const mask=smoothMask(raw,cols,rows),seen=new Uint8Array(mask.length),out=new Uint8Array(mask.length),minimumArea=Math.max(10,Math.round(mask.length*0.00035))
+ const smoothed=smoothMask(raw,cols,rows),frameSuppression=suppressFrameGeometry(smoothed,cols,rows),mask=frameSuppression.mask,seen=new Uint8Array(mask.length),out=new Uint8Array(mask.length),minimumArea=Math.max(10,Math.round(mask.length*0.00035))
  let retainedComponents=0
  const dirs=[-1,0,1]
  for(let start=0;start<mask.length;start++){
@@ -78,7 +113,7 @@ function spatialMask(full:ImageData,canvas:HTMLCanvasElement,selection:Selection
   retainedComponents++
   for(const i of pixels)out[i]=1
  }
- return{cols,rows,stride,originX:marginX,originY:marginY,mask:out,retainedComponents}
+ return{cols,rows,stride,originX:marginX,originY:marginY,mask:out,retainedComponents,suppressedFramePixels:frameSuppression.suppressed}
 }
 
 function gridContains(grid:GridMask,x:number,y:number){const gx=Math.floor((x-grid.originX)/grid.stride),gy=Math.floor((y-grid.originY)/grid.stride);return gx>=0&&gy>=0&&gx<grid.cols&&gy<grid.rows&&grid.mask[gy*grid.cols+gx]===1}
@@ -107,5 +142,5 @@ export function analyzeSegmentedCanvas(canvas:HTMLCanvasElement):UniVisionSegmen
  let borderTotal=0,borderCandidates=0
  for(let gy=0;gy<grid.rows;gy++){for(let gx=0;gx<grid.cols;gx++){if(gx>1&&gy>1&&gx<grid.cols-2&&gy<grid.rows-2)continue;borderTotal++;if(grid.mask[gy*grid.cols+gx])borderCandidates++}}
  const borderCandidateRatio=borderTotal?borderCandidates/borderTotal:0,rMean=r/count,gMean=g/count,bMean=b/count,lMean=l/count,aMean=a/count,labBMean=labB/count,lStd=Math.sqrt(Math.max(0,l2/count-lMean*lMean)),aStd=Math.sqrt(Math.max(0,a2/count-aMean*aMean)),bStd=Math.sqrt(Math.max(0,b2/count-labBMean*labBMean)),chroma=Math.sqrt(aMean*aMean+labBMean*labBMean),hueDeg=(Math.atan2(labBMean,aMean)*180/Math.PI+360)%360,minimumRatio=selection.maskMode==='focused'?0.015:0.03,confidence:SegmentationConfidence=usableRatio<minimumRatio||usableRatio>0.90||borderCandidateRatio>0.20?'review':'good'
- return{metrics:{pixelCount:count,rMean,gMean,bMean,lMean,aMean,labBMean,lStd,aStd,bStd,chroma,hueDeg},usableRatio,borderCandidateRatio,confidence,maskMode:selection.maskMode,previewDataUrl:buildMaskPreview(canvas,grid),retainedComponents:grid.retainedComponents}
+ return{metrics:{pixelCount:count,rMean,gMean,bMean,lMean,aMean,labBMean,lStd,aStd,bStd,chroma,hueDeg},usableRatio,borderCandidateRatio,confidence,maskMode:selection.maskMode,previewDataUrl:buildMaskPreview(canvas,grid),retainedComponents:grid.retainedComponents,suppressedFramePixels:grid.suppressedFramePixels}
 }
