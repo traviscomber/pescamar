@@ -57,7 +57,7 @@ async function listReceptions(response: Response, operator: SessionOperator) {
   const admin=operator.role==="admin",plantIds=operator.plantIds;
   const rows = (await getSql()`
     select r.id,r.reception_number,r.plant_id,p.legal_name as supplier,r.species,r.extraction_zone,r.source_reference,r.guide_kg,r.gross_kg,r.tare_kg,r.drained_kg,r.accepted_kg,r.temperature_c,r.quality_status,r.evidence_count,r.received_at,
-      coalesce((select jsonb_agg(jsonb_build_object('id',e.id,'kind',e.kind,'label',e.label,'url',e.url,'note',e.note,'createdBy',e.created_by,'createdAt',e.created_at) order by e.created_at) from reception_evidence e where e.reception_id=r.id),'[]'::jsonb) as evidence
+      coalesce((select jsonb_agg(jsonb_build_object('id',e.id,'kind',e.kind,'label',e.label,'url',e.url,'note',e.note,'createdBy',e.created_by,'createdAt',e.created_at,'aiProvider',e.ai_provider,'aiModel',e.ai_model,'aiConfidence',e.ai_confidence) order by e.created_at) from reception_evidence e where e.reception_id=r.id),'[]'::jsonb) as evidence
     from receptions r join parties p on p.id=r.supplier_id
     where ${admin} or r.plant_id=any(${plantIds}::text[])
     order by r.received_at desc limit 500
@@ -92,9 +92,11 @@ async function createReception(body: unknown, response: Response, operator: Sess
       values (${supplierId}::uuid,${plantId},${species},${zone},${receivedAt.toISOString()}::timestamptz,${guide},${gross},${tare},${drained},${accepted},${temperature},'Muestreo',${evidence.length},'pending',${operator.fullName},${guideReference},${operator.id}::uuid)
       returning id,reception_number,received_at,source_reference
     ), inserted_evidence as (
-      insert into reception_evidence(reception_id,kind,label,url,note,created_by,created_by_operator_id)
-      select r.id,e->>'kind',e->>'label',e->>'url',nullif(e->>'note',''),${operator.fullName},${operator.id}::uuid
-      from reception r cross join jsonb_array_elements(${JSON.stringify(evidence)}::jsonb) e returning id
+      insert into reception_evidence(reception_id,kind,label,url,note,created_by,created_by_operator_id,ai_provider,ai_model,ai_confidence)
+      select r.id,e->>'kind',e->>'label',e->>'url',nullif(e->>'note',''),${operator.fullName},${operator.id}::uuid,f.ai_provider,f.ai_model,f.ai_confidence
+      from reception r cross join jsonb_array_elements(${JSON.stringify(evidence)}::jsonb) e
+      left join reception_evidence_files f on nullif(e->>'fileId','') is not null and f.id=(e->>'fileId')::uuid
+      returning id
     ), linked_files as (
       update reception_evidence_files f set reception_id=r.id from reception r,jsonb_array_elements(${JSON.stringify(evidence)}::jsonb) e
       where nullif(e->>'fileId','') is not null and f.id=(e->>'fileId')::uuid returning f.id
