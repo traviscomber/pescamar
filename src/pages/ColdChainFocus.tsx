@@ -4,8 +4,7 @@ import {Link} from 'react-router-dom'
 import {PageHeader} from '../components/PageHeader'
 
 type Run={id:string;run_code:string;status:string;last_observed_c:number|string|null;deviation_count:number|string;asset_name:string}
-type Asset={id:string;active:boolean}
-type Payload={assets?:Asset[];runs?:Run[];error?:string}
+type Payload={runs?:Run[];error?:string}
 type SensorState='not_configured'|'ready_for_test'|'observed'
 type SensorStatus={state:SensorState;activeSensors:number;sensorObservationCount:number;lastObservedAt:string|null;error?:string}
 
@@ -21,7 +20,7 @@ export function ColdChainFocus(){
   fetch('/api/cold-chain',{cache:'no-store'}).then(async r=>({r,p:await r.json() as Payload})),
   fetch('/api/cold-sensor-status',{cache:'no-store'}).then(async r=>({r,p:await r.json() as SensorStatus})).catch(()=>null),
  ]).then(([cold,status])=>{if(!active)return;if(!cold.r.ok)throw new Error(cold.p.error??'No fue posible cargar cadena de frío');setData(cold.p);if(status?.r.ok)setSensorStatus(status.p);setError('')}).catch(e=>{if(active)setError(e instanceof Error?e.message:'No fue posible cargar cadena de frío')}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[])
- const assets=data?.assets??[],runs=data?.runs??[],open=runs.filter(r=>r.status==='open'),deviated=runs.filter(r=>r.status==='deviation'||Number(r.deviation_count)>0),priority=deviated[0]??open[0],telemetry=sensorCopy(sensorStatus)
+ const runs=data?.runs??[],open=runs.filter(r=>r.status==='open'),deviated=runs.filter(r=>r.status==='deviation'||Number(r.deviation_count)>0),priority=deviated[0]??open[0],telemetry=sensorCopy(sensorStatus)
  return <>
   <PageHeader eyebrow="Plant Execution" title="Cadena de frío" description="Estado, excepción y siguiente acción. La telemetría automática sólo se declara activa cuando existe evidencia observada."/>
   {error?<div className="system-banner error" role="alert">{error}</div>:null}
