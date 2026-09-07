@@ -167,12 +167,12 @@ test('inventory focus shell remains stable',async({page},testInfo)=>{
   await page.screenshot({path:testInfo.outputPath('inventory-shell.png'),fullPage:true})
 })
 
-test('Pescamar IA shell keeps stage and module hierarchy',async({page},testInfo)=>{
+test('Seafood AI shell keeps stage and module hierarchy',async({page},testInfo)=>{
   await page.addInitScript(()=>localStorage.setItem('pescamar-theme','dark'))
   await mockAuthenticatedApp(page,'operations',['ancud'])
   await page.goto('/pescamar-ia')
   const main=page.locator('#main-content')
-  await expect(main.getByRole('heading',{name:'Pescamar IA',exact:true})).toBeVisible()
+  await expect(main.getByRole('heading',{name:'Seafood AI',exact:true})).toBeVisible()
   await expect(main.getByText('Inteligencia y control',{exact:true})).toBeVisible()
   await expect(main.getByText(/Seafood AI · evidence-native/)).toBeVisible()
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
