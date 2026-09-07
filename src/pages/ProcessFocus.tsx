@@ -24,7 +24,7 @@ export function ProcessFocus(){
   {!selected?<section className="daily-clear-note"><Factory size={19}/><div><b>{copy.empty}</b><small>{copy.note}</small></div></section>:<>
    <section className="daily-cockpit is-clear" aria-label={copy.configured}><div className="daily-cockpit-copy"><span className="overline">{copy.configured}</span><h2>{selected.name}</h2><p>{selected.location} · {selected.mode}</p></div><div className="daily-status-mark" aria-hidden="true"><Factory size={24}/></div></section>
    <section className="panel"><span className="overline">{copy.products}</span><div className="queue-list">{selected.products.map(product=><div className="queue-row" key={product}><span>—</span><div><b>{product}</b></div></div>)}</div></section>
-   {hasUrchin?<section className="daily-priority"><div className="daily-priority-head"><div><span className="overline">{copy.special}</span><h2>{copy.special}</h2><p>{copy.specialText}</p></div><Link className="button primary" to={`/proceso-erizo?plantId=${encodeURIComponent(selected.id)}`}>{copy.open}<ArrowRight size={15}/></Link></div></section>:null}
+   {hasUrchin?<section className="daily-priority"><div className="daily-priority-head"><div><span className="overline">{copy.special}</span><h2>{copy.special}</h2><p>{copy.specialText}</p></div><Link className="button primary" to={`/proceso-erizo/detalle?plantId=${encodeURIComponent(selected.id)}`}>{copy.open}<ArrowRight size={15}/></Link></div></section>:null}
    <div className="notice"><Factory size={16}/><div><b>{copy.note}</b></div></div>
   </>}
  </>
