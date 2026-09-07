@@ -64,6 +64,8 @@ jobs:
         run: node scripts/edgevision-foundation-smoke.mjs
       - name: Uni Vision learning contract
         run: node scripts/uni-vision-learning-smoke.mjs
+      - name: External Uni reference provenance contract
+        run: node scripts/sea-urchin-external-reference-smoke.mjs
       - name: Reception Vision provenance contract
         run: node scripts/reception-vision-provenance-smoke.mjs
       - name: Organization context contract
