@@ -1,0 +1,44 @@
+name: Guarded product polish batch
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/product-polish-batch.yml']
+permissions:
+  contents: write
+jobs:
+  polish:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Apply exact product polish
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs')
+          function replace(path,from,to){
+            const s=fs.readFileSync(path,'utf8')
+            if(!s.includes(from)) throw new Error(`Missing pattern in ${path}: ${from}`)
+            fs.writeFileSync(path,s.replaceAll(from,to))
+          }
+          replace('src/pages/Copilot.tsx','title="Pescamar IA"','title="Seafood AI"')
+          replace('src/pages/Copilot.tsx','aria-label="Controles de Pescamar IA"','aria-label="Controles de Seafood AI"')
+          replace('src/pages/Copilot.tsx','<b>Pescamar IA</b>','<b>Seafood AI</b>')
+          replace('tests/browser-smoke.spec.ts',"test('Pescamar IA shell keeps stage and module hierarchy'","test('Seafood AI shell keeps stage and module hierarchy'")
+          replace('tests/browser-smoke.spec.ts',"name:'Pescamar IA',exact:true","name:'Seafood AI',exact:true")
+          fs.appendFileSync('src/operator-focus-pass.css',`\n/* Product polish: premium density for secondary intelligence and erizo surfaces */\n.copilot-trust{gap:8px;padding-block:10px}.copilot-trust>span{font-size:12px}.copilot-workspace{margin-top:14px}.copilot-empty{padding-block:30px}.canonical-brief{margin-top:12px}.canonical-brief-grid{gap:12px}.canonical-brief-grid>div{padding:14px 16px}.urchin-assistant-answer,.copilot-answer{line-height:1.62}.planning-list{gap:8px}.planning-list>.panel,.planning-list>article{margin-block:0}.signal-grid{gap:10px}.signal-card{min-height:0}.commercial-form-grid{gap:12px}.compact-ledger .alert-row{padding-block:10px}\n@media (max-width:720px){.copilot-trust{overflow-x:auto;flex-wrap:nowrap}.copilot-trust>span{white-space:nowrap}.canonical-brief-grid{grid-template-columns:1fr}.signal-grid{gap:8px}}\n`)
+          NODE
+      - name: Verify quality
+        run: npm run quality
+      - name: Commit verified polish
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/Copilot.tsx tests/browser-smoke.spec.ts src/operator-focus-pass.css
+          git commit -m 'style: align Seafood AI identity and secondary density'
+          git push origin HEAD:main
