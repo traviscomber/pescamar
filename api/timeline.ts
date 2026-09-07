@@ -1,4 +1,4 @@
-import {requireOperator,type SessionOperator} from './_auth.js'
+import {requireOperator} from './_auth.js'
 import {getSql} from './_db.js'
 
 type Request={method?:string;headers?:Record<string,string|string[]|undefined>}
@@ -17,7 +17,6 @@ type LineRow={id:string;name:string;family:string;status:string;updated_at:strin
 type OperatorRow={id:string;full_name:string;role:string;created_at:string;updated_at:string}
 type HistoricalRow={source_row:number;record_status:'operational'|'void';event_date:string|null;guide_number:string|null;supplier_name:string|null;supplier_original:string|null;extraction_zone:string|null;process_site_original:string|null;plant_id:string|null;lot_code:string;guide_kg:string|number|null;received_kg:string|number|null;difference_kg:string|number|null;client:string|null;observations:string|null}
 type HistoricalStats={total:string|number;voids:string|number;first_event_date:string|null;last_event_date:string|null}
-function allowed(operator:SessionOperator,plantId?:unknown){return operator.role==='admin'||typeof plantId!=='string'||!plantId||operator.plantIds.includes(plantId)}
 function rows<T>(value:unknown){return (Array.isArray(value)?value:[]) as T[]}
 function historicalSeverity(row:HistoricalRow):Event['severity']{const guide=Number(row.guide_kg??0),received=Number(row.received_kg??0),text=(row.observations??'').toLowerCase();if((guide>0&&received>guide)||/(vidrio|tijereta|plastico|plástico)/.test(text))return 'critical';if(/(rechaz|mala calidad|respaldo|sin producto|devuel|deshidrat)/.test(text)||row.guide_number?.toLowerCase()==='sin guia'||(guide>0&&Math.abs(guide-received)/guide>.15))return 'attention';return 'normal'}
 function historicalDetail(row:HistoricalRow){const parts=[`Guía ${row.guide_number??'s/n'}`];if(row.guide_kg!=null)parts.push(`${Number(row.guide_kg).toLocaleString('es-CL',{maximumFractionDigits:1})} kg guía`);if(row.received_kg!=null)parts.push(`${Number(row.received_kg).toLocaleString('es-CL',{maximumFractionDigits:1})} kg recibidos`);if(row.process_site_original)parts.push(`Proceso ${row.process_site_original}`);if(row.client)parts.push(`Cliente ${row.client}`);if(row.observations)parts.push(row.observations);return parts.join(' · ')}

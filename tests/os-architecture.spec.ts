@@ -22,8 +22,8 @@ test('Seafood Intelligence OS registry has six ordered systems and unique module
 test('every canonical OS module is routed and governed by an access contract',async()=>{
  const [app,access]=await Promise.all([readFile('src/App.tsx','utf8'),readFile('src/access.ts','utf8')])
  for(const module of osModules){
-  expect(app,`${module.path} must be mounted`).toContain(`path=\"${module.path}\"`)
-  expect(access,`${module.path} must have access governance`).toContain(`\"${module.path}\"`)
+  expect(app,`${module.path} must be mounted`).toContain(`path="${module.path}"`)
+  expect(access,`${module.path} must have access governance`).toContain(`"${module.path}"`)
  }
 })
 

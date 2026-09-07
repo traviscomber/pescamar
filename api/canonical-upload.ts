@@ -11,7 +11,7 @@ type Row=Record<string,unknown>
 const txt=(v:unknown)=>String(v??'').trim()
 const iso=(v:unknown)=>v instanceof Date&&!Number.isNaN(v.getTime())?v.toISOString().slice(0,10):null
 function formulaResult(v:unknown){if(v&&typeof v==='object'&&'result' in v)return (v as {result?:unknown}).result;return v}
-function n(v:unknown){const x=formulaResult(v);if(typeof x==='number'&&Number.isFinite(x))return x;if(typeof x==='string'&&x.trim()&&Number.isFinite(Number(x)))return Number(x);if(v&&typeof v==='object'&&'formula' in v){const f=String((v as {formula?:unknown}).formula??'').replace(/^\+/, '');if(/^[0-9+*/(). -]+$/.test(f)){try{const parts=f.split('*').map(Number);if(parts.every(Number.isFinite))return parts.reduce((a,b)=>a*b,1)}catch{}}}return null}
+function n(v:unknown){const x=formulaResult(v);if(typeof x==='number'&&Number.isFinite(x))return x;if(typeof x==='string'&&x.trim()&&Number.isFinite(Number(x)))return Number(x);if(v&&typeof v==='object'&&'formula' in v){const f=String((v as {formula?:unknown}).formula??'').replace(/^\+/, '');if(/^[0-9+*/(). -]+$/.test(f)){try{const parts=f.split('*').map(Number);if(parts.every(Number.isFinite))return parts.reduce((a,b)=>a*b,1)}catch{/* Formula parse failure falls through to null. */}}}return null}
 function s(v:unknown){const x=formulaResult(v);return x==null?'':String(x).trim()}
 function dateCell(v:unknown){const x=formulaResult(v);return iso(x)}
 function rawValue(v:unknown){if(v instanceof Date)return v.toISOString();if(v&&typeof v==='object'&&'formula' in v)return `=${String((v as {formula?:unknown}).formula??'')}`;if(v&&typeof v==='object'&&'text' in v)return String((v as {text?:unknown}).text??'');return v??null}

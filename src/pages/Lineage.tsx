@@ -35,7 +35,7 @@ export function Lineage(){
 
  useEffect(()=>{const targetId=mode==='historical'?selectedHistoricalId:selectedId;if(!targetId){setData(null);setError('');return}let active=true;setLoading(true);const url=mode==='historical'?`/api/historical-lineage?recordId=${encodeURIComponent(targetId)}`:`/api/lot-lineage?receptionId=${encodeURIComponent(targetId)}`;void fetch(url,{cache:'no-store',headers:{'x-seafood-organization-id':requestOrganizationId}}).then(async response=>{const payload=await response.json() as Payload;if(!response.ok)throw new Error(payload.error??'No fue posible cargar la trazabilidad');if(active){setData(payload);setError('')}}).catch(cause=>{if(active){setData(null);setError(cause instanceof Error?cause.message:'No fue posible cargar la trazabilidad')}}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[mode,selectedId,selectedHistoricalId,requestOrganizationId]);
 
- const selectedLot=lots.find(lot=>lot.receptionId===selectedId),selectedHistorical=historicalRecords.find(record=>record.id===selectedHistoricalId),events=data?.events??[],coverage=data?.coverage;
+ const selectedLot=lots.find(lot=>lot.receptionId===selectedId),selectedHistorical=historicalRecords.find(record=>record.id===selectedHistoricalId),events=useMemo(()=>data?.events??[],[data?.events]),coverage=data?.coverage;
  const coverageEntries=useMemo(()=>coverage?Object.entries(coverage).filter(([,value])=>value!==null) as [keyof Coverage,boolean][]:[],[coverage]);
  const eventById=useMemo(()=>new Map(events.map(event=>[event.id,event])),[events]);
  const intelligence=mode==='live'?data?.intelligence:undefined,signals=intelligence?.signals??[];

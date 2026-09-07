@@ -42,7 +42,8 @@ export function DailyClose(){
   }catch(cause){setError(cause instanceof Error?cause.message:'No fue posible construir el estado del día')}
   finally{setLoading(false)}
  },[])
- useEffect(()=>{setPlantId(defaultPlant);void load(date,defaultPlant)},[defaultPlant,date,load])
+ useEffect(()=>{setPlantId(defaultPlant)},[defaultPlant])
+ useEffect(()=>{void load(date,plantId)},[date,plantId,load])
 
  const snapshot=data?.snapshot,riskItems=snapshot?.risk.items??[],operationalItems=operational?.topSignals??[]
  const eventGraphReceptionIds=new Set(operationalItems.map(item=>item.receptionId)),dailyDistinct=riskItems.filter(item=>!item.receptionId||!eventGraphReceptionIds.has(item.receptionId))
@@ -52,7 +53,7 @@ export function DailyClose(){
  const action=(item:RiskItem)=>item.kind==='quality'?'Resolver calidad':item.kind==='order'?'Cubrir pedido':'Cerrar costo'
  const priorities:Priority[]=[...operationalItems.map(item=>({key:`event-${item.receptionId}-${item.signal.kind}-${item.signal.evidenceEventIds.join('-')}`,score:eventScore(item.signal.priority),reference:`${item.receptionNumber?`REC-${item.receptionNumber}`:'Lote live'}${item.supplier?` · ${item.supplier}`:''}`,reason:item.signal.title,why:item.signal.detail,next:item.signal.action,to:item.path,action:'Abrir trazabilidad',owner:suggestedOwner(item.path),source:'event_graph' as const})),...dailyDistinct.map((item,index)=>{const to=target(item);return {key:`daily-${item.kind}-${item.reference}-${index}`,score:dailyScore(item.level),reference:item.reference,reason:item.reason,why:item.detail,next:action(item),to,action:action(item),owner:suggestedOwner(to),source:'daily' as const}})].sort((a,b)=>b.score-a.score).slice(0,3)
  const operationalCounts=operational?.counts??{p1:0,p2:0,p3:0},eventGraphOpen=operationalCounts.p1+operationalCounts.p2+operationalCounts.p3,dedupedDaily=Math.max(0,(snapshot?.risk.total??0)-riskItems.filter(item=>item.receptionId&&eventGraphReceptionIds.has(item.receptionId)).length),attention=eventGraphOpen+dedupedDaily,firstPriority=priorities[0]
- const actions=<div className="page-actions"><label className="inline-field">Fecha<input type="date" value={date} onChange={event=>{setDate(event.target.value);void load(event.target.value,plantId)}}/></label><label className="inline-field">Planta<select value={plantId} onChange={event=>{const next=event.target.value;setPlantId(next);void load(date,next)}}>{operator?.role==='admin'||accessiblePlants.length>1?<option value="">Toda la red accesible</option>:null}{accessiblePlants.map(plant=><option key={plant.id} value={plant.id}>{plant.name}</option>)}</select></label><button className="button secondary" onClick={()=>void load(date,plantId)}><RefreshCw size={15}/>Actualizar</button></div>
+ const actions=<div className="page-actions"><label className="inline-field">Fecha<input type="date" value={date} onChange={event=>setDate(event.target.value)}/></label><label className="inline-field">Planta<select value={plantId} onChange={event=>setPlantId(event.target.value)}>{operator?.role==='admin'||accessiblePlants.length>1?<option value="">Toda la red accesible</option>:null}{accessiblePlants.map(plant=><option key={plant.id} value={plant.id}>{plant.name}</option>)}</select></label><button className="button secondary" onClick={()=>void load(date,plantId)}><RefreshCw size={15}/>Actualizar</button></div>
 
  return <><PageHeader eyebrow="Pescamar · Hoy" title="Hoy" description="Estado, prioridad y siguiente acción." actions={actions}/>
  {error?<div className="system-banner error">{error}</div>:null}

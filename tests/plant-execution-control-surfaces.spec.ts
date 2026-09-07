@@ -10,9 +10,9 @@ test('Plant Execution control surfaces remain routed and authorized without dire
   readFile('vercel.json','utf8'),
  ])
  for(const route of ['/pallets','/frio','/control-regulatorio']){
-  expect(app).toContain(`path=\"${route}\"`)
-  expect(access).toContain(`\"${route}\"`)
-  expect(vercel).toContain(`\"source\": \"${route}\"`)
+  expect(app).toContain(`path="${route}"`)
+  expect(access).toContain(`"${route}"`)
+  expect(vercel).toContain(`"source": "${route}"`)
  }
  expect(shell).toContain('{to:"/frio",label:"Frío",step:6}')
  expect(shell).toContain('"/pallets"')
@@ -32,9 +32,9 @@ test('regulatory control covers lot pallet and box targets including palletized 
  const [page,targets]=await Promise.all([readFile('src/pages/RegulatoryControl.tsx','utf8'),readFile('api/regulatory-targets.ts','utf8')])
  expect(page).toContain('/api/regulatory-holds')
  expect(page).toContain('/api/regulatory-targets')
- expect(page).toContain("value=\"reception\"")
- expect(page).toContain("value=\"pallet\"")
- expect(page).toContain("value=\"unit\"")
+ expect(page).toContain('value="reception"')
+ expect(page).toContain('value="pallet"')
+ expect(page).toContain('value="unit"')
  expect(page).toContain("action:'openHold'")
  expect(page).toContain("resolve('releaseHold')")
  expect(page).toContain("resolve('rejectHold')")
