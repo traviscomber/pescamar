@@ -1,7 +1,7 @@
 import {readFile} from 'node:fs/promises'
 import {expect,test,type Locator,type Page} from '@playwright/test'
 
-test('cold control binds assets and sensor readings to canonical physical stations',async()=>{
+test('cold control binds assets and manual fallback to canonical physical stations without simulating sensors',async()=>{
  const [page,api,migration,app]=await Promise.all([
   readFile('src/pages/ColdChainControl.tsx','utf8'),
   readFile('api/cold-chain.ts','utf8'),
@@ -12,8 +12,12 @@ test('cold control binds assets and sensor readings to canonical physical statio
  expect(page).toContain("api<StationsPayload>('/api/plant-stations')")
  expect(page).toContain("station.station_type==='cold'")
  expect(page).toContain("action:'upsertAsset',plantId,stationId")
- expect(page).toContain("source==='sensor'?deviceId:null")
+ expect(page).toContain("source:'manual'")
+ expect(page).toContain('idempotencyKey:`manual-${crypto.randomUUID()}`')
  expect(page).toContain("device.active&&device.deviceType==='sensor'")
+ expect(page).toContain('La telemetría automática no se digita aquí')
+ expect(page).not.toContain('Origen lectura')
+ expect(page).not.toContain("source==='sensor'")
  expect(page).toContain('!writesEnabled')
  expect(api).toContain("station.station_type!=='cold'")
  expect(migration).toContain("device_station<>asset_station")
@@ -40,7 +44,7 @@ function selectByLabel(scope:Locator,label:string){return scope.locator('label')
 function inputByLabel(scope:Locator,label:string){return scope.locator('label').filter({hasText:new RegExp(`^${label}`)}).locator('input')}
 async function selectAncud(page:Page){await panel(page,'Activo de frío').locator('select').first().selectOption('ancud')}
 
-test('cold page renders physical station and its sensor without overflow',async({page},testInfo)=>{
+test('cold page renders physical station and registered sensor without exposing a manual sensor source',async({page},testInfo)=>{
  const errors:string[]=[]
  page.on('console',message=>{if(message.type()==='error')errors.push(message.text())})
  await mock(page,true)
@@ -50,8 +54,11 @@ test('cold page renders physical station and its sensor without overflow',async(
  const assetPanel=panel(page,'Activo de frío'),runPanel=panel(page,'Operar ciclo')
  await expect(selectByLabel(assetPanel,'Estación de frío')).toContainText('cold-01 · Frío 1')
  await selectByLabel(runPanel,'Ciclo abierto').selectOption('44444444-4444-4444-8444-444444444444')
- await selectByLabel(runPanel,'Origen lectura').selectOption('sensor')
- await expect(selectByLabel(runPanel,'Sensor')).toContainText('SENSOR-QA-1')
+ await expect(runPanel.getByText('1 sensor registrado en la estación',{exact:true})).toBeVisible()
+ await expect(runPanel.getByText(/La telemetría automática no se digita aquí/)).toBeVisible()
+ await expect(selectByLabel(runPanel,'Origen lectura')).toHaveCount(0)
+ await expect(selectByLabel(runPanel,'Sensor')).toHaveCount(0)
+ await expect(inputByLabel(runPanel,'Temperatura °C')).toBeVisible()
  expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
  expect(errors).toEqual([])
  await page.screenshot({path:testInfo.outputPath('cold-station-sensor.png'),fullPage:true})
