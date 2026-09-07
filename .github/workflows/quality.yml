@@ -62,6 +62,8 @@ jobs:
         run: node scripts/operational-intelligence-overview-smoke.mjs
       - name: EdgeVision foundation contract
         run: node scripts/edgevision-foundation-smoke.mjs
+      - name: Uni Vision learning contract
+        run: node scripts/uni-vision-learning-smoke.mjs
       - name: Reception Vision provenance contract
         run: node scripts/reception-vision-provenance-smoke.mjs
       - name: Organization context contract
