@@ -2,7 +2,7 @@ export type SeaUrchinExternalReference={
   id:string
   title:string
   sourcePage:string
-  sourceType:'public_domain'|'creative_commons'|'official_reference'
+  sourceType:'public_domain'|'creative_commons'|'official_reference'|'research_reference'
   license:string
   attribution:string|null
   scene:'pre_shipment_tray'|'sashimi'|'sushi'|'shell'|'mixed_product'
@@ -17,108 +17,35 @@ export type SeaUrchinExternalReference={
 // A/B/C/D/E, good/bad, origin, species and commercial release remain null until supported
 // by provenance and an explicit human Quality decision inside the operational workflow.
 export const SEA_URCHIN_EXTERNAL_REFERENCE_SET:SeaUrchinExternalReference[]=[
-  {
-    id:'commons-uni-no-sashimi',
-    title:'Uni-no-Sashimi.JPG',
-    sourcePage:'https://commons.wikimedia.org/wiki/File:Uni-no-Sashimi.JPG',
-    sourceType:'public_domain',
-    license:'Public domain (PD-self)',
-    attribution:'Qwert1234',
-    scene:'pre_shipment_tray',
-    intendedUse:'segmentation_qa',
-    qualityStatus:'unlabeled',
-    officialGrade:null,
-    notes:'Preparado de uni previo a despacho. Útil para segmentación de roe en bandeja; no usar como patrón de calidad sin validación humana.'
-  },
-  {
-    id:'commons-uniryori',
-    title:'Uniryori.jpg',
-    sourcePage:'https://commons.wikimedia.org/wiki/File:Uniryori.jpg',
-    sourceType:'public_domain',
-    license:'Public domain (PD-self)',
-    attribution:'FITM',
-    scene:'sashimi',
-    intendedUse:'visual_variability',
-    qualityStatus:'unlabeled',
-    officialGrade:null,
-    notes:'Uni servido como sashimi. Aporta variación de iluminación/presentación; no es evidencia de planta.'
-  },
-  {
-    id:'commons-huevas-concha',
-    title:'Huevas de erizo servidas en la concha.jpg',
-    sourcePage:'https://commons.wikimedia.org/wiki/File:Huevas_de_erizo_servidas_en_la_concha.jpg',
-    sourceType:'creative_commons',
-    license:'Creative Commons per file page; verify exact terms before redistribution',
-    attribution:'Wilfredor',
-    scene:'shell',
-    intendedUse:'visual_variability',
-    qualityStatus:'unlabeled',
-    officialGrade:null,
-    notes:'Roe servido en concha. Útil para robustez frente a fondo/forma no industrial.'
-  },
-  {
-    id:'commons-uni-gunkan',
-    title:'Uni gunkan-maki.jpg',
-    sourcePage:'https://commons.wikimedia.org/wiki/File:Uni_gunkan-maki.jpg',
-    sourceType:'creative_commons',
-    license:'CC BY 3.0',
-    attribution:'Schellack at English Wikipedia',
-    scene:'sushi',
-    intendedUse:'visual_variability',
-    qualityStatus:'unlabeled',
-    officialGrade:null,
-    notes:'Uni gunkan-maki. Útil como negativo contextual para evitar confundir arroz/nori con roe.'
-  },
-  {
-    id:'commons-sushi-uni',
-    title:'Sushi uni.jpg',
-    sourcePage:'https://commons.wikimedia.org/wiki/File:Sushi_uni.jpg',
-    sourceType:'creative_commons',
-    license:'CC BY-SA 3.0 / GFDL',
-    attribution:'Anonymous Powered / self-published work',
-    scene:'sushi',
-    intendedUse:'visual_variability',
-    qualityStatus:'unlabeled',
-    officialGrade:null,
-    notes:'Uni nigirizushi. Variación de forma, iluminación y entorno de servicio.'
-  },
-  {
-    id:'commons-ezo-bafun-1774',
-    title:'Sushi Saito IMG 1774 (23776719666).jpg',
-    sourcePage:'https://commons.wikimedia.org/wiki/File:Sushi_Saito_IMG_1774_(23776719666).jpg',
-    sourceType:'creative_commons',
-    license:'Creative Commons per file page',
-    attribution:'City Foodsters',
-    scene:'sushi',
-    intendedUse:'visual_variability',
-    qualityStatus:'unlabeled',
-    officialGrade:null,
-    notes:'Fuente describe Ezo bafun uni; la especie no debe inferirse para otras imágenes.'
-  },
-  {
-    id:'commons-ezo-bafun-1780',
-    title:'Sushi Saito IMG 1780 (23776718626).jpg',
-    sourcePage:'https://commons.wikimedia.org/wiki/File:Sushi_Saito_IMG_1780_(23776718626).jpg',
-    sourceType:'creative_commons',
-    license:'Creative Commons per file page',
-    attribution:'City Foodsters',
-    scene:'sushi',
-    intendedUse:'visual_variability',
-    qualityStatus:'unlabeled',
-    officialGrade:null,
-    notes:'Segunda vista de Ezo bafun uni para variación intra-producto; sin Grade humano Pescamar.'
-  },
-  {
-    id:'maff-hamanaka-135',
-    title:'Hamanaka Youshoku Uni',
-    sourcePage:'https://www.maff.go.jp/e/policies/intel/gi_act/register/s135.html',
-    sourceType:'official_reference',
-    license:'MAFF terms apply; reference-only until reuse terms are confirmed',
-    attribution:'Ministry of Agriculture, Forestry and Fisheries of Japan',
-    scene:'mixed_product',
-    intendedUse:'reference_only',
-    qualityStatus:'unlabeled',
-    officialGrade:null,
-    notes:'Referencia oficial de producto Hamanaka. Útil para QA comparativa; no convertir características de la ficha en labels extraídos de la foto.'
-  }
+  {id:'commons-uni-no-sashimi',title:'Uni-no-Sashimi.JPG',sourcePage:'https://commons.wikimedia.org/wiki/File:Uni-no-Sashimi.JPG',sourceType:'public_domain',license:'Public domain (PD-self)',attribution:'Qwert1234',scene:'pre_shipment_tray',intendedUse:'segmentation_qa',qualityStatus:'unlabeled',officialGrade:null,notes:'Preparado de uni previo a despacho. Útil para segmentación de roe en bandeja; no usar como patrón de calidad sin validación humana.'},
+  {id:'commons-uniryori',title:'Uniryori.jpg',sourcePage:'https://commons.wikimedia.org/wiki/File:Uniryori.jpg',sourceType:'public_domain',license:'Public domain (PD-self)',attribution:'FITM',scene:'sashimi',intendedUse:'visual_variability',qualityStatus:'unlabeled',officialGrade:null,notes:'Uni servido como sashimi. Aporta variación de iluminación/presentación; no es evidencia de planta.'},
+  {id:'commons-huevas-concha',title:'Huevas de erizo servidas en la concha.jpg',sourcePage:'https://commons.wikimedia.org/wiki/File:Huevas_de_erizo_servidas_en_la_concha.jpg',sourceType:'creative_commons',license:'Creative Commons per file page; verify exact terms before redistribution',attribution:'Wilfredor',scene:'shell',intendedUse:'visual_variability',qualityStatus:'unlabeled',officialGrade:null,notes:'Roe servido en concha. Útil para robustez frente a fondo/forma no industrial.'},
+  {id:'commons-uni-gunkan',title:'Uni gunkan-maki.jpg',sourcePage:'https://commons.wikimedia.org/wiki/File:Uni_gunkan-maki.jpg',sourceType:'creative_commons',license:'CC BY 3.0',attribution:'Schellack at English Wikipedia',scene:'sushi',intendedUse:'visual_variability',qualityStatus:'unlabeled',officialGrade:null,notes:'Uni gunkan-maki. Útil como negativo contextual para evitar confundir arroz/nori con roe.'},
+  {id:'commons-sushi-uni',title:'Sushi uni.jpg',sourcePage:'https://commons.wikimedia.org/wiki/File:Sushi_uni.jpg',sourceType:'creative_commons',license:'CC BY-SA 3.0 / GFDL',attribution:'Anonymous Powered / self-published work',scene:'sushi',intendedUse:'visual_variability',qualityStatus:'unlabeled',officialGrade:null,notes:'Uni nigirizushi. Variación de forma, iluminación y entorno de servicio.'},
+  {id:'commons-ezo-bafun-1774',title:'Sushi Saito IMG 1774 (23776719666).jpg',sourcePage:'https://commons.wikimedia.org/wiki/File:Sushi_Saito_IMG_1774_(23776719666).jpg',sourceType:'creative_commons',license:'Creative Commons per file page',attribution:'City Foodsters',scene:'sushi',intendedUse:'visual_variability',qualityStatus:'unlabeled',officialGrade:null,notes:'Fuente describe Ezo bafun uni; la especie no debe inferirse para otras imágenes.'},
+  {id:'commons-ezo-bafun-1780',title:'Sushi Saito IMG 1780 (23776718626).jpg',sourcePage:'https://commons.wikimedia.org/wiki/File:Sushi_Saito_IMG_1780_(23776718626).jpg',sourceType:'creative_commons',license:'Creative Commons per file page',attribution:'City Foodsters',scene:'sushi',intendedUse:'visual_variability',qualityStatus:'unlabeled',officialGrade:null,notes:'Segunda vista de Ezo bafun uni para variación intra-producto; sin Grade humano Pescamar.'},
+  {id:'maff-hamanaka-135',title:'Hamanaka Youshoku Uni',sourcePage:'https://www.maff.go.jp/e/policies/intel/gi_act/register/s135.html',sourceType:'official_reference',license:'MAFF terms apply; reference-only until reuse terms are confirmed',attribution:'Ministry of Agriculture, Forestry and Fisheries of Japan',scene:'mixed_product',intendedUse:'reference_only',qualityStatus:'unlabeled',officialGrade:null,notes:'Referencia oficial de producto Hamanaka. Útil para QA comparativa; no convertir características de la ficha en labels extraídos de la foto.'},
+  {id:'commons-uni-sea-urchin-kabuto',title:'Uni - Sea Urchin.jpg',sourcePage:'https://commons.wikimedia.org/wiki/File:Uni_-_Sea_Urchin.jpg',sourceType:'creative_commons',license:'CC BY 2.0',attribution:'City Foodsters',scene:'sushi',intendedUse:'visual_variability',qualityStatus:'unlabeled',officialGrade:null,notes:'Presentación de uni con iluminación de restaurante; útil para robustez de color fuera de planta.'},
+  {id:'commons-uni-gunkan-2024',title:'Uni (Sea urchin) Gunkanmaki.jpg',sourcePage:'https://commons.wikimedia.org/wiki/File:Uni_(Sea_urchin)_Gunkanmaki.jpg',sourceType:'creative_commons',license:'CC BY-SA 4.0',attribution:'Zheng Zhou',scene:'sushi',intendedUse:'visual_variability',qualityStatus:'unlabeled',officialGrade:null,notes:'Gunkan moderno con alta resolución; contexto no operacional.'},
+  {id:'commons-uni-ikura-don',title:'UniIkuraDon.jpg',sourcePage:'https://commons.wikimedia.org/wiki/File:UniIkuraDon.jpg',sourceType:'creative_commons',license:'CC BY 3.0',attribution:'Douglas P. Perkins',scene:'mixed_product',intendedUse:'visual_variability',qualityStatus:'unlabeled',officialGrade:null,notes:'Uni junto a ikura y arroz; útil como caso difícil para separación de producto y contexto.'},
+  {id:'commons-uni-ikura-sushi-2013',title:'Uni-ikura-sushi-nov2013.jpg',sourcePage:'https://commons.wikimedia.org/wiki/File:Uni-ikura-sushi-nov2013.jpg',sourceType:'research_reference',license:'Verify exact file license on Commons before redistribution',attribution:'Nesnad',scene:'mixed_product',intendedUse:'visual_variability',qualityStatus:'unlabeled',officialGrade:null,notes:'Uni e ikura juntos; caso de interferencia visual deliberado.'},
+  {id:'commons-wrapped-sushi-2678129579',title:'Wrapped Sushi (2678129579).jpg',sourcePage:'https://commons.wikimedia.org/wiki/File:Wrapped_Sushi_(2678129579).jpg',sourceType:'creative_commons',license:'Creative Commons per file page; verify exact terms before redistribution',attribution:'Naotake Murayama',scene:'mixed_product',intendedUse:'visual_variability',qualityStatus:'unlabeled',officialGrade:null,notes:'Uni, ikura y scallop en gunkan; negativo contextual para segmentación.'},
+  {id:'commons-uni-0272',title:'Uni 0272.jpg',sourcePage:'https://commons.wikimedia.org/wiki/File:Uni_0272.jpg',sourceType:'research_reference',license:'Verify exact file license on Commons before redistribution',attribution:'Davefoc',scene:'mixed_product',intendedUse:'visual_variability',qualityStatus:'unlabeled',officialGrade:null,notes:'Plato kaiseki; iluminación y presentación complejas.'},
+  {id:'commons-uni-don-fukuoka',title:'Uni don by LWY in Fukuoka.jpg',sourcePage:'https://commons.wikimedia.org/wiki/File:Uni_don_by_LWY_in_Fukuoka.jpg',sourceType:'creative_commons',license:'CC BY 2.0',attribution:'LWY / Flickr',scene:'mixed_product',intendedUse:'visual_variability',qualityStatus:'unlabeled',officialGrade:null,notes:'Fuente externa contiene opinión subjetiva del autor; esa opinión no se convierte en label Pescamar.'},
+  {id:'commons-ezo-bafun-2975',title:'Sushi Saito IMG 2975 (31147854802).jpg',sourcePage:'https://commons.wikimedia.org/wiki/File:Sushi_Saito_IMG_2975_(31147854802).jpg',sourceType:'creative_commons',license:'Creative Commons per file page',attribution:'City Foodsters',scene:'sushi',intendedUse:'visual_variability',qualityStatus:'unlabeled',officialGrade:null,notes:'Vista adicional descrita por la fuente como Ezo bafun uni; sin extrapolar especie a otras fotos.'},
+  {id:'commons-ezo-bafun-1773',title:'Sushi Saito IMG 1773 (23720371141).jpg',sourcePage:'https://commons.wikimedia.org/wiki/File:Sushi_Saito_IMG_1773_(23720371141).jpg',sourceType:'creative_commons',license:'CC BY 2.0',attribution:'City Foodsters',scene:'sushi',intendedUse:'visual_variability',qualityStatus:'unlabeled',officialGrade:null,notes:'Toma adicional para variación intra-producto.'},
+  {id:'commons-california-urchin-01',title:'California Sea Urchin (Redondo Beach CA 20140215-0172) 01.JPG',sourcePage:'https://commons.wikimedia.org/wiki/File:California_Sea_Urchin_(Redondo_Beach_CA_20140215-0172)_01.JPG',sourceType:'research_reference',license:'Verify exact file license on Commons before redistribution',attribution:'Nandaro',scene:'shell',intendedUse:'visual_variability',qualityStatus:'unlabeled',officialGrade:null,notes:'Erizo recién procesado; útil para distinguir producto entero/abierto de uni limpio.'},
+  {id:'commons-california-urchin-02',title:'California Sea Urchin 02 (Redondo Beach CA 20140215-0173).JPG',sourcePage:'https://commons.wikimedia.org/wiki/File:California_Sea_Urchin_02_(Redondo_Beach_CA_20140215-0173).JPG',sourceType:'research_reference',license:'Verify exact file license on Commons before redistribution',attribution:'Nandaro',scene:'shell',intendedUse:'visual_variability',qualityStatus:'unlabeled',officialGrade:null,notes:'Segundo ángulo de erizo recién abierto.'},
+  {id:'commons-california-urchin-03',title:'California Sea Urchin 03 (Redondo Beach CA 20140215-0174).JPG',sourcePage:'https://commons.wikimedia.org/wiki/File:California_Sea_Urchin_03_(Redondo_Beach_CA_20140215-0174).JPG',sourceType:'research_reference',license:'Verify exact file license on Commons before redistribution',attribution:'Nandaro',scene:'shell',intendedUse:'visual_variability',qualityStatus:'unlabeled',officialGrade:null,notes:'Tercer ángulo para variación estructural y fondo complejo.'},
+  {id:'commons-california-urchin-04',title:'California Sea Urchin 04 (Redondo Beach CA 20140215-0178).JPG',sourcePage:'https://commons.wikimedia.org/wiki/File:California_Sea_Urchin_04_(Redondo_Beach_CA_20140215-0178).JPG',sourceType:'research_reference',license:'Verify exact file license on Commons before redistribution',attribution:'Nandaro',scene:'shell',intendedUse:'visual_variability',qualityStatus:'unlabeled',officialGrade:null,notes:'Erizo recién procesado con contexto de mercado/restaurante.'},
+  {id:'commons-california-urchin-05',title:'California Sea Urchin 05 (Redondo Beach CA 20140215-0179).JPG',sourcePage:'https://commons.wikimedia.org/wiki/File:California_Sea_Urchin_05_(Redondo_Beach_CA_20140215-0179).JPG',sourceType:'research_reference',license:'Verify exact file license on Commons before redistribution',attribution:'Nandaro',scene:'shell',intendedUse:'visual_variability',qualityStatus:'unlabeled',officialGrade:null,notes:'Quinto ángulo del mismo contexto; útil para robustez de orientación.'},
+  {id:'commons-grilled-yakiuni',title:'Grilled Sea Urchin Japanese YakiUni.jp.jpg',sourcePage:'https://commons.wikimedia.org/wiki/File:Grilled_Sea_Urchin_Japanese_YakiUni.jp.jpg',sourceType:'research_reference',license:'Verify exact file license on Commons before redistribution',attribution:null,scene:'mixed_product',intendedUse:'visual_variability',qualityStatus:'unlabeled',officialGrade:null,notes:'Producto cocido; negativo importante para evitar mezclar color de proceso térmico con uni fresco.'},
+  {id:'commons-uni-oyster-ikura-01',title:'Uni, oyster, ikura 01.jpg',sourcePage:'https://commons.wikimedia.org/wiki/File:Uni,_oyster,_ikura_01.jpg',sourceType:'research_reference',license:'Verify exact file license on Commons before redistribution',attribution:null,scene:'mixed_product',intendedUse:'visual_variability',qualityStatus:'unlabeled',officialGrade:null,notes:'Mezcla de uni, ostra e ikura; escena adversarial para segmentación.'},
+  {id:'commons-uni-oyster-ikura-02',title:'Uni, oyster, ikura 02.jpg',sourcePage:'https://commons.wikimedia.org/wiki/File:Uni,_oyster,_ikura_02.jpg',sourceType:'research_reference',license:'Verify exact file license on Commons before redistribution',attribution:null,scene:'mixed_product',intendedUse:'visual_variability',qualityStatus:'unlabeled',officialGrade:null,notes:'Segunda vista de mezcla de productos.'},
+  {id:'commons-uni-uni-uni',title:'Uni, Uni, Uni. - Sea urchin eggs - Flickr - skyseeker.jpg',sourcePage:'https://commons.wikimedia.org/wiki/File:Uni,_Uni,_Uni._-_Sea_urchin_eggs_-_Flickr_-_skyseeker.jpg',sourceType:'research_reference',license:'Verify exact file license on Commons before redistribution',attribution:'skyseeker',scene:'mixed_product',intendedUse:'visual_variability',qualityStatus:'unlabeled',officialGrade:null,notes:'Variación visual de múltiples porciones de uni.'},
+  {id:'commons-uninokaiyaki',title:'Uninokaiyaki.JPG',sourcePage:'https://commons.wikimedia.org/wiki/File:Uninokaiyaki.JPG',sourceType:'research_reference',license:'Verify exact file license on Commons before redistribution',attribution:null,scene:'shell',intendedUse:'visual_variability',qualityStatus:'unlabeled',officialGrade:null,notes:'Preparación en concha; útil como negativo de producto procesado.'},
+  {id:'commons-sea-urchin-vietnam',title:'Sea urchin Vietnam.jpg',sourcePage:'https://commons.wikimedia.org/wiki/File:Sea_urchin_Vietnam.jpg',sourceType:'research_reference',license:'Verify exact file license on Commons before redistribution',attribution:null,scene:'shell',intendedUse:'visual_variability',qualityStatus:'unlabeled',officialGrade:null,notes:'Erizo en contexto de servicio fuera de Japón; variedad de presentación.'},
+  {id:'commons-sea-urchins-oysters',title:'Sea urchins served amid oysters.JPG',sourcePage:'https://commons.wikimedia.org/wiki/File:Sea_urchins_served_amid_oysters.JPG',sourceType:'research_reference',license:'Verify exact file license on Commons before redistribution',attribution:null,scene:'mixed_product',intendedUse:'visual_variability',qualityStatus:'unlabeled',officialGrade:null,notes:'Erizos entre ostras; fondo y objetos competidores.'},
+  {id:'commons-seeigel-0519-roh',title:'Seeigel 0519 roh.jpg',sourcePage:'https://commons.wikimedia.org/wiki/File:Seeigel_0519_roh.jpg',sourceType:'research_reference',license:'Verify exact file license on Commons before redistribution',attribution:null,scene:'shell',intendedUse:'visual_variability',qualityStatus:'unlabeled',officialGrade:null,notes:'Erizo crudo abierto; útil para distinguir gónada in situ de uni ya limpio.'},
+  {id:'commons-oursins-cassis',title:'Oursins de Cassis (9391394846).jpg',sourcePage:'https://commons.wikimedia.org/wiki/File:Oursins_de_Cassis_(9391394846).jpg',sourceType:'research_reference',license:'Verify exact file license on Commons before redistribution',attribution:null,scene:'shell',intendedUse:'visual_variability',qualityStatus:'unlabeled',officialGrade:null,notes:'Múltiples erizos abiertos; amplia variabilidad de fondo, textura y anatomía visible.'}
 ]
