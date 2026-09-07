@@ -31,6 +31,12 @@ async function accessibleRun(runId:string,operator:SessionOperator){
  return row&&visible(operator,row.plant_id)?row:null
 }
 
+async function qualityFeedbackSchemaReady(){
+ const sql=getSql()
+ const rows=await sql`select count(*)::int as count from information_schema.columns where table_schema='public' and table_name='sea_urchin_color_captures' and column_name in ('quality_feedback_reason','quality_feedback_note','quality_learning_label','learning_eligible')`
+ return Number(Array.isArray(rows)?(rows[0] as {count?:number|string}|undefined)?.count??0:0)===4
+}
+
 function parseMetrics(value:unknown){
  const raw=(value??{}) as Partial<Metrics>
  const metrics={
@@ -69,8 +75,8 @@ export default async function handler(req:Request,res:Response){
   return res.status(405).json({ok:false,error:'Método no permitido'})
  }catch(error){
   const message=error instanceof Error?error.message:''
-  const missing=message.includes('sea_urchin_color_')||message.includes('created_by_operator_id')||message.includes('source_image_sha256')||message.includes('quality_feedback_')||message.includes('quality_learning_label')||message.includes('learning_eligible')
-  return res.status(missing?503:500).json({ok:false,error:missing?'Falta aplicar la migración Uni Vision Station':'No fue posible procesar control de color'})
+  const missing=message.includes('sea_urchin_color_')||message.includes('created_by_operator_id')||message.includes('source_image_sha256')
+  return res.status(missing?503:500).json({ok:false,error:missing?'Falta aplicar una migración Uni Vision requerida':'No fue posible procesar control de color'})
  }
 }
 
@@ -80,14 +86,14 @@ async function list(req:Request,res:Response,operator:SessionOperator){
  if(!uuid.test(runId))return res.status(400).json({ok:false,error:'Proceso inválido'})
  const run=await accessibleRun(runId,operator)
  if(!run)return res.status(404).json({ok:false,error:'Proceso no disponible'})
- const sql=getSql()
- const [capturesRaw,references]=await Promise.all([
-  sql`select c.id,c.run_id,c.evidence_file_id,c.capture_source,c.device_label,c.image_sha256,c.source_image_sha256,c.pixel_count,c.r_mean,c.g_mean,c.b_rgb_mean,c.l_mean,c.a_mean,c.b_mean,c.l_std,c.a_std,c.b_std,c.chroma,c.hue_deg,c.suggested_grade,c.nearest_reference_id,c.delta_e,c.operator_grade,c.decision,c.quality_feedback_reason,c.quality_feedback_note,c.quality_learning_label,c.learning_eligible,c.confirmed_by,c.confirmed_at,c.created_by,c.created_at from sea_urchin_color_captures c where c.run_id=${runId}::uuid order by c.created_at desc limit 30`,
-  run.plant_id?referencesForPlant(run.plant_id):Promise.resolve([])
- ])
+ const sql=getSql(),feedbackReady=await qualityFeedbackSchemaReady()
+ const capturesRaw=feedbackReady
+  ?await sql`select c.id,c.run_id,c.evidence_file_id,c.capture_source,c.device_label,c.image_sha256,c.source_image_sha256,c.pixel_count,c.r_mean,c.g_mean,c.b_rgb_mean,c.l_mean,c.a_mean,c.b_mean,c.l_std,c.a_std,c.b_std,c.chroma,c.hue_deg,c.suggested_grade,c.nearest_reference_id,c.delta_e,c.operator_grade,c.decision,c.quality_feedback_reason,c.quality_feedback_note,c.quality_learning_label,c.learning_eligible,c.confirmed_by,c.confirmed_at,c.created_by,c.created_at from sea_urchin_color_captures c where c.run_id=${runId}::uuid order by c.created_at desc limit 30`
+  :await sql`select c.id,c.run_id,c.evidence_file_id,c.capture_source,c.device_label,c.image_sha256,c.source_image_sha256,c.pixel_count,c.r_mean,c.g_mean,c.b_rgb_mean,c.l_mean,c.a_mean,c.b_mean,c.l_std,c.a_std,c.b_std,c.chroma,c.hue_deg,c.suggested_grade,c.nearest_reference_id,c.delta_e,c.operator_grade,c.decision,null::text as quality_feedback_reason,null::text as quality_feedback_note,null::text as quality_learning_label,false as learning_eligible,c.confirmed_by,c.confirmed_at,c.created_by,c.created_at from sea_urchin_color_captures c where c.run_id=${runId}::uuid order by c.created_at desc limit 30`
+ const references=run.plant_id?await referencesForPlant(run.plant_id):[]
  const captures=Array.isArray(capturesRaw)?capturesRaw.map(item=>({...item,seedMatch:seedSummary((item as {source_image_sha256?:unknown;image_sha256?:unknown}).source_image_sha256??(item as {image_sha256?:unknown}).image_sha256)})):[]
  const capture=canCapture(operator),confirm=canConfirm(operator)
- return res.status(200).json({ok:true,run:{id:run.id,plantId:run.plant_id,grade:run.grade},captures,references,permissions:{canWrite:capture,canCapture:capture,canConfirm:confirm,canManageReferences:canManageReferences(operator)}})
+ return res.status(200).json({ok:true,run:{id:run.id,plantId:run.plant_id,grade:run.grade},captures,references,feedbackLearningReady:feedbackReady,permissions:{canWrite:capture,canCapture:capture,canConfirm:confirm,canManageReferences:canManageReferences(operator)}})
 }
 
 async function mutate(req:Request,res:Response,operator:SessionOperator){
@@ -165,12 +171,16 @@ async function confirmCapture(input:Input,res:Response,operator:SessionOperator)
  if(!row?.id||!row.run_id||!visible(operator,row.plant_id))return res.status(404).json({ok:false,error:'Captura no disponible'})
  const colorStatus=decision==='accepted'?'accepted':decision==='ng'?'ng':'review'
  const learningLabel=decision==='accepted'?'good':decision==='ng'?'bad':null
- const learningEligible=learningLabel!==null
+ const feedbackReady=await qualityFeedbackSchemaReady(),learningEligible=feedbackReady&&learningLabel!==null
  const code=`LAB ${Number(row.l_mean).toFixed(1)}/${Number(row.a_mean).toFixed(1)}/${Number(row.b_mean).toFixed(1)}`
  const feedback=reason?`${qualityReasonLabels[reason]}${note?`: ${note}`:''}`:note
- await sql`update sea_urchin_color_captures set operator_grade=${grade},decision=${decision},quality_feedback_reason=${reason},quality_feedback_note=${note},quality_learning_label=${learningLabel},learning_eligible=${learningEligible},confirmed_by=${operator.fullName},confirmed_by_operator_id=${operator.id}::uuid,confirmed_at=now() where id=${captureId}::uuid`
+ if(feedbackReady){
+  await sql`update sea_urchin_color_captures set operator_grade=${grade},decision=${decision},quality_feedback_reason=${reason},quality_feedback_note=${note},quality_learning_label=${learningLabel},learning_eligible=${learningEligible},confirmed_by=${operator.fullName},confirmed_by_operator_id=${operator.id}::uuid,confirmed_at=now() where id=${captureId}::uuid`
+ }else{
+  await sql`update sea_urchin_color_captures set operator_grade=${grade},decision=${decision},confirmed_by=${operator.fullName},confirmed_by_operator_id=${operator.id}::uuid,confirmed_at=now() where id=${captureId}::uuid`
+ }
  await sql`update sea_urchin_stage_checks set status=${decision==='accepted'?'ok':decision==='ng'?'hold':'pending'},note=${`Uni Vision ${code}${row.delta_e!=null?` · ΔE ${Number(row.delta_e).toFixed(2)}`:''}${row.suggested_grade?` · sugerido ${row.suggested_grade}`:''}${feedback?` · Calidad: ${feedback}`:''}`},checked_by=${operator.fullName},checked_by_operator_id=${operator.id}::uuid,checked_at=now() where run_id=${row.run_id}::uuid and stage='color'`
  await sql`update sea_urchin_process_runs set grade=coalesce(${grade},grade),color_code=${code},color_status=${colorStatus},updated_at=now() where id=${row.run_id}::uuid`
  await sql`update sea_urchin_process_runs u set status=case when u.color_status='ng' or u.xray_status='failed' or exists(select 1 from sea_urchin_stage_checks s where s.run_id=u.id and s.status in ('deviation','hold')) or exists(select 1 from product_labels l where l.reception_id=u.reception_id and l.status in ('mismatch','blocked')) then 'hold' when u.color_status='accepted' and u.xray_status='passed' and u.grade is not null then 'ready_for_packing' else 'in_process' end,updated_at=now() where u.id=${row.run_id}::uuid`
- return res.status(200).json({ok:true,runId:row.run_id,colorCode:code,colorStatus,grade,qualityFeedback:{reason,note,learningLabel,learningEligible}})
+ return res.status(200).json({ok:true,runId:row.run_id,colorCode:code,colorStatus,grade,qualityFeedback:{reason,note,learningLabel:feedbackReady?learningLabel:null,learningEligible,feedbackLearningReady:feedbackReady}})
 }
