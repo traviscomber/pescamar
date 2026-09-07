@@ -2,7 +2,7 @@ import {readFile} from 'node:fs/promises'
 
 const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
-const [registry,organization,page,app,access,os,shell,modules,lineage,segmentation,qaBench]=await Promise.all([
+const [registry,organization,page,app,access,os,shell,modules,lineage,segmentation,qaBench,station,colorApi,qualityMigration]=await Promise.all([
   readFile(new URL('../src/edgevision.ts',import.meta.url),'utf8'),
   readFile(new URL('../src/organization.ts',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/EdgeVision.tsx',import.meta.url),'utf8'),
@@ -14,6 +14,9 @@ const [registry,organization,page,app,access,os,shell,modules,lineage,segmentati
   readFile(new URL('../api/lot-lineage.ts',import.meta.url),'utf8'),
   readFile(new URL('../src/lib/uniVisionSegmentation.ts',import.meta.url),'utf8'),
   readFile(new URL('../src/components/UniVisionQaBench.tsx',import.meta.url),'utf8'),
+  readFile(new URL('../src/components/UniVisionStation.tsx',import.meta.url),'utf8'),
+  readFile(new URL('../api/sea-urchin-color.ts',import.meta.url),'utf8'),
+  readFile(new URL('../db/migrations/050_uni_vision_quality_feedback.sql',import.meta.url),'utf8'),
 ])
 
 for(const capability of ['count','calibre','size','color','defects','classification','biomass','process_control','anomaly'])assert(registry.includes(`id:'${capability}'`),`EdgeVision registry must include ${capability}`)
@@ -43,10 +46,15 @@ assert(qaBench.includes('La IA ayuda. Calidad decide.')&&qaBench.includes('La im
 assert(!qaBench.includes("fetch('/api/")&&!qaBench.includes('saveMeasurement'),'QA bench must remain browser-local and must not persist test data')
 assert(qaBench.includes('Muestra visualmente consistente')&&qaBench.includes('Puede pasar a validación de Calidad'),'QA result must translate measurements into an operator-facing recommendation')
 assert(qaBench.includes('Decisión final: pendiente de Calidad')&&qaBench.includes('no define Grade, origen, inocuidad ni liberación del producto'),'human quality authority must remain explicit')
+assert(station.includes('La IA propone. Calidad decide y enseña.')&&station.includes('¿Por qué se rechaza?'),'Quality station must make the human teaching loop explicit and require rejection context')
+assert(station.includes('Aprobado = ejemplo humano “good”')&&station.includes('Rechazado = ejemplo humano “bad” con causa'),'operator UI must explain supervised labels without claiming automatic training')
+assert(colorApi.includes("decision==='ng'&&!reason")&&colorApi.includes("quality_learning_label=${learningLabel}")&&colorApi.includes('learning_eligible=${learningEligible}'),'server must require rejection reason and persist human learning labels')
+assert(colorApi.includes("learningLabel=decision==='accepted'?'good':decision==='ng'?'bad':null"),'only final accepted/rejected human decisions may become learning labels')
+assert(qualityMigration.includes('automatic_training\',false')&&qualityMigration.includes('learning_eligible boolean not null default false'),'migration must explicitly prohibit silent automatic training and preserve eligibility state')
 
 if(failures.length){
  console.error('EdgeVision foundation smoke FAILED')
  for(const failure of failures)console.error(`- ${failure}`)
  process.exit(1)
 }
-console.log('EdgeVision foundation smoke PASS: tenant-neutral capability registry, human authority, mixed-scene segmentation, simple non-persistent product validation and Vision→Event Graph provenance verified')
+console.log('EdgeVision foundation smoke PASS: human authority, mixed-scene segmentation, simple product validation, Quality feedback learning labels and Vision→Event Graph provenance verified')
