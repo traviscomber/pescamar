@@ -1,4 +1,4 @@
-import {requireOperator,type SessionOperator} from './_auth.js'
+import {requireOperator} from './_auth.js'
 import {getSql} from './_db.js'
 
 type Request={method?:string;headers?:Record<string,string|string[]|undefined>}
