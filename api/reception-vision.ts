@@ -57,7 +57,8 @@ export default async function handler(request:Request,response:Response){
     const ai=await fetch("https://api.openai.com/v1/chat/completions",{method:"POST",headers:{Authorization:`Bearer ${apiKey}`,"Content-Type":"application/json"},body:JSON.stringify({model,temperature:0,messages:[{role:"user",content:[{type:"text",text:visionPrompt},{type:"image_url",image_url:{url:`data:${mimeType};base64,${dataBase64}`,detail:"high"}}]}]})});
     if(!ai.ok){await ai.json();return response.status(200).json({ok:true,evidence,vision:null,warning:`La foto quedó guardada, pero OpenAI Vision respondió ${ai.status}`})}
     const payload=await ai.json();const vision=parseVision(chatOutput(payload));
-    return response.status(200).json({ok:true,evidence:{...evidence,note:vision.guideReference?`IA: ${vision.guideReference}`:"Analizada con Vision"},vision,provider:"openai",model});
+    await sql`update reception_evidence_files set ai_provider=${"openai"},ai_model=${model},ai_confidence=${vision.confidence} where id=${id}::uuid and reception_id is null`;
+    return response.status(200).json({ok:true,evidence:{...evidence,note:vision.guideReference?`IA: ${vision.guideReference}`:"Analizada con Vision",aiProvider:"openai",aiModel:model,aiConfidence:vision.confidence},vision,provider:"openai",model});
   }catch{
     return response.status(200).json({ok:true,evidence,vision:null,warning:"La foto quedó guardada, pero no fue posible completar el análisis Vision"});
   }
