@@ -28,7 +28,7 @@ export function Inventory(){
   async function load(){try{const r=await fetch('/api/inventory',{cache:'no-store'}),p=await r.json() as Payload;if(!r.ok)throw new Error(p.error??'No fue posible cargar inventario');setData(p);setError('')}catch(e){setError(e instanceof Error?e.message:'No fue posible cargar inventario')}finally{setLoading(false)}}
   useEffect(()=>{void (async()=>load())()},[])
   useEffect(()=>{busyRef.current=busy},[busy])
-  const allLots=data?.lots??[],allLocations=data?.locations??[],allMovements=data?.movements??[]
+  const allLots=useMemo(()=>data?.lots??[],[data?.lots]),allLocations=useMemo(()=>data?.locations??[],[data?.locations]),allMovements=useMemo(()=>data?.movements??[],[data?.movements])
   const lots=useMemo(()=>scopedPlant?allLots.filter(l=>l.plant_id===scopedPlant):allLots,[allLots,scopedPlant])
   const locations=useMemo(()=>scopedPlant?allLocations.filter(l=>l.plant_id===scopedPlant):allLocations,[allLocations,scopedPlant])
   const movements=useMemo(()=>scopedPlant?allMovements.filter(m=>m.plant_id===scopedPlant):allMovements,[allMovements,scopedPlant])

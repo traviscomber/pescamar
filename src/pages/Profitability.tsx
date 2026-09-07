@@ -15,7 +15,7 @@ const sourceRange=(first?:string,last?:string)=>first&&last?`${sourceDate(first)
 export function Profitability(){
  const[data,setData]=useState<Payload|null>(null),[error,setError]=useState(''),[loading,setLoading]=useState(true),[view,setView]=useState<'supplier'|'plant'|'customer'>('supplier')
  useEffect(()=>{fetch('/api/profitability',{cache:'no-store'}).then(async r=>{const p=await r.json() as Payload;if(!r.ok)throw new Error(p.error??'No fue posible calcular inteligencia');setData(p)}).catch(e=>setError(e instanceof Error?e.message:'No fue posible calcular inteligencia')).finally(()=>setLoading(false))},[])
- const liveRows=view==='supplier'?data?.live?.suppliers??[]:view==='plant'?data?.live?.plants??[]:data?.live?.customers??[]
+ const liveRows=useMemo(()=>view==='supplier'?data?.live?.suppliers??[]:view==='plant'?data?.live?.plants??[]:data?.live?.customers??[],[view,data?.live?.suppliers,data?.live?.plants,data?.live?.customers])
  const historyRows=view==='supplier'?data?.historical?.suppliers??[]:view==='plant'?data?.historical?.plants??[]:data?.historical?.customers??[]
  const hasLive=liveRows.some(r=>Number(r.revenue_clp??0)>0||Number(r.receptions??r.lots??0)>0)
  const revenue=useMemo(()=>liveRows.reduce((a,r)=>a+Number(r.revenue_clp??0),0),[liveRows]),contribution=useMemo(()=>liveRows.reduce((a,r)=>a+Number(r.contribution_clp??0),0),[liveRows])
