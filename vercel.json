@@ -9,6 +9,7 @@
     { "source": "/lineage", "destination": "/index.html" },
     { "source": "/lotes", "destination": "/index.html" },
     { "source": "/lotes/:receptionId", "destination": "/index.html" },
+    { "source": "/uni", "destination": "/index.html" },
     { "source": "/edgevision", "destination": "/index.html" },
     { "source": "/organization", "destination": "/index.html" },
     { "source": "/integrations", "destination": "/index.html" },
