@@ -58,7 +58,7 @@ test('cold page renders physical station and registered sensor without exposing 
  await expect(runPanel.getByText(/La telemetría automática no se digita aquí/)).toBeVisible()
  await expect(selectByLabel(runPanel,'Origen lectura')).toHaveCount(0)
  await expect(selectByLabel(runPanel,'Sensor')).toHaveCount(0)
- await expect(inputByLabel(runPanel,'Temperatura °C')).toBeVisible()
+ await expect(inputByLabel(runPanel,'Lectura manual auditada · °C')).toBeVisible()
  expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
  expect(errors).toEqual([])
  await page.screenshot({path:testInfo.outputPath('cold-station-sensor.png'),fullPage:true})
