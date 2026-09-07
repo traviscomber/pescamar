@@ -74,6 +74,8 @@ Desde `041_schema_migration_baseline.sql`, Neon conserva un registro explícito 
 | `045_japan_cold_chain_fail_closed.sql` | incorpora cadena de frío válida y sin desviaciones al gate fail-closed de liberación Japón |
 | `046_lot_operational_lifecycle.sql` | historial append-only y auditable de cierre/reapertura operacional por lote con fundamento, snapshot y operador |
 | `047_reconcile_post_baseline_migration_registry.sql` | verifica la estructura canónica de 042–046, reconcilia su provenance sin inventar timestamps y registra 047 como migración aplicada |
+| `048_reception_vision_provenance.sql` | provenance estructurada de IA en evidencia final de recepción: provider, modelo y confianza acotada 0..1 |
+| `049_reception_vision_file_provenance.sql` | provenance Vision server-side en el archivo fuente almacenado para impedir metadata IA inventada por el cliente |
 
 El inventario anterior describe el repositorio actual. Si se agrega una migración, debe agregarse también a esta tabla; CI verifica esa correspondencia y que los landmarks del preflight sigan alineados con el manifiesto runtime.
 
@@ -104,7 +106,9 @@ El inventario anterior describe el repositorio actual. Si se agrega una migraci�
 - El gate regulatorio de despacho existe también en PostgreSQL sobre `lot_dispatches`; no depende de que la UI recuerde validar el hold.
 - Para destinos Japón, el despacho queda en fail-closed: proceso de erizo, etiquetas, holds regulatorios y los 10 requisitos Japan Release deben estar completos antes de confirmar la salida.
 - Una aprobación Japan Release requiere documento o evidencia, actor verificador y vigencia cuando corresponda; no se acepta una casilla sin provenance.
-- La integración Sernapesca XML/Siscomex no forma parte de 037–047 y sólo debe implementarse cuando exista contrato oficial de endpoint, autenticación y formato.
+- La integración Sernapesca XML/Siscomex no forma parte de 037–049 y sólo debe implementarse cuando exista contrato oficial de endpoint, autenticación y formato.
+- La provenance Vision válida nace server-side en `reception_evidence_files` y se copia a `reception_evidence`; metadata equivalente enviada por el navegador no es fuente de verdad.
+- Confidence de Vision es evidencia de extracción, no certeza sobre calidad, origen, peso físico, cumplimiento regulatorio ni decisión comercial.
 
 ## Seguridad y tenancy operacional
 
