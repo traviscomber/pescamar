@@ -17,7 +17,7 @@ function parseTimelineDate(value:string){
   if(!value)return null
   const direct=new Date(value)
   if(Number.isFinite(direct.getTime()))return direct
-  const match=value.trim().match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/)
+  const match=value.trim().match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/)
   if(!match)return null
   const [,day,month,year,hour='0',minute='0',second='0']=match
   const parsed=new Date(Number(year),Number(month)-1,Number(day),Number(hour),Number(minute),Number(second))
