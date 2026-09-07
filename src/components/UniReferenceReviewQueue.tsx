@@ -1,31 +1,64 @@
-import {useEffect,useMemo,useState} from 'react'
-import {ExternalLink,ShieldCheck,Target} from 'lucide-react'
+import {useCallback,useEffect,useMemo,useState} from 'react'
+import {CheckCircle2,ExternalLink,ShieldCheck,Target,XCircle} from 'lucide-react'
 import {useAuth} from '../auth'
 
-type Reference={id:string;title:string;source_page:string;image_url:string|null;scene:string;intended_use:string;source_type:string;quality_status:'unlabeled';official_grade:null;reviewPriority:number;reviewReason:string}
-type Payload={ok?:boolean;references?:Reference[];reviewQueue?:{total:number;highPriority:number;firstBatch:string[];rule:string};error?:string}
+type Review={decision:'accepted'|'rejected';rejection_reason:string|null;note:string|null;reviewed_by:string;reviewed_at:string}|null
+type Reference={id:string;title:string;source_page:string;image_url:string|null;scene:string;intended_use:string;source_type:string;quality_status:'unlabeled';official_grade:null;reviewPriority:number;reviewReason:string;latest_review:Review}
+type Payload={ok?:boolean;references?:Reference[];reviewQueue?:{total:number;pending:number;reviewed:number;highPriority:number;firstBatch:string[];rule:string};error?:string}
+
+const reasons=[
+ ['color_fuera_objetivo','Color fuera de objetivo'],
+ ['color_poco_uniforme','Color poco uniforme'],
+ ['dano_visual','Daño visual'],
+ ['apariencia_no_conforme','Apariencia no conforme'],
+ ['material_extrano_visible','Material extraño visible'],
+ ['presentacion_no_conforme','Presentación no conforme'],
+ ['otro','Otro'],
+] as const
 
 export function UniReferenceReviewQueue(){
  const {operator}=useAuth()
  const allowed=operator&&['admin','quality'].includes(operator.role)
  const [payload,setPayload]=useState<Payload|null>(null)
  const [error,setError]=useState('')
+ const [busy,setBusy]=useState('')
+ const [reasonById,setReasonById]=useState<Record<string,string>>({})
+ const [noteById,setNoteById]=useState<Record<string,string>>({})
+ const load=useCallback(async()=>{
+  if(!allowed)return
+  const response=await fetch('/api/sea-urchin-external-references',{credentials:'same-origin',cache:'no-store'})
+  const data=await response.json().catch(()=>({})) as Payload
+  if(!response.ok)throw new Error(data.error||'No fue posible cargar referencias Uni')
+  setPayload(data)
+ },[allowed])
  useEffect(()=>{
   if(!allowed)return
   let active=true
-  void fetch('/api/sea-urchin-external-references',{credentials:'same-origin',cache:'no-store'}).then(async response=>{
-   const data=await response.json().catch(()=>({})) as Payload
-   if(!response.ok)throw new Error(data.error||'No fue posible cargar referencias Uni')
-   if(active)setPayload(data)
-  }).catch(cause=>{if(active)setError(cause instanceof Error?cause.message:'No fue posible cargar referencias Uni')})
+  void load().catch(cause=>{if(active)setError(cause instanceof Error?cause.message:'No fue posible cargar referencias Uni')})
   return()=>{active=false}
- },[allowed])
- const firstBatch=useMemo(()=>payload?.references?.slice(0,12)??[],[payload])
+ },[allowed,load])
+ const firstBatch=useMemo(()=>payload?.references?.filter(item=>!item.latest_review).slice(0,12)??[],[payload])
+ async function submit(item:Reference,decision:'accepted'|'rejected'){
+  const rejectionReason=decision==='rejected'?(reasonById[item.id]||''):''
+  const note=(noteById[item.id]||'').trim()
+  if(decision==='rejected'&&!rejectionReason){setError('Selecciona por qué rechazas la referencia.');return}
+  if(decision==='rejected'&&rejectionReason==='otro'&&!note){setError('Describe el motivo cuando seleccionas Otro.');return}
+  setBusy(item.id);setError('')
+  try{
+   const response=await fetch('/api/sea-urchin-external-references',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({referenceId:item.id,decision,rejectionReason:rejectionReason||null,note:note||null})})
+   const data=await response.json().catch(()=>({})) as {error?:string}
+   if(!response.ok)throw new Error(data.error||'No fue posible guardar la decisión de Calidad')
+   await load()
+  }catch(cause){setError(cause instanceof Error?cause.message:'No fue posible guardar la decisión de Calidad')}
+  finally{setBusy('')}
+ }
  if(!allowed)return null
- return <section className="panel"><div className="section-heading"><div><span className="overline teal">Calidad enseña al sistema</span><h2>Primer lote de revisión Uni</h2></div><span>{payload?.reviewQueue?.total??'—'} referencias</span></div>
-  <div className="governance-note"><ShieldCheck size={19}/><div><b>Ordenamos primero los casos que más enseñan.</b><p>Defectos/variabilidad difícil → segmentación → escenas ambiguas. Esta prioridad es derivada del contexto; no significa que el producto esté bueno o malo.</p><small>Calidad sigue siendo la única autoridad para aprobar/rechazar y explicar por qué.</small></div></div>
-  {error?<div className="notice"><div><b>No disponible</b><small>{error}</small></div></div>:null}
-  {!error&&!payload?<div className="notice"><div><b>Cargando referencias…</b><small>Consultando catálogo real almacenado en Neon.</small></div></div>:null}
-  {payload?<><div className="signal-grid"><article className="signal-card"><span><Target size={16}/>Alta prioridad</span><b>{payload.reviewQueue?.highPriority??0}</b><small>casos difíciles para revisar primero</small></article><article className="signal-card"><span><ShieldCheck size={16}/>Etiquetas humanas</span><b>0</b><small>no se inventan decisiones antes de Calidad</small></article></div><div className="compact-ledger">{firstBatch.map((item,index)=><div className="alert-row static" key={item.id}><span className="os-module-step">{String(index+1).padStart(2,'0')}</span><div><b>{item.title}</b><small>{item.reviewReason}</small><p className="source-note">Estado: sin etiqueta humana · Grade: pendiente</p></div><a className="source-link compact" href={item.source_page} target="_blank" rel="noreferrer">Abrir fuente <ExternalLink size={12}/></a></div>)}</div></>:null}
+ return <section className="panel"><div className="section-heading"><div><span className="overline teal">Calidad enseña al sistema</span><h2>Revisión humana de referencias Uni</h2></div><span>{payload?.reviewQueue?.pending??'—'} pendientes</span></div>
+  <div className="governance-note"><ShieldCheck size={19}/><div><b>Vision propone contexto. Calidad define la etiqueta.</b><p>Defectos/variabilidad difícil → segmentación → escenas ambiguas. La prioridad no significa que el producto esté bueno o malo.</p><small>Aprobar o rechazar aquí crea feedback humano trazable; no asigna Grade, no libera producto y no reentrena automáticamente.</small></div></div>
+  {error?<div className="notice"><div><b>Atención</b><small>{error}</small></div></div>:null}
+  {!payload&&!error?<div className="notice"><div><b>Cargando referencias…</b><small>Consultando catálogo real almacenado en Neon.</small></div></div>:null}
+  {payload?<><div className="signal-grid"><article className="signal-card"><span><Target size={16}/>Alta prioridad</span><b>{payload.reviewQueue?.highPriority??0}</b><small>casos difíciles pendientes</small></article><article className="signal-card"><span><CheckCircle2 size={16}/>Revisadas</span><b>{payload.reviewQueue?.reviewed??0}</b><small>decisiones humanas guardadas</small></article></div>
+   {firstBatch.length===0?<div className="notice"><CheckCircle2 size={16}/><div><b>Batch de revisión completo</b><small>No quedan referencias externas pendientes en este conjunto.</small></div></div>:<div className="compact-ledger">{firstBatch.map((item,index)=><div className="alert-row static" key={item.id}><span className="os-module-step">{String(index+1).padStart(2,'0')}</span><div style={{minWidth:0,flex:1}}>{item.image_url?<img src={item.image_url} alt={item.title} loading="lazy" style={{width:'100%',maxWidth:360,maxHeight:220,objectFit:'cover',display:'block',marginBottom:10}}/>:null}<b>{item.title}</b><small>{item.reviewReason}</small><p className="source-note">Sin etiqueta humana · Grade pendiente</p><div className="row-actions" style={{marginTop:8}}><select aria-label={`Motivo de rechazo ${item.title}`} value={reasonById[item.id]||''} onChange={event=>setReasonById(current=>({...current,[item.id]:event.target.value}))}><option value="">Motivo si rechazas…</option>{reasons.map(([value,label])=><option value={value} key={value}>{label}</option>)}</select><input aria-label={`Observación ${item.title}`} value={noteById[item.id]||''} onChange={event=>setNoteById(current=>({...current,[item.id]:event.target.value}))} placeholder="Observación opcional" maxLength={1000}/></div><div className="row-actions" style={{marginTop:8}}><button className="button secondary" disabled={busy===item.id} onClick={()=>void submit(item,'accepted')}><CheckCircle2 size={14}/>Aprobar</button><button className="button secondary" disabled={busy===item.id} onClick={()=>void submit(item,'rejected')}><XCircle size={14}/>Rechazar</button><a className="source-link compact" href={item.source_page} target="_blank" rel="noreferrer">Ver fuente <ExternalLink size={12}/></a></div></div></div>)}</div>}
+  </>:null}
  </section>
 }
