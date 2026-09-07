@@ -16,7 +16,7 @@ async function read<T extends {error?:string}>(url:string):Promise<T>{const r=aw
 export function LabelPrintFocus(){
  const[engine,setEngine]=useState<EnginePayload|null>(null),[options,setOptions]=useState<OptionsPayload|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState('')
  useEffect(()=>{void Promise.all([read<EnginePayload>('/api/label-engine'),read<OptionsPayload>('/api/label-engine-options')]).then(([e,o])=>{setEngine(e);setOptions(o)}).catch(e=>setError(e instanceof Error?e.message:'No fue posible cargar impresión')).finally(()=>setLoading(false))},[])
- const jobs=engine?.jobs??[],templates=(engine?.templates??[]).filter(t=>t.active),units=options?.packingUnits??[],labels=(options?.labels??[]).filter(l=>l.status==='validated'),printers=options?.printers??[]
+ const jobs=useMemo(()=>engine?.jobs??[],[engine?.jobs]),templates=(engine?.templates??[]).filter(t=>t.active),units=options?.packingUnits??[],labels=(options?.labels??[]).filter(l=>l.status==='validated'),printers=options?.printers??[]
  const counts=useMemo(()=>({queued:jobs.filter(j=>['queued','sent'].includes(j.status)).length,failed:jobs.filter(j=>j.status==='failed').length,printed:jobs.filter(j=>['printed','reprinted'].includes(j.status)).length}),[jobs])
  const hardwareReady=printers.length>0,documentReady=labels.length>0,templateReady=templates.length>0,writesEnabled=Boolean(engine?.writesEnabled)
  const state=!hardwareReady?'hardware':!documentReady?'label':!templateReady?'template':counts.failed>0?'failed':counts.queued>0?'queue':units.length>0&&writesEnabled?'ready':'waiting'
