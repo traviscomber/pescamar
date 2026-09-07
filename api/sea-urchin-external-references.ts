@@ -103,6 +103,22 @@ export default async function handler(req:Request,res:Response){
       interpretation:'Resumen derivado exclusivamente desde decisiones humanas de Calidad/Admin. No mide accuracy del modelo ni define Grade.',
       automaticTraining:false,
     }:null
+
+    const compared=reviewed.filter(item=>item.visionTest)
+    const compatible=compared.filter(item=>item.visionTest?.recommendation==='visually_consistent_with_test_reference')
+    const cautious=compared.filter(item=>item.visionTest?.recommendation!=='visually_consistent_with_test_reference')
+    const visionQualityComparison=compared.length?{
+      compared:compared.length,
+      compatibleAccepted:compatible.filter(item=>item.latest_review?.decision==='accepted').length,
+      compatibleRejected:compatible.filter(item=>item.latest_review?.decision==='rejected').length,
+      cautionAccepted:cautious.filter(item=>item.latest_review?.decision==='accepted').length,
+      cautionRejected:cautious.filter(item=>item.latest_review?.decision==='rejected').length,
+      basis:'same_external_reference_with_persisted_vision_test_and_latest_human_quality_review',
+      interpretation:'Matriz observada entre recomendación visual y decisión humana. "Requiere revisión" es una señal de cautela, no una predicción de rechazo; por eso esto no es accuracy, sensibilidad ni especificidad.',
+      authority:'human_quality',
+      automaticTraining:false,
+    }:null
+
     return res.status(200).json({
       ok:true,
       references,
@@ -116,12 +132,14 @@ export default async function handler(req:Request,res:Response){
         rule:'Prioridad derivada sólo desde contexto/provenance; no implica calidad, Grade ni rechazo.'
       },
       qualityKnowledge,
+      visionQualityComparison,
       semantics:{
         operationalEvidence:false,
         humanQualityLabels:true,
         derivedKnowledge:qualityKnowledge!==null,
+        visionComparison:visionQualityComparison!==null,
         automaticTraining:false,
-        note:'Vision puede proponer evidencia visual; sólo Calidad/Admin crea accepted/rejected. Los resúmenes aparecen sólo cuando existe feedback humano real.'
+        note:'Vision puede proponer evidencia visual; sólo Calidad/Admin crea accepted/rejected. Comparaciones aparecen sólo donde existen ambos registros sobre la misma referencia.'
       }
     })
   }catch(error){
