@@ -10,7 +10,7 @@ export const osStages:readonly OsStage[]=[
  {id:'production',order:2,label:'Producción',owner:'Jefatura de planta',description:'Plan, transformación, rendimiento y empaque.',entry:'/planificacion',modules:[
   {path:'/planificacion',label:'Planificación',description:'Carga y prioridades de proceso'},
   {path:'/lineas',label:'Producción',description:'Ejecución y balance de masa'},
-  {path:'/proceso-erizo',label:'Proceso de erizo',description:'Flujo especializado y Vision'},
+  {path:'/proceso-erizo',label:'Proceso',description:'Proceso configurado según planta y producto'},
   {path:'/floor',label:'Piso / packing',description:'Captura en estación'},
   {path:'/etiquetas',label:'Etiquetas',description:'Identidad de producto'},
   {path:'/impresion-etiquetas',label:'Impresión de etiquetas',description:'Cola y control de impresión'},
