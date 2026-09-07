@@ -84,23 +84,44 @@ export default async function handler(req:Request,res:Response){
     ` as ReferenceRow[]
     const references=(Array.isArray(rows)?rows:[]).map(row=>({...row,...reviewPriority(row)})).sort((a,b)=>b.reviewPriority-a.reviewPriority||a.id.localeCompare(b.id))
     const pending=references.filter(item=>!item.latest_review)
+    const reviewed=references.filter(item=>item.latest_review)
+    const accepted=reviewed.filter(item=>item.latest_review?.decision==='accepted').length
+    const rejected=reviewed.filter(item=>item.latest_review?.decision==='rejected').length
+    const reasonCounts=new Map<string,number>()
+    for(const item of reviewed){
+      const reason=item.latest_review?.rejection_reason
+      if(reason)reasonCounts.set(reason,(reasonCounts.get(reason)??0)+1)
+    }
+    const rejectionReasonsObserved=[...reasonCounts.entries()].map(([reason,count])=>({reason,count})).sort((a,b)=>b.count-a.count||a.reason.localeCompare(b.reason))
+    const qualityKnowledge=reviewed.length?{
+      reviewed:reviewed.length,
+      accepted,
+      rejected,
+      acceptanceRate:accepted/reviewed.length,
+      rejectionReasons:rejectionReasonsObserved,
+      basis:'latest_human_quality_review_per_reference',
+      interpretation:'Resumen derivado exclusivamente desde decisiones humanas de Calidad/Admin. No mide accuracy del modelo ni define Grade.',
+      automaticTraining:false,
+    }:null
     return res.status(200).json({
       ok:true,
       references,
       reviewQueue:{
         total:references.length,
         pending:pending.length,
-        reviewed:references.length-pending.length,
+        reviewed:reviewed.length,
         analyzedPending:pending.filter(item=>item.visionTest?.status==='pending_quality_review').length,
         highPriority:pending.filter(item=>item.reviewPriority>=50).length,
         firstBatch:pending.slice(0,12).map(item=>item.id),
         rule:'Prioridad derivada sólo desde contexto/provenance; no implica calidad, Grade ni rechazo.'
       },
+      qualityKnowledge,
       semantics:{
         operationalEvidence:false,
         humanQualityLabels:true,
+        derivedKnowledge:qualityKnowledge!==null,
         automaticTraining:false,
-        note:'Vision puede proponer evidencia visual; sólo Calidad/Admin crea accepted/rejected. No es Grade ni evidencia operacional.'
+        note:'Vision puede proponer evidencia visual; sólo Calidad/Admin crea accepted/rejected. Los resúmenes aparecen sólo cuando existe feedback humano real.'
       }
     })
   }catch(error){
