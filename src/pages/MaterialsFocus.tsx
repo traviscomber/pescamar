@@ -10,7 +10,7 @@ const qty=(value:number|string,unit:string)=>`${Number(value).toLocaleString('es
 export function MaterialsFocus(){
  const [data,setData]=useState<Payload|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState('')
  useEffect(()=>{let active=true;void fetch('/api/materials-inventory',{cache:'no-store'}).then(async response=>{const payload=await response.json() as Payload;if(!response.ok)throw new Error(payload.error??'No fue posible cargar abastecimiento');if(active){setData(payload);setError('')}}).catch(cause=>{if(active)setError(cause instanceof Error?cause.message:'No fue posible cargar abastecimiento')}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[])
- const items=data?.items??[]
+ const items=useMemo(()=>data?.items??[],[data?.items])
  const critical=useMemo(()=>items.filter(item=>item.belowMinimum).sort((a,b)=>{const ar=Number(a.minimum_stock)>0?Number(a.stock)/Number(a.minimum_stock):1;const br=Number(b.minimum_stock)>0?Number(b.stock)/Number(b.minimum_stock):1;return ar-br}),[items])
  const next=critical[0]
  const healthy=items.length-critical.length
