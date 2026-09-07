@@ -43,7 +43,9 @@ export const expectedMigrations=[
   '044_sea_urchin_sequence_fail_closed.sql',
   '045_japan_cold_chain_fail_closed.sql',
   '046_lot_operational_lifecycle.sql',
-  '047_reconcile_post_baseline_migration_registry.sql'
+  '047_reconcile_post_baseline_migration_registry.sql',
+  '048_reception_vision_provenance.sql',
+  '049_reception_vision_file_provenance.sql'
 ] as const
 
 export const migrationLandmarks=[
