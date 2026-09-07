@@ -9,7 +9,7 @@ type Payload={messages?:Message[];error?:string}
 export function CommunicationsFocus(){
   const [data,setData]=useState<Payload|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState('')
   useEffect(()=>{let live=true;(async()=>{try{const r=await fetch('/api/communications',{cache:'no-store'}),p=await r.json() as Payload;if(!r.ok)throw new Error(p.error??'No fue posible cargar comunicaciones');if(live)setData(p)}catch(e){if(live)setError(e instanceof Error?e.message:'No fue posible cargar comunicaciones')}finally{if(live)setLoading(false)}})();return()=>{live=false}},[])
-  const messages=data?.messages??[]
+  const messages=useMemo(()=>data?.messages??[],[data?.messages])
   const pending=useMemo(()=>messages.filter(m=>m.insight_status==='pending'),[messages])
   const raw=useMemo(()=>messages.filter(m=>!m.insight_id),[messages])
   const critical=useMemo(()=>pending.find(m=>m.severity==='critical'||m.severity==='high')??pending[0]??null,[pending])
