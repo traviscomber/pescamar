@@ -1,5 +1,5 @@
 import {Camera,ChevronLeft,ShieldCheck} from 'lucide-react'
-import {useEffect,useState} from 'react'
+import {useCallback,useEffect,useState} from 'react'
 import {Link,useSearchParams} from 'react-router-dom'
 import {PageHeader} from '../components/PageHeader'
 import {UniVisionStation} from '../components/UniVisionStation'
@@ -9,8 +9,8 @@ type MobilePayload={ok?:boolean;run?:{runId:string;receptionId:string;receptionN
 export function SeaUrchinMobileCapture(){
  const [params]=useSearchParams(),runId=params.get('runId')??''
  const [data,setData]=useState<MobilePayload|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState('')
- async function load(){if(!runId){setError('Falta identificar el proceso de erizo');setLoading(false);return}setLoading(true);try{const response=await fetch(`/api/sea-urchin-mobile?runId=${encodeURIComponent(runId)}`,{cache:'no-store'}),payload=await response.json() as MobilePayload;if(!response.ok)throw new Error(payload.error??'No fue posible abrir estación móvil');setData(payload);setError('')}catch(cause){setError(cause instanceof Error?cause.message:'No fue posible abrir estación móvil')}finally{setLoading(false)}}
- useEffect(()=>{void load()},[runId])
+ const load=useCallback(async()=>{if(!runId){setError('Falta identificar el proceso de erizo');setLoading(false);return}setLoading(true);try{const response=await fetch(`/api/sea-urchin-mobile?runId=${encodeURIComponent(runId)}`,{cache:'no-store'}),payload=await response.json() as MobilePayload;if(!response.ok)throw new Error(payload.error??'No fue posible abrir estación móvil');setData(payload);setError('')}catch(cause){setError(cause instanceof Error?cause.message:'No fue posible abrir estación móvil')}finally{setLoading(false)}},[runId])
+ useEffect(()=>{void load()},[load])
  const run=data?.run??null
  return <>
   <PageHeader eyebrow="Estación móvil" title="Erizo · Cámara o foto" description="Toma una foto con el celular o sube una imagen existente para medir color CIELAB y homogeneidad antes de confirmar Grade." actions={<div className="page-actions"><Link className="button secondary" to={run?`/proceso-erizo?receptionId=${encodeURIComponent(run.receptionId)}${run.plantId?`&plantId=${encodeURIComponent(run.plantId)}`:''}`:'/proceso-erizo'}><ChevronLeft size={15}/>Volver al proceso</Link></div>}/>
