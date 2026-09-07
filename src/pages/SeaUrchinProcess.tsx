@@ -1,5 +1,5 @@
 import {AlertTriangle,CheckCircle2,FileText,FlaskConical,PackageCheck,Plus,ScanLine,Thermometer} from 'lucide-react'
-import {useEffect,useMemo,useState} from 'react'
+import {useCallback,useEffect,useMemo,useState} from 'react'
 import {Link,useSearchParams} from 'react-router-dom'
 import {PageHeader} from '../components/PageHeader'
 import {LotModuleContext} from '../components/LotModuleContext'
@@ -18,8 +18,8 @@ const dateLabel=(v:string)=>{const d=new Date(v);return Number.isNaN(d.getTime()
 export function SeaUrchinProcess(){
  const [params]=useSearchParams();const requested=params.get('receptionId')??'',plantId=params.get('plantId')??''
  const [data,setData]=useState<Payload|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[selectedId,setSelectedId]=useState(requested),[busy,setBusy]=useState('')
- async function load(){setLoading(true);try{const q=plantId?`?plantId=${encodeURIComponent(plantId)}`:'',r=await fetch(`/api/sea-urchin-process${q}`,{cache:'no-store'}),p=await r.json() as Payload;if(!r.ok)throw new Error(p.error??'No fue posible cargar proceso de erizo');setData(p);setError('');const runs=p.runs??[],candidates=p.candidates??[];if(requested&&(runs.some(x=>x.reception_id===requested)||candidates.some(x=>x.id===requested)))setSelectedId(requested);else if(!selectedId&&runs[0])setSelectedId(runs[0].reception_id)}catch(e){setError(e instanceof Error?e.message:'No fue posible cargar proceso de erizo')}finally{setLoading(false)}}
- useEffect(()=>{void load()},[plantId])
+ const load=useCallback(async()=>{setLoading(true);try{const q=plantId?`?plantId=${encodeURIComponent(plantId)}`:'',r=await fetch(`/api/sea-urchin-process${q}`,{cache:'no-store'}),p=await r.json() as Payload;if(!r.ok)throw new Error(p.error??'No fue posible cargar proceso de erizo');setData(p);setError('');const nextRuns=p.runs??[],candidates=p.candidates??[];setSelectedId(current=>requested&&(nextRuns.some(x=>x.reception_id===requested)||candidates.some(x=>x.id===requested))?requested:current||nextRuns[0]?.reception_id||'')}catch(e){setError(e instanceof Error?e.message:'No fue posible cargar proceso de erizo')}finally{setLoading(false)}},[plantId,requested])
+ useEffect(()=>{void load()},[load])
  useEffect(()=>{if(requested)setSelectedId(requested)},[requested])
  const runs=useMemo(()=>data?.runs??[],[data?.runs]),candidates=data?.candidates??[],documents=data?.documents??[],run=runs.find(r=>r.reception_id===selectedId)??null,candidate=candidates.find(c=>c.id===selectedId)??null
  const deviations=useMemo(()=>runs.reduce((n,r)=>n+r.stages.filter(s=>['deviation','hold'].includes(s.status)).length+r.labels.filter(l=>['mismatch','blocked'].includes(l.status)).length,0),[runs])

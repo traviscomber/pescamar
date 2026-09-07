@@ -1,5 +1,5 @@
 import {AlertTriangle,Camera,CheckCircle2,Database,ImagePlus,ScanLine,ShieldCheck,Target} from 'lucide-react'
-import {useEffect,useMemo,useRef,useState,type ChangeEvent} from 'react'
+import {useCallback,useEffect,useMemo,useRef,useState,type ChangeEvent} from 'react'
 import {analyzeSegmentedCanvas,type UniVisionMetrics,type UniVisionSegmentation} from '../lib/uniVisionSegmentation'
 import {colorDispersion,operatorAgreement,repeatabilityDelta} from '../lib/uniVisionQuality'
 
@@ -17,8 +17,8 @@ export function UniVisionStation({runId,plantId,currentGrade,onChanged}:{runId:s
  const [preview,setPreview]=useState(''),[metrics,setMetrics]=useState<Metrics|null>(null),[segmentation,setSegmentation]=useState<UniVisionSegmentation|null>(null),[source,setSource]=useState<'camera'|'upload'>('camera'),[sourceImageSha256,setSourceImageSha256]=useState(''),[saved,setSaved]=useState<SavedCapture|null>(null)
  const [grade,setGrade]=useState(currentGrade??''),[decision,setDecision]=useState<'accepted'|'review'|'ng'>('review'),[referenceLabel,setReferenceLabel]=useState('')
  function stopCamera(){streamRef.current?.getTracks().forEach(track=>track.stop());streamRef.current=null;if(videoRef.current)videoRef.current.srcObject=null;setCameraOn(false)}
- async function load(){try{const response=await fetch(`/api/sea-urchin-color?runId=${encodeURIComponent(runId)}`,{cache:'no-store'}),payload=await response.json() as Payload;if(!response.ok)throw new Error(payload.error??'No fue posible cargar Uni Vision');setData(payload);setError('')}catch(cause){setError(cause instanceof Error?cause.message:'No fue posible cargar Uni Vision')}}
- useEffect(()=>{void load();return()=>stopCamera()},[runId])
+ const load=useCallback(async()=>{try{const response=await fetch(`/api/sea-urchin-color?runId=${encodeURIComponent(runId)}`,{cache:'no-store'}),payload=await response.json() as Payload;if(!response.ok)throw new Error(payload.error??'No fue posible cargar Uni Vision');setData(payload);setError('')}catch(cause){setError(cause instanceof Error?cause.message:'No fue posible cargar Uni Vision')}},[runId])
+ useEffect(()=>{void load();return()=>stopCamera()},[load])
  useEffect(()=>{if(currentGrade)setGrade(currentGrade)},[currentGrade])
  async function startCamera(){setError('');try{stopCamera();const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false});streamRef.current=stream;const video=videoRef.current;if(!video)throw new Error('Cámara no disponible');video.srcObject=stream;await video.play();setDeviceLabel(stream.getVideoTracks()[0]?.label??'Cámara');setCameraOn(true);setSource('camera');setSourceImageSha256('');setSegmentation(null)}catch(cause){setError(cause instanceof Error?cause.message:'No fue posible abrir la cámara')}}
  function captureCamera(){const video=videoRef.current;if(!video||!video.videoWidth||!video.videoHeight)return setError('La cámara aún no está lista');try{const canvas=drawToCanvas(video,video.videoWidth,video.videoHeight),result=analyzeSegmentedCanvas(canvas);setPreview(canvas.toDataURL('image/jpeg',0.86));setMetrics(result.metrics);setSegmentation(result);setSource('camera');setSourceImageSha256('');setSaved(null);setDecision('review');setError('')}catch(cause){setError(cause instanceof Error?cause.message:'No fue posible segmentar la muestra')}}
