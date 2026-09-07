@@ -1,4 +1,4 @@
-import {ArrowRight,PackagePlus,ShieldCheck,WifiOff} from 'lucide-react'
+import {ArrowRight,ShieldCheck,WifiOff} from 'lucide-react'
 import {useEffect,useMemo,useState} from 'react'
 import {Link} from 'react-router-dom'
 import {useAuth} from '../auth'
