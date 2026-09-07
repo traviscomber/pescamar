@@ -2,6 +2,7 @@ import {ArrowRight,Camera,CheckCircle2,CircleDashed,GitBranch,ScanLine,ShieldChe
 import {Link} from 'react-router-dom'
 import {canAccessPath} from '../access'
 import {useAuth} from '../auth'
+import {AutoPrepareUniReferences} from '../components/AutoPrepareUniReferences'
 import {PageHeader} from '../components/PageHeader'
 import {UniReferenceReviewQueue} from '../components/UniReferenceReviewQueue'
 import {UniVisionQaBench} from '../components/UniVisionQaBench'
@@ -19,6 +20,7 @@ export function EdgeVision(){
  const mayOpenStations=operator?canAccessPath(operator.role,'/estaciones'):false
  return <><PageHeader eyebrow="Seafood Intelligence OS · Vision" title="EdgeVision" description="Evidencia visual atribuible al lote y al proceso. Medir, clasificar y detectar sin separar la visión del contexto operacional." actions={<div className="row-actions"><Link className="button secondary" to="/lineage"><GitBranch size={14}/>Seafood Event Graph</Link>{mayOpenStations?<Link className="button secondary" to="/estaciones"><Camera size={14}/>Estaciones</Link>:null}</div>}/>
  <section className="signal-grid"><article className="signal-card"><span><CheckCircle2 size={16}/>Capacidades existentes</span><b>{available}</b><small>adapter de {organizationContext.implementationName} con evidencia real de software</small></article><article className="signal-card"><span><Target size={16}/>Fundación</span><b>{foundation}</b><small>contratos listos para ampliar</small></article><article className="signal-card"><span><CircleDashed size={16}/>Planificadas</span><b>{planned}</b><small>no se presentan como operativas</small></article><article className="signal-card"><span><ScanLine size={16}/>Adapters</span><b>{edgeVisionAdapters.length}</b><small>fuentes Vision actualmente registradas</small></article></section>
+ <AutoPrepareUniReferences/>
  <UniVisionQaBench/>
  <UniReferenceReviewQueue/>
  <section className="panel"><div className="section-heading"><div><span className="overline teal">Capability registry</span><h2>Qué debe observar EdgeVision</h2></div><span>{edgeVisionCapabilities.length} capacidades</span></div><div className="compact-ledger">{edgeVisionCapabilities.map(capability=><div className="alert-row static" key={capability.id}><span><ScanLine size={15}/></span><div><b>{capability.label}</b><small>{capability.outcome}</small><p className="source-note">{capability.currentEvidence}</p></div><span className={`status ${statusClass[capability.status]}`}>{statusLabel[capability.status]}</span></div>)}</div></section>
