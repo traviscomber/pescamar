@@ -62,7 +62,7 @@ export function AppShell({children,onNewReception}:{children:ReactNode;onNewRece
  const plantTabs:WorkspaceTab[]=plantContextId?[
   {to:`/plantas/${encodeURIComponent(plantContextId)}`,labelKey:'nav.overview',step:1},
   {to:`/recepciones?${plantQuery}`,labelKey:'nav.reception',step:2},
-  {to:`/proceso?${plantQuery}`,labelKey:'nav.process',step:3},
+  {to:`/proceso-erizo?${plantQuery}`,labelKey:'nav.process',step:3},
   {to:`/pallets?${plantQuery}`,labelKey:'nav.packing',step:4},
   {to:`/inventario?${plantQuery}`,labelKey:'nav.inventory',step:5},
   {to:`/frio?${plantQuery}`,labelKey:'nav.cold',step:6},
