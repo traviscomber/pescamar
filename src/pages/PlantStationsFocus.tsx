@@ -17,7 +17,7 @@ async function loadStations():Promise<Payload>{
 export function PlantStationsFocus(){
  const [data,setData]=useState<Payload|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState('')
  useEffect(()=>{void (async()=>{try{setData(await loadStations());setError('')}catch(cause){setError(cause instanceof Error?cause.message:'No fue posible cargar hardware')}finally{setLoading(false)}})()},[])
- const stations=data?.stations??[]
+ const stations=useMemo(()=>data?.stations??[],[data?.stations])
  const devices=useMemo(()=>stations.flatMap(station=>station.devices??[]),[stations])
  const activeStations=stations.filter(station=>station.active)
  const activeDevices=devices.filter(device=>device.active)
