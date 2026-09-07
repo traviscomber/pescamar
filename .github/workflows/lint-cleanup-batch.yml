@@ -1,0 +1,93 @@
+name: Guarded lint cleanup batch
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/lint-cleanup-batch.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Setup Node
+        uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Apply exact lint cleanups
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs')
+          function exact(path,oldText,newText){
+            const source=fs.readFileSync(path,'utf8')
+            if(!source.includes(oldText))throw new Error(`Expected pattern missing in ${path}: ${oldText.slice(0,100)}`)
+            const matches=source.split(oldText).length-1
+            if(matches!==1)throw new Error(`Expected exactly one match in ${path}, got ${matches}`)
+            fs.writeFileSync(path,source.replace(oldText,newText))
+            console.log(`updated ${path}`)
+          }
+
+          exact('src/pages/DailyClose.tsx',
+            " useEffect(()=>{setPlantId(defaultPlant);void load(date,defaultPlant)},[defaultPlant,date,load])",
+            " useEffect(()=>{setPlantId(defaultPlant)},[defaultPlant])\n useEffect(()=>{void load(date,plantId)},[date,plantId,load])")
+          exact('src/pages/DailyClose.tsx',
+            "const actions=<div className=\"page-actions\"><label className=\"inline-field\">Fecha<input type=\"date\" value={date} onChange={event=>{setDate(event.target.value);void load(event.target.value,plantId)}}/></label><label className=\"inline-field\">Planta<select value={plantId} onChange={event=>{const next=event.target.value;setPlantId(next);void load(date,next)}}>",
+            "const actions=<div className=\"page-actions\"><label className=\"inline-field\">Fecha<input type=\"date\" value={date} onChange={event=>setDate(event.target.value)}/></label><label className=\"inline-field\">Planta<select value={plantId} onChange={event=>setPlantId(event.target.value)}>")
+
+          exact('api/timeline.ts',
+            "import {requireOperator,type SessionOperator} from './_auth.js'",
+            "import {requireOperator} from './_auth.js'")
+          exact('api/timeline.ts',
+            "function allowed(operator:SessionOperator,plantId?:unknown){return operator.role==='admin'||typeof plantId!=='string'||!plantId||operator.plantIds.includes(plantId)}\n",
+            "")
+
+          exact('src/pages/Commercial.tsx',
+            " async function loadCustomers(){setCustomersLoading(true);setCustomerError('');try{const response=await fetch('/api/partners',{cache:'no-store'}),payload=await response.json() as PartnersPayload;if(!response.ok)throw new Error(payload.error??'No fue posible cargar el maestro de clientes');setCustomers(payload.parties??[])}catch(cause){setCustomers([]);setCustomerError(cause instanceof Error?cause.message:'No fue posible cargar el maestro de clientes')}finally{setCustomersLoading(false)}}\n",
+            "")
+
+          exact('src/pages/ProductionLines.tsx',
+            "  const balances=overview?.balances??[];",
+            "  const balances=useMemo(()=>overview?.balances??[],[overview?.balances]);")
+          exact('src/pages/Lineage.tsx',
+            " const selectedLot=lots.find(lot=>lot.receptionId===selectedId),selectedHistorical=historicalRecords.find(record=>record.id===selectedHistoricalId),events=data?.events??[],coverage=data?.coverage;",
+            " const selectedLot=lots.find(lot=>lot.receptionId===selectedId),selectedHistorical=historicalRecords.find(record=>record.id===selectedHistoricalId),events=useMemo(()=>data?.events??[],[data?.events]),coverage=data?.coverage;")
+
+          exact('api/canonical-upload.ts',
+            "if(parts.every(Number.isFinite))return parts.reduce((a,b)=>a*b,1)}catch{}}}return null}",
+            "if(parts.every(Number.isFinite))return parts.reduce((a,b)=>a*b,1)}catch{/* Formula parse failure falls through to null. */}}}return null}")
+
+          exact('tests/os-architecture.spec.ts',
+            "  expect(app,`${module.path} must be mounted`).toContain(`path=\\\"${module.path}\\\"`)\n  expect(access,`${module.path} must have access governance`).toContain(`\\\"${module.path}\\\"`)",
+            "  expect(app,`${module.path} must be mounted`).toContain(`path=\"${module.path}\"`)\n  expect(access,`${module.path} must have access governance`).toContain(`\"${module.path}\"`)")
+
+          exact('tests/plant-execution-control-surfaces.spec.ts',
+            "  expect(app).toContain(`path=\\\"${route}\\\"`)\n  expect(access).toContain(`\\\"${route}\\\"`)\n  expect(vercel).toContain(`\\\"source\\\": \\\"${route}\\\"`)",
+            "  expect(app).toContain(`path=\"${route}\"`)\n  expect(access).toContain(`\"${route}\"`)\n  expect(vercel).toContain(`\"source\": \"${route}\"`)")
+          exact('tests/plant-execution-control-surfaces.spec.ts',
+            " expect(page).toContain(\"value=\\\"reception\\\"\")\n expect(page).toContain(\"value=\\\"pallet\\\"\")\n expect(page).toContain(\"value=\\\"unit\\\"\")",
+            " expect(page).toContain('value=\"reception\"')\n expect(page).toContain('value=\"pallet\"')\n expect(page).toContain('value=\"unit\"')")
+          NODE
+      - name: Verify quality before commit
+        run: npm run quality
+      - name: Report remaining warnings
+        run: |
+          npm run lint -- --format stylish 2>&1 | tee /tmp/lint.txt
+          echo "warning_count=$(grep -c 'warning' /tmp/lint.txt || true)"
+      - name: Commit verified cleanup
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'lint: apply guarded cleanup batch'
+          git push origin HEAD:main
