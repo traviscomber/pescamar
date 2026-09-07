@@ -1,4 +1,5 @@
 export type AppRole="admin"|"operations"|"finance"|"quality"|"viewer";
+export type PlantAgentAction="process"|"quality"|"packing"|"inventory"|"cold"|"orders"|"dispatch"|"costs"|"close";
 
 const access:Record<string,AppRole[]|"all">={
   "/":"all",
@@ -43,5 +44,18 @@ const access:Record<string,AppRole[]|"all">={
   "/modulos":["admin","operations"],
 };
 
+const plantAgentExecutors:Record<PlantAgentAction,AppRole[]>={
+  process:["admin","operations"],
+  quality:["admin","quality"],
+  packing:["admin","operations","quality"],
+  inventory:["admin","operations"],
+  cold:["admin","operations","quality"],
+  orders:["admin","operations","finance"],
+  dispatch:["admin","operations","finance"],
+  costs:["admin","operations","finance"],
+  close:["admin","operations","finance"],
+};
+
 export function canAccessPath(role:AppRole,path:string){const key=Object.keys(access).filter(candidate=>candidate==="/"?path==="/":path===candidate||path.startsWith(`${candidate}/`)).sort((a,b)=>b.length-a.length)[0];if(!key)return false;const roles=access[key];return roles==="all"||roles.includes(role)}
 export function canCreateReception(role:AppRole){return ["admin","operations","quality"].includes(role)}
+export function canExecutePlantAction(role:AppRole,action:PlantAgentAction){return plantAgentExecutors[action].includes(role)}
