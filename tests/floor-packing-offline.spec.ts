@@ -15,18 +15,18 @@ async function commonRoute(route:import('@playwright/test').Route,writesEnabled:
  return false
 }
 
-test('Floor remains read-only and never queries station tables while Plant Execution gate is disabled',async({page})=>{
+test('Packing remains read-only and never queries station tables while Plant Execution gate is disabled',async({page})=>{
  const stationCalls={value:0}
  await page.route('**/api/**',async route=>{if(await commonRoute(route,false,stationCalls))return;await route.fulfill({status:200,contentType:'application/json',body:'{}'})})
  await page.goto('/floor/detalle')
  await expect(page.getByText('Modo seguro',{exact:true})).toBeVisible()
  await page.getByLabel('Peso de estación').fill('2,50')
- await expect(page.getByRole('button',{name:/Crear packing unit/})).toBeDisabled()
+ await expect(page.getByRole('button',{name:/Confirmar packing/})).toBeDisabled()
  await page.waitForTimeout(100)
  expect(stationCalls.value).toBe(0)
 })
 
-test('Floor creates one idempotent packing request when gate and a real station are available',async({page})=>{
+test('Packing creates one idempotent request when gate and a real station are available',async({page})=>{
  const stationCalls={value:0},posts:Array<Record<string,unknown>>=[]
  await page.route('**/api/**',async route=>{
   if(await commonRoute(route,true,stationCalls))return
@@ -39,9 +39,9 @@ test('Floor creates one idempotent packing request when gate and a real station 
  })
  await page.goto('/floor/detalle')
  await expect(page.getByText('Escritura habilitada',{exact:true})).toBeVisible()
- await expect(page.getByLabel('Estación de planta')).toHaveValue(station.id)
+ await expect(page.getByText('Packing 01',{exact:true})).toBeVisible()
  await page.getByLabel('Peso de estación').fill('2,50')
- await page.getByRole('button',{name:/Crear packing unit/}).click()
+ await page.getByRole('button',{name:/Confirmar packing/}).click()
  await expect(page.getByRole('status')).toContainText('registrada')
  expect(posts).toHaveLength(1)
  expect(posts[0].action).toBe('createPackingUnit')
@@ -67,7 +67,7 @@ test('a network failure queues the same packing identity and replays it once con
  })
  await page.goto('/floor/detalle')
  await page.getByLabel('Peso de estación').fill('1,75')
- await page.getByRole('button',{name:/Crear packing unit/}).click()
+ await page.getByRole('button',{name:/Confirmar packing/}).click()
  await expect(page.getByRole('status')).toContainText('pendiente de sincronización')
  await expect(page.getByText('1 pendiente de sync',{exact:true})).toBeVisible()
  await page.evaluate(()=>window.dispatchEvent(new Event('online')))
@@ -93,7 +93,7 @@ test('a queued request rejected by contract moves to attention and leaves the au
  })
  await page.goto('/floor/detalle')
  await page.getByLabel('Peso de estación').fill('9,99')
- await page.getByRole('button',{name:/Crear packing unit/}).click()
+ await page.getByRole('button',{name:/Confirmar packing/}).click()
  await expect(page.getByRole('status')).toContainText('pendiente de sincronización')
  await page.evaluate(()=>window.dispatchEvent(new Event('online')))
  await expect(page.getByRole('alert')).toContainText('requiere revisión')
