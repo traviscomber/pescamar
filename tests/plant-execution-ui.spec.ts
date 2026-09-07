@@ -53,7 +53,8 @@ for(const scenario of [
       const instruments=page.locator('.floor-status-strip>div');await expect(instruments).toHaveCount(4);await noShadow(instruments.first())
       const gate=page.locator('.floor-next-gate');await expect(gate).toBeVisible();await noShadow(gate)
       await expect(page.getByText('Escanear lote',{exact:true})).toBeVisible()
-      await expect(page.getByText('Confirmar peso',{exact:true})).toBeVisible()
+      await expect(page.getByRole('heading',{name:'Sin lotes disponibles',exact:true})).toBeVisible()
+      await expect(page.getByText('Confirmar peso',{exact:true})).toHaveCount(0)
     }
     if(['/pallets/detalle','/frio/detalle','/control-regulatorio'].includes(scenario.path)){
       const nav=page.locator('.page-header .row-actions').filter({has:page.getByRole('link',{name:'Pallets'})});await expect(nav).toBeVisible()
