@@ -2,7 +2,7 @@ import {readFile} from 'node:fs/promises'
 
 const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
-const [vision,reception,production,floor,inventory,salesOrders,commercial,today,operatingModel]=await Promise.all([
+const [vision,reception,production,floor,inventory,salesOrders,commercial,today,operatingModel,plantReadiness]=await Promise.all([
   readFile(new URL('../src/components/ReceptionVisionUpload.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/components/ReceptionModal.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/ProductionFocus.tsx',import.meta.url),'utf8'),
@@ -12,6 +12,7 @@ const [vision,reception,production,floor,inventory,salesOrders,commercial,today,
   readFile(new URL('../src/pages/Commercial.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/DailyClose.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/OperatingModel.tsx',import.meta.url),'utf8'),
+  readFile(new URL('../src/components/PlantReadiness.tsx',import.meta.url),'utf8'),
 ])
 
 assert(vision.includes('setProposal(payload.vision)'),'reception must stage AI extraction as a proposal')
@@ -41,10 +42,13 @@ assert(commercial.includes("mode==='dispatch'?'Confirmar salida':'Confirmar vent
 assert(today.includes("const suggestedOwner=(path:string)=>")&&today.includes("'Comercial / administrativo':'Operador generalista'"),'Today must route each priority to a minimum-team responsibility without inventing an individual assignment')
 assert(today.includes('<b>Responsable sugerido:</b>')&&today.includes('Responsable sugerido: {item.owner}'),'Today must display the suggested owner on the primary priority and remaining queue')
 assert(operatingModel.includes('Un dato heredable o calculable no debe convertirse en una nueva tarea humana'),'operating model must state the minimum-team rule')
+assert(plantReadiness.includes('findIndex(check=>!check.complete)'),'rollout must select one next incomplete UAT step instead of presenting every blocker as equal priority')
+assert(plantReadiness.includes('Primer lote real · paso')&&plantReadiness.includes('mismo reception_id'),'rollout must guide the first real lot through one attributable end-to-end reception identity')
+assert(plantReadiness.includes('no uses datos simulados para completar el gate'),'rollout must explicitly prohibit synthetic data from completing UAT')
 
 if(failures.length){
   console.error('Minimum-team flow contract FAILED')
   for(const failure of failures)console.error(`- ${failure}`)
   process.exit(1)
 }
-console.log('Minimum-team flow contract PASS: reception, production, packing, inventory, commercial commitments and Today owner routing preserve capture-once, inherited context and exception-only review')
+console.log('Minimum-team flow contract PASS: reception, production, packing, inventory, commercial commitments, Today owner routing and guided first-lot UAT preserve capture-once, inherited context and exception-only review')
