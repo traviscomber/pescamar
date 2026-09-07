@@ -12,7 +12,7 @@ const kg=(v:number)=>`${v.toLocaleString('es-CL',{maximumFractionDigits:1})} kg`
 export function ProfitabilityFocus(){
  const [data,setData]=useState<Payload|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState('')
  useEffect(()=>{let active=true;void fetch('/api/profitability',{cache:'no-store'}).then(async r=>{const p=await r.json() as Payload;if(!r.ok)throw new Error(p.error??'No fue posible calcular rentabilidad');if(active)setData(p)}).catch(e=>{if(active)setError(e instanceof Error?e.message:'No fue posible calcular rentabilidad')}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[])
- const live=data?.live?.suppliers??[]
+ const live=useMemo(()=>data?.live?.suppliers??[],[data?.live?.suppliers])
  const history=data?.historical?.suppliers??[]
  const revenue=useMemo(()=>live.reduce((sum,row)=>sum+Number(row.revenue_clp??0),0),[live])
  const contribution=useMemo(()=>live.reduce((sum,row)=>sum+Number(row.contribution_clp??0),0),[live])
