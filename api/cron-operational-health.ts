@@ -4,7 +4,7 @@ declare const process:{env:Record<string,string|undefined>}
 type Request={method?:string;headers?:Record<string,string|string[]|undefined>}
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void}
 const one=(value:string|string[]|undefined)=>Array.isArray(value)?value[0]:value
-const runtimeLog=(payload:unknown)=>{try{const target=(globalThis as unknown as {console?:{log?:(value:string)=>void}}).console;target?.log?.(JSON.stringify(payload))}catch{}}
+const runtimeLog=(payload:unknown)=>{try{const target=(globalThis as unknown as {console?:{log?:(value:string)=>void}}).console;target?.log?.(JSON.stringify(payload))}catch{/* Observability must never break the scheduled health check. */}}
 
 export default async function handler(req:Request,res:Response){
  res.setHeader('Cache-Control','no-store')
