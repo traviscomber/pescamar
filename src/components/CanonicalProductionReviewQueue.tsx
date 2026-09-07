@@ -49,7 +49,7 @@ export function CanonicalProductionReviewQueue(){
     }).catch(cause=>{if(active)setError(cause instanceof Error?cause.message:'No fue posible cargar la cola de revisión')})
     return()=>{active=false}
   },[])
-  const rows=payload?.rows??[]
+  const rows=useMemo(()=>payload?.rows??[],[payload?.rows])
   const visibleRows=useMemo(()=>focusFilter==='all'?rows:rows.filter(row=>row.triage.focus===focusFilter),[focusFilter,rows])
   const rowsBySource=useMemo(()=>visibleRows.reduce<Record<string,ReviewRow[]>>((acc,row)=>{(acc[row.source_file]??=[]).push(row);return acc},{}),[visibleRows])
   const sourceNames=useMemo(()=>Object.keys(rowsBySource).sort((a,b)=>b.localeCompare(a)),[rowsBySource])
