@@ -38,7 +38,10 @@ async function mockReception(page:Page,support:unknown,role:Role='operations',ec
 async function openSupplierDecision(page:Page){
  await page.goto('/recepciones')
  await page.getByRole('button',{name:/Nueva recepción/}).first().click()
- await page.getByLabel('Proveedor').selectOption('Proveedor QA')
+ await page.getByText('Completar contexto manualmente',{exact:true}).click()
+ const supplier=page.getByLabel('Proveedor')
+ await expect(supplier).toBeEnabled()
+ await supplier.selectOption('Proveedor QA')
  await page.getByLabel('Zona de extracción').fill('Quellón')
 }
 
