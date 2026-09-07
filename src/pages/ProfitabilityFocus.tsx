@@ -23,16 +23,16 @@ export function ProfitabilityFocus(){
  return <>
   <PageHeader eyebrow="Rentabilidad" title="Rentabilidad" description="Qué sabemos económicamente y qué falta para decidir."/>
   {error?<div className="system-banner error" role="alert">{error}</div>:null}
-  {loading?<div className="system-banner">Calculando evidencia económica…</div>:null}
+  {loading?<div className="system-banner">Calculando información económica…</div>:null}
   {!loading&&!error?<>
    <section className="panel decision-brief">
-    <div className="section-heading"><div><span className="overline">Estado</span><h2>{hasLive?'Rentabilidad trazable disponible':'Rentabilidad viva aún incompleta'}</h2></div><Landmark size={20}/></div>
-    <p>{hasLive?`La operación viva ya conecta ingresos y costos suficientes para mostrar una contribución conocida de ${clp(contribution)}.`:'La historia permite comparar volumen y diferencias, pero no debe presentarse como margen hasta conectar compra, transformación y venta por lote.'}</p>
-    {hasLive&&topLive?<div className="decision-primary"><div><small>Principal señal</small><b>{topLive.supplier??topLive.customer??topLive.plant_id??'Operación viva'}</b><span>{clp(Number(topLive.contribution_clp??0))} de contribución conocida</span></div><Link className="button primary" to="/rentabilidad/detalle">Ver evidencia <ArrowRight size={16}/></Link></div>:<div className="decision-primary"><div><small>Siguiente paso</small><b>Completar trazabilidad económica</b><span>Conectar precio de venta, costo de compra y transformación por lote.</span></div><Link className="button primary" to="/costos-transformacion">Completar costos <ArrowRight size={16}/></Link></div>}
+    <div className="section-heading"><div><span className="overline">Estado</span><h2>{hasLive?'Rentabilidad actual disponible':'Rentabilidad actual aún incompleta'}</h2></div><Landmark size={20}/></div>
+    <p>{hasLive?`La operación actual ya conecta ingresos y costos suficientes para mostrar una contribución conocida de ${clp(contribution)}.`:'La historia permite comparar volumen y diferencias, pero no debe presentarse como margen hasta conectar compra, transformación y venta por lote.'}</p>
+    {hasLive&&topLive?<div className="decision-primary"><div><small>Principal señal</small><b>{topLive.supplier??topLive.customer??topLive.plant_id??'Operación actual'}</b><span>{clp(Number(topLive.contribution_clp??0))} de contribución conocida</span></div><Link className="button primary" to="/rentabilidad/detalle">Ver respaldo <ArrowRight size={16}/></Link></div>:<div className="decision-primary"><div><small>Siguiente paso</small><b>Completar trazabilidad económica</b><span>Conectar precio de venta, costo de compra y transformación por lote.</span></div><Link className="button primary" to="/costos-transformacion">Completar costos <ArrowRight size={16}/></Link></div>}
    </section>
    <section className="signal-grid">
-    <article className="signal-card"><span><TrendingUp size={16}/>Ingresos trazados</span><b>{hasLive?clp(revenue):'—'}</b><small>{hasLive?'Operación viva':'No disponibles aún'}</small></article>
-    <article className="signal-card"><span><Landmark size={16}/>Contribución conocida</span><b>{hasLive?clp(contribution):'—'}</b><small>{hasLive?'Sin extrapolar historia':'Pendiente de evidencia viva'}</small></article>
+    <article className="signal-card"><span><TrendingUp size={16}/>Ingresos registrados</span><b>{hasLive?clp(revenue):'—'}</b><small>{hasLive?'Operación actual':'No disponibles aún'}</small></article>
+    <article className="signal-card"><span><Landmark size={16}/>Contribución conocida</span><b>{hasLive?clp(contribution):'—'}</b><small>{hasLive?'Sin extrapolar el historial':'Pendiente de información actual'}</small></article>
     <article className="signal-card"><span>Historia útil</span><b>{Number(data?.coverage?.historical_rows??0).toLocaleString('es-CL')}</b><small>{flagged} filas con observaciones</small></article>
    </section>
    {!hasLive&&topHistory?<section className="panel"><div className="section-heading"><div><span className="overline">Referencia histórica</span><h2>{topHistory.supplier??topHistory.customer??topHistory.plant_id??'Mayor volumen observado'}</h2></div></div><p>{kg(Number(topHistory.received_kg??topHistory.source_kg??0))} en {Number(topHistory.lots??0).toLocaleString('es-CL')} lotes. Úsalo como referencia operacional, no como margen.</p></section>:null}
