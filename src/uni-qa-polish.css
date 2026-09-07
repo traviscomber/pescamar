@@ -1,0 +1,104 @@
+[aria-label="Banco QA Uni Vision"]{
+  padding:clamp(24px,2.2vw,32px);
+}
+
+[aria-label="Banco QA Uni Vision"] .section-heading{
+  margin-bottom:22px;
+}
+
+[aria-label="Banco QA Uni Vision"] .section-heading>div{
+  gap:6px;
+}
+
+[aria-label="Banco QA Uni Vision"] .section-heading h2{
+  margin:0;
+  line-height:1.15;
+}
+
+[aria-label="Banco QA Uni Vision"] .notice{
+  margin-top:12px;
+}
+
+[aria-label="Banco QA Uni Vision"] .notice:first-of-type{
+  margin-top:0;
+}
+
+[aria-label="Banco QA Uni Vision"] .notice>div{
+  min-width:0;
+}
+
+[aria-label="Banco QA Uni Vision"] .notice small{
+  display:block;
+  max-width:78ch;
+  margin-top:5px;
+  line-height:1.55;
+}
+
+[aria-label="Banco QA Uni Vision"] .row-actions{
+  position:static;
+  inset:auto;
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  flex-wrap:wrap;
+  gap:10px;
+  width:100%;
+  margin:24px 0 20px;
+}
+
+[aria-label="Banco QA Uni Vision"] .row-actions .button{
+  position:static;
+  inset:auto;
+  flex:0 0 auto;
+  min-height:42px;
+  padding:10px 15px;
+  white-space:nowrap;
+}
+
+[aria-label="Banco QA Uni Vision"] .row-actions .source-note{
+  flex:1 0 100%;
+  min-width:0;
+  margin-top:2px;
+  overflow-wrap:anywhere;
+  line-height:1.45;
+}
+
+[aria-label="Banco QA Uni Vision"] video,
+[aria-label="Banco QA Uni Vision"] img[alt="Producto aislado por Uni Vision"]{
+  display:block;
+}
+
+@media (max-width:900px){
+  [aria-label="Banco QA Uni Vision"]{
+    padding:22px;
+  }
+
+  [aria-label="Banco QA Uni Vision"] .row-actions{
+    align-items:stretch;
+  }
+
+  [aria-label="Banco QA Uni Vision"] .row-actions .button{
+    flex:1 1 200px;
+    min-width:0;
+  }
+}
+
+@media (max-width:520px){
+  [aria-label="Banco QA Uni Vision"]{
+    padding:18px;
+  }
+
+  [aria-label="Banco QA Uni Vision"] .section-heading{
+    margin-bottom:18px;
+  }
+
+  [aria-label="Banco QA Uni Vision"] .row-actions{
+    gap:8px;
+    margin:20px 0 16px;
+  }
+
+  [aria-label="Banco QA Uni Vision"] .row-actions .button{
+    flex-basis:100%;
+    width:100%;
+  }
+}
