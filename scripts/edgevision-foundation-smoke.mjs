@@ -2,7 +2,7 @@ import {readFile} from 'node:fs/promises'
 
 const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
-const [registry,organization,page,app,access,os,shell,modules,lineage]=await Promise.all([
+const [registry,organization,page,app,access,os,shell,modules,lineage,segmentation]=await Promise.all([
   readFile(new URL('../src/edgevision.ts',import.meta.url),'utf8'),
   readFile(new URL('../src/organization.ts',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/EdgeVision.tsx',import.meta.url),'utf8'),
@@ -12,6 +12,7 @@ const [registry,organization,page,app,access,os,shell,modules,lineage]=await Pro
   readFile(new URL('../src/components/AppShell.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/Modules.tsx',import.meta.url),'utf8'),
   readFile(new URL('../api/lot-lineage.ts',import.meta.url),'utf8'),
+  readFile(new URL('../src/lib/uniVisionSegmentation.ts',import.meta.url),'utf8'),
 ])
 
 for(const capability of ['count','calibre','size','color','defects','classification','biomass','process_control','anomaly'])assert(registry.includes(`id:'${capability}'`),`EdgeVision registry must include ${capability}`)
@@ -32,10 +33,14 @@ assert(os.includes("{path:'/edgevision',label:'EdgeVision'"),'OS map must expose
 assert(!shell.includes('{to:"/edgevision",label:"EdgeVision"'),'EdgeVision must not compete in daily workspace navigation')
 assert(modules.includes("{to:'/edgevision',label:'EdgeVision'"),'EdgeVision must remain reachable from Administration')
 assert(lineage.includes("type:'vision'")&&lineage.includes("entityType:'sea_urchin_color_capture'"),'EdgeVision foundation must connect existing visual evidence to the Seafood Event Graph')
+assert(segmentation.includes('isFocusedRoeCandidate'),'Uni Vision must have a focused extracted-roe mask for mixed scenes')
+assert(segmentation.includes("maskMode:'focused'")&&segmentation.includes("maskMode:'broad'"),'Uni Vision must preserve focused segmentation with a broad fallback for real sample diversity')
+assert(segmentation.includes('they never encode Grade A-E, species, origin or acceptance')||segmentation.includes('never encode Grade A-E, species, origin or acceptance'),'segmentation thresholds must remain explicitly non-authoritative')
+assert(segmentation.includes("focused>=100&&focusedRatio>=0.02"),'focused segmentation must require enough observed pixels before replacing the broad fallback')
 
 if(failures.length){
  console.error('EdgeVision foundation smoke FAILED')
  for(const failure of failures)console.error(`- ${failure}`)
  process.exit(1)
 }
-console.log('EdgeVision foundation smoke PASS: tenant-neutral capability registry, implementation adapter ownership, human authority, simplified navigation and Vision→Event Graph provenance verified')
+console.log('EdgeVision foundation smoke PASS: tenant-neutral capability registry, implementation adapter ownership, human authority, mixed-scene Uni Vision segmentation, simplified navigation and Vision→Event Graph provenance verified')
