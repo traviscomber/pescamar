@@ -26,4 +26,11 @@ export default tseslint.config(
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
     },
   },
+  {
+    files: ['src/auth.tsx','src/components/Lot360Context.tsx','src/components/PlantReadiness.tsx','src/main.tsx'],
+    rules: {
+      // Context/entry modules are stable module boundaries, not Fast Refresh leaf components.
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 )
