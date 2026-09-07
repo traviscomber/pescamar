@@ -20,14 +20,14 @@ export function InventoryFocus(){
   const firstBlocked=lots.find(lot=>lot.releaseStatus==='blocked')
   const detailPath=plantId?`/inventario/detalle?plantId=${encodeURIComponent(plantId)}`:'/inventario/detalle'
   const primary=totals.unlocated>0
-    ?{tone:'warning',icon:<MapPin size={20}/>,eyebrow:'REQUIERE ACCIÓN',title:`Ubicar ${kg(totals.unlocated)}`,text:'Hay inventario físico sin posición registrada.',label:'Ubicar inventario',to:detailPath}
+    ?{tone:'warning',icon:<MapPin size={20}/>,eyebrow:'REQUIERE ACCIÓN',title:`Ubicar ${kg(totals.unlocated)}`,text:'Hay producto sin ubicación registrada.',label:'Ubicar producto',to:detailPath}
     :firstBlocked
-      ?{tone:'warning',icon:<AlertTriangle size={20}/>,eyebrow:'REQUIERE ACCIÓN',title:`${totals.blocked} lote${totals.blocked===1?'':'s'} bloqueado${totals.blocked===1?'':'s'}`,text:firstBlocked.releaseBlockReasons.slice(0,2).join(' · ')||'La liberación todavía no está completa.',label:'Resolver bloqueo',to:firstBlocked.species.toLowerCase().includes('eriz')?`/proceso-erizo?receptionId=${encodeURIComponent(firstBlocked.reception_id)}`:`/etiquetas?receptionId=${encodeURIComponent(firstBlocked.reception_id)}`}
+      ?{tone:'warning',icon:<AlertTriangle size={20}/>,eyebrow:'REQUIERE ACCIÓN',title:`${totals.blocked} lote${totals.blocked===1?'':'s'} retenido${totals.blocked===1?'':'s'}`,text:firstBlocked.releaseBlockReasons.slice(0,2).join(' · ')||'El lote todavía no está listo para despacho o venta.',label:'Revisar lote',to:firstBlocked.species.toLowerCase().includes('eriz')?`/proceso-erizo?receptionId=${encodeURIComponent(firstBlocked.reception_id)}`:`/etiquetas?receptionId=${encodeURIComponent(firstBlocked.reception_id)}`}
       :totals.planning>0
-        ?{tone:'success',icon:<CheckCircle2 size={20}/>,eyebrow:'DISPONIBLE',title:`${kg(totals.planning)} planificables`,text:'El inventario liberado está disponible para compromisos comerciales.',label:'Abrir Comercial',to:'/ordenes-venta'}
-        :{tone:'neutral',icon:<PackageCheck size={20}/>,eyebrow:'SIN INVENTARIO LIVE',title:'Sin movimientos live todavía',text:'La base histórica permanece disponible; el inventario live comienza con nuevos movimientos confirmados.',label:'Ir a Operación',to:'/recepciones'}
+        ?{tone:'success',icon:<CheckCircle2 size={20}/>,eyebrow:'DISPONIBLE',title:`${kg(totals.planning)} disponibles`,text:'Producto disponible para pedidos comerciales.',label:'Abrir Comercial',to:'/ordenes-venta'}
+        :{tone:'neutral',icon:<PackageCheck size={20}/>,eyebrow:'SIN STOCK ACTUAL',title:'Sin movimientos nuevos todavía',text:'El stock histórico sigue disponible para consulta. El stock actual comienza con los movimientos nuevos.',label:'Ir a Operación',to:'/recepciones'}
   return <>
-    <PageHeader eyebrow="Inventario" title="Inventario" description="Disponibilidad live y continuidad histórica, siempre separadas por evidencia."/>
+    <PageHeader eyebrow="Inventario" title="Inventario" description="Producto disponible hoy y stock histórico, claramente separados."/>
     {error?<div className="system-banner error" role="alert">{error}</div>:null}
     {loading?<div className="system-banner">Calculando disponibilidad…</div>:null}
     {!loading&&!error?<>
@@ -36,15 +36,15 @@ export function InventoryFocus(){
         <div className="decision-focus-copy"><span className="overline">{primary.eyebrow}</span><h2>{primary.title}</h2><p>{primary.text}</p></div>
         <Link className="button primary" to={primary.to}>{primary.label}<ArrowRight size={16}/></Link>
       </section>
-      <section className="summary-strip" aria-label="Resumen mínimo de inventario live">
-        <div><small>Planificable live</small><b>{kg(totals.planning)}</b></div>
-        <div><small>Bloqueados live</small><b>{totals.blocked}</b></div>
-        <div><small>Por ubicar live</small><b>{kg(totals.unlocated)}</b></div>
+      <section className="summary-strip" aria-label="Resumen de inventario actual">
+        <div><small>Disponible</small><b>{kg(totals.planning)}</b></div>
+        <div><small>Lotes retenidos</small><b>{totals.blocked}</b></div>
+        <div><small>Por ubicar</small><b>{kg(totals.unlocated)}</b></div>
       </section>
       <HistoricalContinuity context="inventory"/>
       <nav className="minimal-actions" aria-label="Más información de inventario">
         <Link className="source-link" to={detailPath}>Ver inventario completo</Link>
-        <Link className="source-link" to="/pescamar-ia">Preguntar a Inteligencia</Link>
+        <Link className="source-link" to="/pescamar-ia">Consultar análisis</Link>
       </nav>
     </>:null}
   </>
