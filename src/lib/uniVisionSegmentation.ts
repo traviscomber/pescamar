@@ -10,28 +10,46 @@ export function rgbToLab(r:number,g:number,b:number):Lab{
  const linear=(value:number)=>{const v=value/255;return v<=0.04045?v/12.92:((v+0.055)/1.055)**2.4}
  const rr=linear(r),gg=linear(g),bb=linear(b)
  const x=(rr*0.4124564+gg*0.3575761+bb*0.1804375)/0.95047
- const y=rr*0.2126729+gg*0.7151522+bb*0.0721750
+ const y=(rr*0.2126729+gg*0.7151522+bb*0.0721750)
  const z=(rr*0.0193339+gg*0.1191920+bb*0.9503041)/1.08883
  const f=(value:number)=>value>0.008856?Math.cbrt(value):7.787*value+16/116
  const fx=f(x),fy=f(y),fz=f(z)
  return[116*fy-16,500*(fx-fy),200*(fy-fz)] as const
 }
 
-// Broad fallback domain. It keeps Uni Vision usable for pale/darker real samples
-// when the more selective extracted-roe mask cannot isolate enough pixels.
-function isBroadRoeCandidate([l,a,b]:Lab){const chroma=Math.sqrt(a*a+b*b);return l>15&&l<95&&a>-5&&b>10&&chroma>15}
+// Broad fallback domain. It deliberately covers pale and darker yellow/orange roe,
+// but still excludes most neutral trays, dark shells/spines and green garnish.
+function isBroadRoeCandidate([l,a,b]:Lab){const chroma=Math.sqrt(a*a+b*b);return l>18&&l<98&&a>-8&&b>8&&chroma>14}
 
-// Preferred mask for mixed scenes (for example roe + whole urchins + basket/tray).
-// It focuses on warm, sufficiently luminous biological tissue and rejects most
-// dark shells/spines, green garnish and neutral hardware. These are segmentation
-// limits only: they never encode Grade A-E, species, origin or acceptance.
-function isFocusedRoeCandidate([l,a,b]:Lab){const chroma=Math.sqrt(a*a+b*b);return l>42&&l<90&&a>4&&b>24&&chroma>28}
+// Seed mask: intentionally conservative. We use it to estimate the actual colour
+// centre in each photo, not as the final mask. This lets the final mask include
+// shadows, pale highlights and darker pieces of the same roe instead of clipping
+// them because of fixed LAB thresholds.
+function isFocusedRoeCandidate([l,a,b]:Lab){const chroma=Math.sqrt(a*a+b*b);return l>40&&l<92&&a>2&&b>20&&chroma>24}
+
+function deltaE76([l1,a1,b1]:Lab,[l2,a2,b2]:Lab){return Math.sqrt((l1-l2)**2+(a1-a2)**2+(b1-b2)**2)}
 
 function chooseCandidate(full:ImageData,canvas:HTMLCanvasElement,marginX:number,marginY:number,stride:number):{candidate:Candidate;maskMode:UniVisionMaskMode}{
- let total=0,focused=0
- for(let y=marginY;y<canvas.height-marginY;y+=stride){for(let x=marginX;x<canvas.width-marginX;x+=stride){const index=(y*canvas.width+x)*4;if(full.data[index+3]<200)continue;total++;if(isFocusedRoeCandidate(rgbToLab(full.data[index],full.data[index+1],full.data[index+2])))focused++}}
+ let total=0,focused=0,l=0,a=0,b=0
+ for(let y=marginY;y<canvas.height-marginY;y+=stride){for(let x=marginX;x<canvas.width-marginX;x+=stride){
+  const index=(y*canvas.width+x)*4
+  if(full.data[index+3]<200)continue
+  total++
+  const lab=rgbToLab(full.data[index],full.data[index+1],full.data[index+2])
+  if(isFocusedRoeCandidate(lab)){focused++;l+=lab[0];a+=lab[1];b+=lab[2]}
+ }}
  const focusedRatio=total?focused/total:0
- return focused>=100&&focusedRatio>=0.02?{candidate:isFocusedRoeCandidate,maskMode:'focused'}:{candidate:isBroadRoeCandidate,maskMode:'broad'}
+ if(focused>=100&&focusedRatio>=0.015){
+  const centre:[number,number,number]=[l/focused,a/focused,b/focused]
+  const adaptive:Candidate=(lab)=>{
+   if(!isBroadRoeCandidate(lab))return false
+   // Seed pixels always survive. Neighbouring warm pixels are admitted by colour
+   // distance so the mask follows the real sample instead of a hard-coded band.
+   return isFocusedRoeCandidate(lab)||deltaE76(lab,centre)<=34
+  }
+  return{candidate:adaptive,maskMode:'focused'}
+ }
+ return{candidate:isBroadRoeCandidate,maskMode:'broad'}
 }
 
 function buildMaskPreview(canvas:HTMLCanvasElement,candidate:Candidate){
@@ -40,25 +58,50 @@ function buildMaskPreview(canvas:HTMLCanvasElement,candidate:Candidate){
  const context=preview.getContext('2d',{willReadFrequently:true});if(!context)return''
  context.drawImage(canvas,0,0,preview.width,preview.height)
  const image=context.getImageData(0,0,preview.width,preview.height),marginX=Math.floor(preview.width*0.08),marginY=Math.floor(preview.height*0.08)
- for(let y=0;y<preview.height;y++){for(let x=0;x<preview.width;x++){const index=(y*preview.width+x)*4,inside=x>=marginX&&x<preview.width-marginX&&y>=marginY&&y<preview.height-marginY,product=inside&&candidate(rgbToLab(image.data[index],image.data[index+1],image.data[index+2]));if(!product){image.data[index]=Math.round(image.data[index]*0.22+198);image.data[index+1]=Math.round(image.data[index+1]*0.22+198);image.data[index+2]=Math.round(image.data[index+2]*0.22+198)}}}
+ for(let y=0;y<preview.height;y++){for(let x=0;x<preview.width;x++){
+  const index=(y*preview.width+x)*4
+  const inside=x>=marginX&&x<preview.width-marginX&&y>=marginY&&y<preview.height-marginY
+  const product=inside&&candidate(rgbToLab(image.data[index],image.data[index+1],image.data[index+2]))
+  if(!product){image.data[index]=Math.round(image.data[index]*0.22+198);image.data[index+1]=Math.round(image.data[index+1]*0.22+198);image.data[index+2]=Math.round(image.data[index+2]*0.22+198)}
+ }}
  context.putImageData(image,0,0)
  return preview.toDataURL('image/jpeg',0.82)
 }
 
 export function analyzeSegmentedCanvas(canvas:HTMLCanvasElement):UniVisionSegmentation{
  const context=canvas.getContext('2d',{willReadFrequently:true});if(!context)throw new Error('Canvas no disponible')
- const full=context.getImageData(0,0,canvas.width,canvas.height),marginX=Math.floor(canvas.width*0.08),marginY=Math.floor(canvas.height*0.08),width=Math.max(1,canvas.width-marginX*2),height=Math.max(1,canvas.height-marginY*2),stride=Math.max(1,Math.floor(Math.sqrt((width*height)/120000)))
+ const full=context.getImageData(0,0,canvas.width,canvas.height)
+ const marginX=Math.floor(canvas.width*0.08),marginY=Math.floor(canvas.height*0.08)
+ const width=Math.max(1,canvas.width-marginX*2),height=Math.max(1,canvas.height-marginY*2)
+ const stride=Math.max(1,Math.floor(Math.sqrt((width*height)/120000)))
  const selection=chooseCandidate(full,canvas,marginX,marginY,stride),candidate=selection.candidate
  let total=0,count=0,r=0,g=0,b=0,l=0,a=0,labB=0,l2=0,a2=0,b2=0
- for(let y=marginY;y<canvas.height-marginY;y+=stride){for(let x=marginX;x<canvas.width-marginX;x+=stride){const index=(y*canvas.width+x)*4;if(full.data[index+3]<200)continue;total++;const rr=full.data[index],gg=full.data[index+1],bb=full.data[index+2],lab=rgbToLab(rr,gg,bb);if(!candidate(lab))continue;const[ll,aa,bbb]=lab;count++;r+=rr;g+=gg;b+=bb;l+=ll;a+=aa;labB+=bbb;l2+=ll*ll;a2+=aa*aa;b2+=bbb*bbb}}
+ for(let y=marginY;y<canvas.height-marginY;y+=stride){for(let x=marginX;x<canvas.width-marginX;x+=stride){
+  const index=(y*canvas.width+x)*4
+  if(full.data[index+3]<200)continue
+  total++
+  const rr=full.data[index],gg=full.data[index+1],bb=full.data[index+2],lab=rgbToLab(rr,gg,bb)
+  if(!candidate(lab))continue
+  const[ll,aa,bbb]=lab
+  count++;r+=rr;g+=gg;b+=bb;l+=ll;a+=aa;labB+=bbb;l2+=ll*ll;a2+=aa*aa;b2+=bbb*bbb
+ }}
  const usableRatio=total?count/total:0
  if(count<100||usableRatio<0.02)throw new Error('No se pudo aislar suficiente roe. Acerca la muestra, reduce reflejos o deja el producto sobre un fondo neutro.')
- const border=Math.max(4,Math.round(Math.min(canvas.width,canvas.height)*0.08)),borderStride=Math.max(1,Math.floor(Math.sqrt(Math.max(1,(canvas.width*border*2+canvas.height*border*2)/8000))))
+ const border=Math.max(4,Math.round(Math.min(canvas.width,canvas.height)*0.08))
+ const borderStride=Math.max(1,Math.floor(Math.sqrt(Math.max(1,(canvas.width*border*2+canvas.height*border*2)/8000))))
  let borderTotal=0,borderCandidates=0
- for(let y=0;y<canvas.height;y+=borderStride){for(let x=0;x<canvas.width;x+=borderStride){if(x>=border&&x<canvas.width-border&&y>=border&&y<canvas.height-border)continue;const index=(y*canvas.width+x)*4;if(full.data[index+3]<200)continue;borderTotal++;if(candidate(rgbToLab(full.data[index],full.data[index+1],full.data[index+2])))borderCandidates++}}
+ for(let y=0;y<canvas.height;y+=borderStride){for(let x=0;x<canvas.width;x+=borderStride){
+  if(x>=border&&x<canvas.width-border&&y>=border&&y<canvas.height-border)continue
+  const index=(y*canvas.width+x)*4
+  if(full.data[index+3]<200)continue
+  borderTotal++
+  if(candidate(rgbToLab(full.data[index],full.data[index+1],full.data[index+2])))borderCandidates++
+ }}
  const borderCandidateRatio=borderTotal?borderCandidates/borderTotal:0
- const rMean=r/count,gMean=g/count,bMean=b/count,lMean=l/count,aMean=a/count,labBMean=labB/count,lStd=Math.sqrt(Math.max(0,l2/count-lMean*lMean)),aStd=Math.sqrt(Math.max(0,a2/count-aMean*aMean)),bStd=Math.sqrt(Math.max(0,b2/count-labBMean*labBMean)),chroma=Math.sqrt(aMean*aMean+labBMean*labBMean),hueDeg=(Math.atan2(labBMean,aMean)*180/Math.PI+360)%360
- const minimumRatio=selection.maskMode==='focused'?0.02:0.03
+ const rMean=r/count,gMean=g/count,bMean=b/count,lMean=l/count,aMean=a/count,labBMean=labB/count
+ const lStd=Math.sqrt(Math.max(0,l2/count-lMean*lMean)),aStd=Math.sqrt(Math.max(0,a2/count-aMean*aMean)),bStd=Math.sqrt(Math.max(0,b2/count-labBMean*labBMean))
+ const chroma=Math.sqrt(aMean*aMean+labBMean*labBMean),hueDeg=(Math.atan2(labBMean,aMean)*180/Math.PI+360)%360
+ const minimumRatio=selection.maskMode==='focused'?0.015:0.03
  const confidence:SegmentationConfidence=usableRatio<minimumRatio||usableRatio>0.97||borderCandidateRatio>0.45?'review':'good'
  return{metrics:{pixelCount:count,rMean,gMean,bMean,lMean,aMean,labBMean,lStd,aStd,bStd,chroma,hueDeg},usableRatio,borderCandidateRatio,confidence,maskMode:selection.maskMode,previewDataUrl:buildMaskPreview(canvas,candidate)}
 }
