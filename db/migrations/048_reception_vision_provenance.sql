@@ -20,3 +20,16 @@ end $$;
 create index if not exists reception_evidence_ai_provenance_idx
   on reception_evidence (ai_provider, ai_model)
   where ai_provider is not null;
+
+insert into schema_migrations(migration_name,evidence_kind,applied_at,details)
+values(
+  '048_reception_vision_provenance.sql',
+  'applied',
+  now(),
+  jsonb_build_object(
+    'attestation','structured_reception_vision_provenance',
+    'source','canonical_migration',
+    'historical_execution_reconstructed',false
+  )
+)
+on conflict(migration_name) do nothing;
