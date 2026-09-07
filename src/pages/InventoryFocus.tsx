@@ -1,6 +1,7 @@
 import {AlertTriangle,ArrowRight,CheckCircle2,MapPin,PackageCheck} from 'lucide-react'
 import {useEffect,useMemo,useState} from 'react'
 import {Link,useSearchParams} from 'react-router-dom'
+import {HistoricalContinuity} from '../components/HistoricalContinuity'
 import {PageHeader} from '../components/PageHeader'
 
 type Lot={reception_id:string;reception_number:number|string;plant_id:string|null;species:string;supplier:string;availablePhysicalKg:number;planningAvailableKg:number;releaseStatus:'released'|'blocked';releaseBlockReasons:string[];unlocatedKg:number}
@@ -24,9 +25,9 @@ export function InventoryFocus(){
       ?{tone:'warning',icon:<AlertTriangle size={20}/>,eyebrow:'REQUIERE ACCIÓN',title:`${totals.blocked} lote${totals.blocked===1?'':'s'} bloqueado${totals.blocked===1?'':'s'}`,text:firstBlocked.releaseBlockReasons.slice(0,2).join(' · ')||'La liberación todavía no está completa.',label:'Resolver bloqueo',to:firstBlocked.species.toLowerCase().includes('eriz')?`/proceso-erizo?receptionId=${encodeURIComponent(firstBlocked.reception_id)}`:`/etiquetas?receptionId=${encodeURIComponent(firstBlocked.reception_id)}`}
       :totals.planning>0
         ?{tone:'success',icon:<CheckCircle2 size={20}/>,eyebrow:'DISPONIBLE',title:`${kg(totals.planning)} planificables`,text:'El inventario liberado está disponible para compromisos comerciales.',label:'Abrir Comercial',to:'/ordenes-venta'}
-        :{tone:'neutral',icon:<PackageCheck size={20}/>,eyebrow:'SIN INVENTARIO VIVO',title:'Nada disponible todavía',text:'El inventario operativo comenzará con la primera recepción.',label:'Ir a Operación',to:'/recepciones'}
+        :{tone:'neutral',icon:<PackageCheck size={20}/>,eyebrow:'SIN INVENTARIO LIVE',title:'Sin movimientos live todavía',text:'La base histórica permanece disponible; el inventario live comienza con nuevos movimientos confirmados.',label:'Ir a Operación',to:'/recepciones'}
   return <>
-    <PageHeader eyebrow="Inventario" title="Inventario" description="Disponibilidad, bloqueo y siguiente acción. El detalle físico y la evidencia quedan disponibles cuando los necesitas."/>
+    <PageHeader eyebrow="Inventario" title="Inventario" description="Disponibilidad live y continuidad histórica, siempre separadas por evidencia."/>
     {error?<div className="system-banner error" role="alert">{error}</div>:null}
     {loading?<div className="system-banner">Calculando disponibilidad…</div>:null}
     {!loading&&!error?<>
@@ -35,11 +36,12 @@ export function InventoryFocus(){
         <div className="decision-focus-copy"><span className="overline">{primary.eyebrow}</span><h2>{primary.title}</h2><p>{primary.text}</p></div>
         <Link className="button primary" to={primary.to}>{primary.label}<ArrowRight size={16}/></Link>
       </section>
-      <section className="summary-strip" aria-label="Resumen mínimo de inventario">
-        <div><small>Planificable</small><b>{kg(totals.planning)}</b></div>
-        <div><small>Bloqueados</small><b>{totals.blocked}</b></div>
-        <div><small>Por ubicar</small><b>{kg(totals.unlocated)}</b></div>
+      <section className="summary-strip" aria-label="Resumen mínimo de inventario live">
+        <div><small>Planificable live</small><b>{kg(totals.planning)}</b></div>
+        <div><small>Bloqueados live</small><b>{totals.blocked}</b></div>
+        <div><small>Por ubicar live</small><b>{kg(totals.unlocated)}</b></div>
       </section>
+      <HistoricalContinuity context="inventory"/>
       <nav className="minimal-actions" aria-label="Más información de inventario">
         <Link className="source-link" to={detailPath}>Ver inventario completo</Link>
         <Link className="source-link" to="/pescamar-ia">Preguntar a Inteligencia</Link>
