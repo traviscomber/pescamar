@@ -17,10 +17,10 @@ export function Communications(){
   const [data,setData]=useState<Payload|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[filter,setFilter]=useState('all'),[busy,setBusy]=useState('')
   async function load(){setLoading(true);try{const r=await fetch('/api/communications',{cache:'no-store'}),p=await r.json() as Payload;if(!r.ok)throw new Error(p.error??'No fue posible cargar comunicaciones');setData(p);setError('')}catch(e){setError(e instanceof Error?e.message:'No fue posible cargar comunicaciones')}finally{setLoading(false)}}
   useEffect(()=>{void load()},[])
-  const liveChannels=data?.channels??[],messages=data?.messages??[]
+  const liveChannels=data?.channels??[],messages=useMemo(()=>data?.messages??[],[data?.messages])
   const channelByName=new Map(liveChannels.map(c=>[c.name.toLowerCase(),c]))
   const sources=communicationSources.map(source=>({source,live:channelByName.get(source.name.toLowerCase())??null}))
-  const counterparties=useMemo(()=>Array.from(new Set(communicationSources.map(s=>s.counterparty).filter((v):v is string=>Boolean(v)))).sort((a,b)=>a.localeCompare(b,'es')),[ ])
+  const counterparties=useMemo(()=>Array.from(new Set(communicationSources.map(s=>s.counterparty).filter((v):v is string=>Boolean(v)))).sort((a,b)=>a.localeCompare(b,'es')),[])
   const visible=useMemo(()=>filter==='all'?messages:filter==='pending'?messages.filter(m=>m.insight_status==='pending'):messages.filter(m=>(m.insight_category??m.channel_category)===filter),[filter,messages])
   const pending=messages.filter(m=>m.insight_status==='pending').length,newCount=messages.filter(m=>!m.insight_id).length,linkedCount=messages.filter(m=>Array.isArray(m.links)&&m.links.length>0).length
   async function act(body:Record<string,unknown>,key:string){setBusy(key);try{const r=await fetch('/api/communications',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),p=await r.json() as {error?:string};if(!r.ok)throw new Error(p.error??'No fue posible procesar');await load()}catch(e){setError(e instanceof Error?e.message:'No fue posible procesar')}finally{setBusy('')}}
