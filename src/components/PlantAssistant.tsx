@@ -35,10 +35,12 @@ export function PlantAssistant(){
  const [open,setOpen]=useState(false),[showLots,setShowLots]=useState(false),[receptionId,setReceptionId]=useState(''),[question,setQuestion]=useState(''),[turns,setTurns]=useState<Turn[]>([]),[photos,setPhotos]=useState<Photo[]>([]),[loading,setLoading]=useState(false),[photoLoading,setPhotoLoading]=useState(false),[error,setError]=useState('')
  const inputRef=useRef<HTMLTextAreaElement>(null),threadRef=useRef<HTMLDivElement>(null),photoInputRef=useRef<HTMLInputElement>(null)
  const routeLot=/^\/lotes\/([0-9a-f-]{36})$/i.exec(pathname)?.[1]??''
+ const routePlant=/^\/plantas\/([^/]+)$/.exec(pathname)?.[1]??''
  const requestedLot=params.get('receptionId')??routeLot
  const selectedLot=lots.find(lot=>lot.receptionId===receptionId)
  const isUrchin=Boolean(selectedLot&&/eriz|urchin/i.test(String(selectedLot.species)))
- const plantId=selectedLot?.plantId??params.get('plantId')??null
+ const routePlantId=routePlant&&!routePlant.startsWith('historico-')?decodeURIComponent(routePlant):null
+ const plantId=selectedLot?.plantId??params.get('plantId')??routePlantId
  const lotQuery=receptionId?`receptionId=${encodeURIComponent(receptionId)}`:''
  const plantQuery=plantId?`plantId=${encodeURIComponent(plantId)}`:''
  const join=(base:string,...parts:string[])=>{const query=parts.filter(Boolean).join('&');return query?`${base}?${query}`:base}
