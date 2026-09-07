@@ -12,8 +12,8 @@ if(ids.length<40)fail.push(`external reference coverage too small: ${ids.length}
 if(new Set(ids).size!==ids.length)fail.push('external reference ids must be unique')
 if(!source.includes("intendedUse:'defect_variability'"))fail.push('hard-case defect variability references missing')
 if(!source.includes('imageUrl:'))fail.push('direct image references missing')
-for(const token of ["intended_use==='defect_variability'","reviewPriority","pending_quality_review","visionTest","analyzedPending","req.method==='POST'","sea_urchin_external_reference_reviews","automaticTraining:false","rejectionReasons"]){if(!endpoint.includes(token))fail.push(`review contract missing ${token}`)}
-for(const token of ['Calidad enseña al sistema','Vision propone. Calidad decide.','Análisis Vision:','Decisión humana requerida.','Aprobar','Rechazar','Color fuera de objetivo','Daño visual','no reentrena automáticamente']){if(!queue.includes(token))fail.push(`review queue UI missing ${token}`)}
+for(const token of ["intended_use==='defect_variability'","reviewPriority","pending_quality_review","visionTest","analyzedPending","qualityKnowledge","latest_human_quality_review_per_reference","derivedKnowledge:qualityKnowledge!==null","req.method==='POST'","sea_urchin_external_reference_reviews","automaticTraining:false","rejectionReasons"]){if(!endpoint.includes(token))fail.push(`review contract missing ${token}`)}
+for(const token of ['Calidad enseña al sistema','Vision propone. Calidad decide.','Análisis Vision:','Decisión humana requerida.','Conocimiento observado','Lo que Calidad ya enseñó','no es accuracy del modelo','No se muestra esta sección hasta existir feedback humano real.','Aprobar','Rechazar','Color fuera de objetivo','Daño visual','no reentrena automáticamente']){if(!queue.includes(token))fail.push(`review queue UI missing ${token}`)}
 if(!edge.includes('<UniReferenceReviewQueue/>'))fail.push('EdgeVision does not expose Uni review queue')
 if(fail.length){console.error('Sea urchin external reference smoke FAILED');for(const item of fail)console.error(`- ${item}`);process.exit(1)}
-console.log(`Sea urchin external reference smoke PASS · ${ids.length} unlabeled references + Vision-to-Quality handoff`)
+console.log(`Sea urchin external reference smoke PASS · ${ids.length} unlabeled references + Vision-to-Quality handoff + observed Quality knowledge`)
