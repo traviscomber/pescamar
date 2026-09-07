@@ -4,14 +4,23 @@ import {getSql} from './_db.js'
 type Request={method?:string;headers?:Record<string,string|string[]|undefined>;body?:unknown}
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void}
 type Review={decision:'accepted'|'rejected';rejection_reason:string|null;note:string|null;reviewed_by:string;reviewed_at:string}|null
-type ReferenceRow={id:string;title:string;source_page:string;image_url:string|null;source_type:string;license:string;attribution:string|null;scene:string;intended_use:string;quality_status:string;official_grade:null;notes:string;provenance:unknown;created_at:string;updated_at:string;latest_review:Review}
+type VisionTest={status:string;analyzed_at:string;engine:string;mask_mode:string;usable_ratio:number;l_mean:number;a_mean:number;b_mean:number;dispersion:number;border_candidate_ratio:number;confidence:string;recommendation:string;operational_evidence:boolean;automatic_training:boolean;human_decision_required:boolean}|null
+type ReferenceRow={id:string;title:string;source_page:string;image_url:string|null;source_type:string;license:string;attribution:string|null;scene:string;intended_use:string;quality_status:string;official_grade:null;notes:string;provenance:Record<string,unknown>|null;created_at:string;updated_at:string;latest_review:Review}
 
 const rejectionReasons=new Set(['color_fuera_objetivo','color_poco_uniforme','dano_visual','apariencia_no_conforme','material_extrano_visible','presentacion_no_conforme','otro'])
+
+function visionTest(row:ReferenceRow):VisionTest{
+  const value=row.provenance?.vision_test
+  if(!value||typeof value!=='object')return null
+  return value as VisionTest
+}
 
 function reviewPriority(row:ReferenceRow){
   let score=0
   const reasons:string[]=[]
+  const analysis=visionTest(row)
   if(row.latest_review)score-=200
+  if(analysis?.status==='pending_quality_review'){score+=80;reasons.push('análisis Vision listo para decisión de Calidad')}
   if(row.intended_use==='defect_variability'){score+=50;reasons.push('posible defecto/variabilidad difícil')}
   if(row.intended_use==='segmentation_qa'){score+=35;reasons.push('útil para validar segmentación')}
   if(row.scene==='mixed_product'){score+=20;reasons.push('contexto visual ambiguo')}
@@ -21,7 +30,7 @@ function reviewPriority(row:ReferenceRow){
   if(row.source_type==='research_reference'){score+=5;reasons.push('referencia externa no operacional')}
   if(!row.image_url){score-=100;reasons.push('sin imagen directa')}
   if(row.latest_review)reasons.unshift('ya revisada por Calidad')
-  return {reviewPriority:score,reviewReason:reasons.join(' · ')||'variabilidad visual general'}
+  return {reviewPriority:score,reviewReason:reasons.join(' · ')||'variabilidad visual general',visionTest:analysis}
 }
 
 function parseBody(body:unknown){
@@ -82,6 +91,7 @@ export default async function handler(req:Request,res:Response){
         total:references.length,
         pending:pending.length,
         reviewed:references.length-pending.length,
+        analyzedPending:pending.filter(item=>item.visionTest?.status==='pending_quality_review').length,
         highPriority:pending.filter(item=>item.reviewPriority>=50).length,
         firstBatch:pending.slice(0,12).map(item=>item.id),
         rule:'Prioridad derivada sólo desde contexto/provenance; no implica calidad, Grade ni rechazo.'
@@ -90,7 +100,7 @@ export default async function handler(req:Request,res:Response){
         operationalEvidence:false,
         humanQualityLabels:true,
         automaticTraining:false,
-        note:'Las referencias externas sólo adquieren accepted/rejected mediante revisión humana de Calidad/Admin. No son Grade ni evidencia operacional.'
+        note:'Vision puede proponer evidencia visual; sólo Calidad/Admin crea accepted/rejected. No es Grade ni evidencia operacional.'
       }
     })
   }catch(error){
