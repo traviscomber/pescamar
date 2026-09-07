@@ -1,6 +1,7 @@
 import {Factory} from 'lucide-react'
 import {useEffect,useState} from 'react'
 import {Link} from 'react-router-dom'
+import {HistoricalContinuity} from '../components/HistoricalContinuity'
 import {useLot360} from '../components/Lot360Context'
 import {PageHeader} from '../components/PageHeader'
 import type {Lot} from '../types'
@@ -44,11 +45,11 @@ export function ProductionFocus({lots}:{lots:Lot[]}){
   const hasLots=lots.length>0
   const blocked=priority?.action==='blocked'
   return <>
-    <PageHeader eyebrow="Operación" title="Producción" description="El sistema resuelve prioridad, lote y destino. Tú ejecutas la siguiente acción física; el plan completo sólo aparece cuando existe un bloqueo."/>
+    <PageHeader eyebrow="Operación" title="Producción" description="La historia productiva ya está incorporada. Los nuevos lotes continúan desde aquí como operación live, sin mezclar ambas capas."/>
     {error?<div className="system-banner error" role="alert">{error}</div>:null}
     <section className="panel" aria-label="Siguiente acción de producción">
-      <div className="section-heading"><div><span className="overline">Siguiente acción</span><h2>{loading?'Calculando…':priority?actionLabel(priority.action):'Sin producción priorizada'}</h2></div></div>
-      {loading?<p className="data-caveat">Revisando órdenes, lotes y disponibilidad.</p>:priority?<>
+      <div className="section-heading"><div><span className="overline">Siguiente acción live</span><h2>{loading?'Calculando…':priority?actionLabel(priority.action):'Sin producción live priorizada'}</h2></div></div>
+      {loading?<p className="data-caveat">Revisando órdenes, lotes y disponibilidad live.</p>:priority?<>
         <div className="balance-summary compact">
           <div><small>Lote</small><b>{priority.receptionNumber!=null?`REC-${priority.receptionNumber}`:'Sin lote liberado'}</b></div>
           <div><small>Cantidad</small><b>{kg(priority.recommendedKg)}</b></div>
@@ -59,8 +60,9 @@ export function ProductionFocus({lots}:{lots:Lot[]}){
           {blocked?<Link className="button primary" to="/planificacion">Resolver bloqueo</Link>:priority.receptionId?<button className="button primary" onClick={()=>openLive(priority.receptionId!)}>Abrir lote</button>:<Link className="button primary" to="/planificacion">Resolver en planificación</Link>}
           {blocked&&priority.receptionId?<button className="button secondary" onClick={()=>openLive(priority.receptionId!)}>Ver evidencia del lote</button>:null}
         </div>
-      </>:<div className="empty-state"><Factory size={28}/><h3>{hasLots?'No hay una orden que requiera producción ahora':'Sin lotes vivos'}</h3><p>{hasLots?'No hay una acción productiva pendiente. No necesitas revisar el plan completo.':'La primera recepción operacional aparecerá aquí cuando exista.'}</p>{!hasLots?<Link className="button primary" to="/recepciones">Ir a recepciones</Link>:null}</div>}
+      </>:<div className="empty-state"><Factory size={28}/><h3>{hasLots?'No hay una orden que requiera producción ahora':'Sin lotes live todavía'}</h3><p>{hasLots?'No hay una acción productiva pendiente. No necesitas revisar el plan completo.':'La producción histórica sigue disponible abajo; la primera recepción nueva abrirá la continuidad live.'}</p>{!hasLots?<Link className="button primary" to="/recepciones">Ir a recepciones</Link>:null}</div>}
     </section>
+    <HistoricalContinuity context="operation"/>
     <nav className="more-actions" aria-label="Más información de producción"><Link to="/lineas/detalle">Ver detalle productivo</Link></nav>
   </>
 }
