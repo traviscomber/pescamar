@@ -4,7 +4,7 @@ const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
 const [contract,migration,endpoint,page,glossary,glossaryPanel,app,access,modules,vercel,gdst]=await Promise.all([
  readFile(new URL('../api/_gs1-identity.ts',import.meta.url),'utf8'),
- readFile(new URL('../db/migrations/052_gs1_identity_registry.sql',import.meta.url),'utf8'),
+ readFile(new URL('../db/migrations/053_gs1_identity_registry.sql',import.meta.url),'utf8'),
  readFile(new URL('../api/gs1-identities.ts',import.meta.url),'utf8'),
  readFile(new URL('../src/pages/Gs1Identities.tsx',import.meta.url),'utf8'),
  readFile(new URL('../src/technicalTerms.ts',import.meta.url),'utf8'),
@@ -25,6 +25,7 @@ assert(contract.includes('hasValidGs1CheckDigit'),'GS1 contract must validate ch
 assert(contract.includes('https://id.gs1.org/${rule.ai}/${normalized}'),'GS1 contract must expose reference Digital Link URI without claiming resolver ownership')
 
 assert(migration.includes('create table if not exists gs1_identity_links'),'GS1 migration must create a separate identity registry')
+assert(migration.includes("'053_gs1_identity_registry.sql'"),'GS1 migration must register its canonical 053 filename')
 assert(migration.includes("key_type in ('gtin','gln_location','gln_party','sscc')"),'migration must constrain supported GS1 keys')
 assert(migration.includes("evidence <> '{}'::jsonb"),'GS1 links must require evidence')
 assert(migration.includes('num_nonnulls(party_id,plant_id,inventory_location_id,packing_spec_id,pallet_id)=1'),'GS1 link must target exactly one internal entity')
