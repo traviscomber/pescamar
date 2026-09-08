@@ -63,6 +63,6 @@ test('operations and quality can inspect expanded control plane',async({page},te
 test('finance cannot open operational observability',async({page})=>{
  await mock(page,'finance')
  await page.goto('/observabilidad')
- await expect(page).toHaveURL(/\/$/)
+ await expect(page).toHaveURL(/\/es\/?$/)
  await expect(page.getByRole('heading',{name:'Observabilidad y alertas'})).toHaveCount(0)
 })
