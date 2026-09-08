@@ -6,6 +6,7 @@ import {resolveRequestOrganization} from './_organization.js'
 type Request={method?:string;headers?:Record<string,string|string[]|undefined>}
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void}
 type Row={id:string;key_type:Gs1KeyType;gs1_value:string;entity_type:Gs1EntityType;link_status:'candidate'|'confirmed'|'rejected';source_system:string;source_reference:string;evidence:Record<string,unknown>;reviewed_at:string|null;review_note:string|null;entity_label:string|null}
+type ReadinessRow={ready?:boolean}
 
 export default async function handler(request:Request,response:Response){
  response.setHeader('Cache-Control','no-store')
@@ -17,7 +18,8 @@ export default async function handler(request:Request,response:Response){
   if(!organization)return response.status(409).json({ok:false,code:'ORGANIZATION_CONTEXT_UNSUPPORTED',error:'La organización solicitada no está habilitada en esta implementación'})
   const sql=getSql()
   const readiness=await sql`select to_regclass('public.gs1_identity_links') is not null ready`
-  const schemaReady=Boolean((Array.isArray(readiness)?readiness:[])[0]?.ready)
+  const readinessRows=(Array.isArray(readiness)?readiness:[]) as ReadinessRow[]
+  const schemaReady=Boolean(readinessRows[0]?.ready)
   if(!schemaReady)return response.status(200).json({ok:true,schemaVersion:gs1IdentityContract.schemaVersion,standardVersion:gs1IdentityContract.digitalLinkVersion,schemaReady:false,summary:{total:0,candidate:0,confirmed:0,rejected:0,gtin:0,gln_location:0,gln_party:0,sscc:0},identities:[],contract:gs1IdentityContract,message:'La migración 052 aún no está aplicada en esta base. No se inventan ni derivan identificadores GS1.'})
   const raw=await sql`
    select g.id,g.key_type,g.gs1_value,g.entity_type,g.link_status,g.source_system,g.source_reference,g.evidence,g.reviewed_at,g.review_note,
