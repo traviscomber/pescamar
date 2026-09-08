@@ -18,7 +18,7 @@ test('Seafood AI exposes evidence policy with scoped navigable evidence without 
  await expect(page.getByText('Ir al contenido principal')).not.toBeVisible()
  await expect(page.getByText('Seafood AI · evidence-native')).toBeVisible()
  await expect(page.getByText('Sin escrituras ni acciones')).toBeVisible()
- await page.getByLabel('Planta').selectOption('ancud')
+ await page.getByRole('combobox',{name:'Planta'}).selectOption('ancud')
  await page.getByLabel('Pregunta').fill('¿Qué requiere atención?')
  await page.getByRole('button',{name:'Enviar'}).click()
  await expect(page.getByText(/Hay 2 lotes con revisión/)).toBeVisible()
