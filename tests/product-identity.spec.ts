@@ -13,7 +13,7 @@ test('shell presents Seafood Intelligence OS as product and Pescamar as implemen
   await page.goto('/')
   if(testInfo.project.name==='mobile-chromium')await page.getByRole('button',{name:'Abrir menú'}).click()
 
-  const navigation=page.getByRole('complementary',{name:'Navegación de Seafood Intelligence OS'})
+  const navigation=page.getByRole('complementary',{name:'Navegación · Seafood Intelligence OS'})
   await expect(navigation).toBeVisible()
   await expect(navigation.getByText('Seafood Intelligence OS',{exact:true})).toBeVisible()
   const attribution=navigation.getByRole('link',{name:'Powered by N3uralia',exact:true})
