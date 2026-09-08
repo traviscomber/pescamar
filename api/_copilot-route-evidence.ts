@@ -9,7 +9,6 @@ import {allowedPlantIds} from './_plants.js'
 import type {SeafoodCapability,SeafoodQueryRoute} from './_seafood-query-router.js'
 
 const baseCapabilities=new Set<SeafoodCapability>(['receptions','production','quality','inventory','orders','canonical_sources','canonical_inventory','finance'])
-const unique=<T>(items:T[])=>[...new Set(items)]
 
 function scopeFor(operator:SessionOperator,plantId:string|null):CopilotContext['scope']{
  const allowed=allowedPlantIds(operator)
@@ -36,7 +35,7 @@ function mergeSources(...groups:Array<Array<CopilotSource|undefined|null>>){
 }
 
 export async function buildRoutedCopilotEvidence(operator:SessionOperator,plantId:string|null,receptionId:unknown,route:SeafoodQueryRoute){
- const selected=route.route==='investigative'?unique([...route.requiredCapabilities,...route.optionalCapabilities]):route.requiredCapabilities
+ const selected=[...route.requiredCapabilities]
  const needBase=selected.some(capability=>baseCapabilities.has(capability))
  const needLot=selected.includes('lot_control')||selected.includes('operational_intelligence')||selected.includes('urchin_graph')
  const [baseRaw,cardRaw,operationalRaw,historicalRaw,canonicalRaw,urchinRaw]=await Promise.all([
