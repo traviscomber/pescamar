@@ -58,11 +58,12 @@ assert(intelligence.includes('reference_rows'),'canonical intelligence must expo
 assert(intelligence.includes("movementRule:'dated_monetary_row_only'"),'canonical intelligence must expose the finance grain contract')
 assert(intelligence.includes('missing_guide_price')&&intelligence.includes('missing_received_kg')&&intelligence.includes('missing_process_date')&&intelligence.includes('missing_production_date'),'canonical intelligence must derive production completeness gaps deterministically')
 assert(intelligence.includes('sum(inflow_clp) filter(where ${LEDGER_MOVEMENT_RULE})')&&intelligence.includes('sum(outflow_clp) filter(where ${LEDGER_MOVEMENT_RULE})'),'canonical financial totals must exclude reference rows')
-assert(page.includes('Seafood AI · evidence-native'),'Pescamar IA must expose the reusable Seafood AI engine')
-assert(page.includes('operational_intelligence'),'UI citation parser must support Event Graph operational intelligence evidence')
-assert(page.includes('Event Graph + Lot Control'),'lot-scoped UI must expose the decision stack')
+assert(page.includes('Seafood AI · respuestas con evidencia'),'Pescamar IA must explain its evidence-native behavior in plain language')
+assert(page.includes('Trazabilidad del lote + control operativo'),'lot-scoped UI must describe the decision stack without internal jargon')
+assert(page.includes('capabilityLabels')&&page.includes('Información que falta:'),'missing capability IDs must be translated before being shown to operators')
+assert(page.includes('photo_observation'),'UI citation parser must support photo evidence citations')
 assert(page.includes('evidenceLabels'),'UI must expose evidence classes to the user')
-assert(page.includes('Sin escrituras ni acciones'),'UI must keep the read-only trust boundary visible')
+assert(page.includes('Sólo consulta · no ejecuta acciones'),'UI must keep the read-only trust boundary visible in plain language')
 assert(!/\b(insert|update|delete)\s+(into|from|[a-z_]+\s+set)\b/i.test(`${handler}\n${context}\n${contextWithLot}\n${operationalContext}\n${policy}\n${intelligence}`),'Seafood AI path must not introduce data mutation')
 
 if(failures.length){
@@ -70,4 +71,4 @@ if(failures.length){
  for(const failure of failures)console.error(`- ${failure}`)
  process.exit(1)
 }
-console.log('Seafood AI smoke PASS: evidence classes, organization scope, citation fail-closed policy, persisted Vision provenance, Event Graph priorities, canonical gaps, audited ledger grain, read-only policy and source validation verified')
+console.log('Seafood AI smoke PASS: evidence classes, organization scope, citation fail-closed policy, plain-language UI, persisted Vision provenance, Event Graph priorities, canonical gaps, audited ledger grain, read-only policy and source validation verified')
