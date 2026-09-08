@@ -31,7 +31,7 @@ assert(handler.includes('buildRoutedCopilotEvidence(operator,plantId,body.recept
 assert(handler.includes("queryRoute.route==='deterministic'&&lotControl"),'deterministic route must bypass the model when deterministic evidence is sufficient')
 assert(handler.includes('routerVersion:SEAFOOD_QUERY_ROUTER_VERSION'),'API must expose router version')
 assert(handler.includes('evidenceGate'),'API and model snapshot must expose evidence sufficiency')
-assert(policy.includes("SEAFOOD_AI_POLICY_VERSION='seafood.ai.evidence.v8'"),'Seafood AI policy must be versioned at v8')
+assert(policy.includes("SEAFOOD_AI_POLICY_VERSION='seafood.ai.evidence.v9'"),'Seafood AI policy must be versioned at v9')
 assert(policy.includes('Seafood AI Router decide qué capabilities cargar'),'policy must bind the model to router scope')
 assert(policy.includes("evidenceGate es vinculante"),'policy must bind conclusions to evidence sufficiency')
 assert(policy.includes("router.writesAllowed=false es vinculante"),'policy must preserve routed read-only boundary')
