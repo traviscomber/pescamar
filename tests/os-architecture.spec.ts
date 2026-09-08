@@ -35,7 +35,7 @@ test('admin console exposes infrequent controls without recreating the full OS m
  for(const group of ['Operación y planta','Control y cumplimiento','Datos e integración','Usuarios y sistema'])await expect(console.getByRole('heading',{name:group})).toBeVisible()
  await expect(console.getByRole('link',{name:/Modelo operativo/})).toBeVisible()
  await expect(console.getByRole('link',{name:/Auditoría operacional/})).toBeVisible()
- await expect(console.getByRole('link',{name:/EdgeVision/})).toBeVisible()
+ await expect(console.getByRole('link',{name:/Uni/})).toBeVisible()
  await expect(page.getByText('Un core operacional. Múltiples implementaciones.')).toHaveCount(0)
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true)
 })
