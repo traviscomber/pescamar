@@ -14,9 +14,11 @@ declare
   expected integer;
 begin
   if p_value !~ '^[0-9]+$' or length(p_value) < 2 then return false; end if;
-  for i in reverse length(p_value)-1..1 loop
+  i := length(p_value)-1;
+  while i >= 1 loop
     total := total + substring(p_value from i for 1)::integer * multiplier;
     multiplier := case when multiplier=3 then 1 else 3 end;
+    i := i-1;
   end loop;
   expected := (10 - (total % 10)) % 10;
   return expected = right(p_value,1)::integer;
