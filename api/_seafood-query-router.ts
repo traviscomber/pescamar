@@ -1,4 +1,4 @@
-export const SEAFOOD_QUERY_ROUTER_VERSION='seafood.router.v1' as const
+export const SEAFOOD_QUERY_ROUTER_VERSION='seafood.router.v2' as const
 
 export type SeafoodQueryRouteName='deterministic'|'fast_evidence'|'investigative'
 export type SeafoodCapability=
@@ -58,27 +58,45 @@ function normalize(value:string){return value.toLocaleLowerCase('es-CL').normali
 function unique<T>(items:T[]){return [...new Set(items)]}
 function hasAny(value:string,patterns:RegExp[]){return patterns.some(pattern=>pattern.test(value))}
 
+// Pescamar is bilingual. Router semantics must remain equivalent in Spanish and English.
 const investigationPatterns=[
- /\bpor que\b/,/\bporque\b/,/\bexplica/,/\bcompar/,/\bhistor/,/\btendenc/,/\bcausa/,/\brelacion/,/\bcorrel/,/\binvestig/,/\banomali/,/\bdesviacion/,/\bevolucion/,/\brentabil/,/\btrazab/,/\blinaje/,/\bmejor\b.*\bproveedor/,/\bpeor\b.*\bproveedor/,/\bmejor\b.*\brendimiento/,/\bpeor\b.*\brendimiento/
+ /\bpor que\b/,/\bporque\b/,/\bexplica/,/\bwhy\b/,/\bexplain/,
+ /\bcompar/,/\bcompare/,/\bhistor/,/\btendenc/,/\btrend/,
+ /\bcausa/,/\bcause/,/\brelacion/,/\brelationship/,/\bcorrel/,
+ /\binvestig/,/\banomali/,/\bdesviacion/,/\bdeviat/,/\bevolucion/,/\bevolution/,
+ /\brentabil/,/\bprofitabil/,/\btrazab/,/\btraceab/,/\blinaje/,/\blineage/,
+ /\bmejor\b.*\bproveedor/,/\bpeor\b.*\bproveedor/,/\bbest\b.*\bsupplier/,/\bworst\b.*\bsupplier/,
+ /\bmejor\b.*\brendimiento/,/\bpeor\b.*\brendimiento/,/\bbest\b.*\byield/,/\bworst\b.*\byield/
 ]
 const historicalComparisonPatterns=[
- /\bcompar/,/\bhistor/,/\btendenc/,/\bproveedor/,/\bevolucion/,/\brentabil/,/\btrazab/,/\blinaje/,/\bmejor\b/,/\bpeor\b/
+ /\bcompar/,/\bcompare/,/\bhistor/,/\btendenc/,/\btrend/,/\bproveedor/,/\bsupplier/,
+ /\bevolucion/,/\bevolution/,/\brentabil/,/\bprofitabil/,/\btrazab/,/\btraceab/,/\blinaje/,/\blineage/,
+ /\bmejor\b/,/\bpeor\b/,/\bbest\b/,/\bworst\b/,/\bprevious\b/,/\bprior\b/,/\bover time\b/,
+ /\blast (week|month|year|season)\b/,/\bsemana pasada\b/,/\bmes pasado\b/,/\bano pasado\b/
 ]
 const deterministicLotPatterns=[
- /\bque bloquea/,/\bbloqueo/,/\bestado\b/,/\bsiguiente accion/,/\bque hago/,/\bque sigue/,/\blisto\b/,/\bapto\b/,/\bjapon\b/,/\bliberad/,/\bgrade\b/,/\bcolor\b/,/\bxray\b/,/\brayos? x/,/\bhold\b/,/\bpuedo despachar/
+ /\bque bloquea/,/\bwhat blocks\b/,/\bbloqueo/,/\bblocked\b/,/\bestado\b/,/\bstatus\b/,
+ /\bsiguiente accion/,/\bnext action\b/,/\bque hago/,/\bwhat should i do\b/,/\bque sigue/,/\bwhat next\b/,
+ /\blisto\b/,/\bready\b/,/\bapto\b/,/\bfit for\b/,/\bjapon\b/,/\bjapan\b/,
+ /\bliberad/,/\brelease status\b/,/\breleased\b/,/\bgrade\b/,/\bcolor\b/,/\bxray\b/,/\bx-ray\b/,/\brayos? x/,
+ /\bhold\b/,/\bpuedo despachar/,/\bcan i dispatch\b/,/\bcan i ship\b/
+]
+const materialActionPatterns=[
+ /\bjapon\b/,/\bjapan\b/,/\bliberad/,/\breleas/,/\bdespach/,/\bdispatch/,/\bship(?:ment|ping)?\b/,
+ /\brechaz/,/\breject/,/\bgrade\b/,/\baprobar/,/\bapprove/
 ]
 
 function fastCapabilities(question:string,hasLot:boolean):SeafoodCapability[]{
  const capabilities:SeafoodCapability[]=[]
- if(/\bstock\b|\binventario\b|\bsaldo\b|\bdisponib/.test(question))capabilities.push('inventory')
- if(/\brecepcion|\brecib|\bingreso/.test(question))capabilities.push('receptions')
- if(/\bproduccion|\bproceso\b|\byield\b|\brendimiento\b|\bkilos? procesad/.test(question))capabilities.push('production')
- if(/\bcalidad\b|\bhold\b|\balerta\b|\brechazo/.test(question))capabilities.push('quality')
- if(/\borden|\bpedido|\bcliente|\bcompromiso|\bventa\b|\bdespacho/.test(question))capabilities.push('orders')
- if(/\bliquidacion|\bfinanz|\bmonto\b|\bcosto\b|\bcuenta\b|\bpago\b/.test(question))capabilities.push('finance')
- if(/\bfuente|\barchivo|\bcobertura\b|\bplanilla/.test(question))capabilities.push('canonical_sources')
- if(/\bpacking\b|\bcaja\b|\binventario histor/.test(question))capabilities.push('canonical_inventory')
- if(!hasLot&&/\batencion\b|\bprioridad\b|\bpendiente\b|\bbloque/.test(question))capabilities.push('quality','orders','inventory')
+ if(/\bstock\b|\binventar|\binventory\b|\bsaldo\b|\bbalance\b|\bdisponib|\bavailab/.test(question))capabilities.push('inventory')
+ if(/\brecepcion|\breceiv|\bingreso|\bintake\b|\blanding\b|\bdescarga/.test(question))capabilities.push('receptions')
+ if(/\bproduccion|\bproduction\b|\bproceso\b|\bprocess\b|\byield\b|\brendimiento\b|\bkilos? procesad|\bprocessed kg\b|\bthroughput\b|\bmerma\b|\bshrinkage\b|\bwaste\b/.test(question))capabilities.push('production')
+ if(/\bcalidad\b|\bquality\b|\bhold\b|\balerta\b|\balert\b|\brechazo|\breject|\bdefect|\bconformidad\b|\bcompliance\b/.test(question))capabilities.push('quality')
+ if(/\borden|\border\b|\bpedido|\bcustomer\b|\bcliente|\bcommitment\b|\bcompromiso|\bsale\b|\bventa\b|\bdispatch\b|\bdespacho|\bshipment\b/.test(question))capabilities.push('orders')
+ if(/\bliquidacion|\bsettlement\b|\bfinanz|\bfinance\b|\bmonto\b|\bamount\b|\bcosto\b|\bcost\b|\bcuenta\b|\baccount\b|\bpago\b|\bpayment\b|\bmargen\b|\bmargin\b/.test(question))capabilities.push('finance')
+ if(/\bfuente|\bsource\b|\barchivo|\bfile\b|\bcobertura\b|\bcoverage\b|\bplanilla|\bspreadsheet\b|\bdocumento|\bdocument\b|\bprovenance\b/.test(question))capabilities.push('canonical_sources')
+ if(/\bpacking\b|\bcaja\b|\bbox\b|\bcarton\b|\bpackage\b|\binventario histor|\bhistorical inventory\b/.test(question))capabilities.push('canonical_inventory')
+ if(!hasLot&&/\batencion\b|\battention\b|\bprioridad\b|\bpriority\b|\bpendiente\b|\bpending\b|\bbloque|\bblocker/.test(question))capabilities.push('quality','orders','inventory')
  return unique(capabilities)
 }
 
@@ -86,11 +104,11 @@ export function routeSeafoodQuery(input:{question:string;hasLot:boolean;hasPhoto
  const question=normalize(input.question)
  const investigative=hasAny(question,investigationPatterns)
  const historicalComparison=hasAny(question,historicalComparisonPatterns)
- const urchinSpecific=input.seniorUrchin||/\berizo|\burchin|\bjapon\b|\bgrade\b|\bxray\b|\brayos? x|\bcolor\b/.test(question)
+ const urchinSpecific=input.seniorUrchin||/\berizo|\burchin|\buni\b|\broe\b|\bjapon\b|\bjapan\b|\bgrade\b|\bxray\b|\bx-ray\b|\brayos? x|\bcolor\b/.test(question)
  if(input.hasLot&&!input.hasPhotos&&!investigative&&hasAny(question,deterministicLotPatterns)){
   const required:SeafoodCapability[]=['lot_control','operational_intelligence']
-  if(input.seniorUrchin||/\bxray\b|\brayos? x/.test(question))required.push('urchin_graph')
-  return {version:SEAFOOD_QUERY_ROUTER_VERSION,route:'deterministic',intent:urchinSpecific?'lot_specialist_status':'lot_operational_status',requiredCapabilities:unique(required),optionalCapabilities:urchinSpecific&&!required.includes('urchin_graph')?['urchin_graph']:[],writesAllowed:false,humanGate:/\bjapon\b|\bliberad|\bdespach|\brechaz|\bgrade\b/.test(question)?'material_action_review':'none'}
+  if(input.seniorUrchin||/\bxray\b|\bx-ray\b|\brayos? x/.test(question))required.push('urchin_graph')
+  return {version:SEAFOOD_QUERY_ROUTER_VERSION,route:'deterministic',intent:urchinSpecific?'lot_specialist_status':'lot_operational_status',requiredCapabilities:unique(required),optionalCapabilities:urchinSpecific&&!required.includes('urchin_graph')?['urchin_graph']:[],writesAllowed:false,humanGate:hasAny(question,materialActionPatterns)?'material_action_review':'none'}
  }
  const fast=fastCapabilities(question,input.hasLot)
  if(input.hasPhotos&&!investigative){
@@ -102,7 +120,7 @@ export function routeSeafoodQuery(input:{question:string;hasLot:boolean;hasPhoto
  if(!investigative&&fast.length){
   const required=[...fast]
   if(input.hasLot)required.push('lot_control')
-  return {version:SEAFOOD_QUERY_ROUTER_VERSION,route:'fast_evidence',intent:fast.length===1?`direct_${fast[0]}`:'direct_cross_domain',requiredCapabilities:unique(required),optionalCapabilities:[],writesAllowed:false,humanGate:/\bdespach|\bliberad|\brechaz|\baprobar/.test(question)?'material_action_review':'none'}
+  return {version:SEAFOOD_QUERY_ROUTER_VERSION,route:'fast_evidence',intent:fast.length===1?`direct_${fast[0]}`:'direct_cross_domain',requiredCapabilities:unique(required),optionalCapabilities:[],writesAllowed:false,humanGate:hasAny(question,materialActionPatterns)?'material_action_review':'none'}
  }
  const required:SeafoodCapability[]=[...fast]
  const optional:SeafoodCapability[]=[]
