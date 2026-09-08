@@ -3,7 +3,7 @@
 **Producto:** Seafood Intelligence OS  
 **Implementación:** Pescamar — Implementation 01  
 **Modo:** CIERRE FINITO / NO FEATURE CREEP  
-**Baseline técnico:** `1aec75620c4703f6a3c08810f7535e3febaa9b79`  
+**Baseline técnico:** `28b701d1076692daa1e3e641087ea6247c7eed2f`  
 **Fuente superior de alcance:** `ROADMAP.md`  
 **Aceptación de piloto:** `PILOT_ACCEPTANCE.md`  
 **Diseño:** `DESIGN.md`
@@ -70,49 +70,63 @@ Criterios:
 
 # Gate 2 — Trazabilidad e interoperabilidad
 
-**Estado:** `EN CURSO`
+**Estado:** `REQUIERE PILOTO REAL`
 
 Owners: Seafood Chile Core + Databasin + Borat + Cronos + Qalito.
 
 Objetivo: reconstruir el máximo lineage soportado por evidencia y preparar interoperabilidad sin declarar capacidades inexistentes.
 
-Trabajo cerrado cuando:
-- recepción → lote → producción → packing → pallet → inventario/frío → orden → despacho puede recorrerse con identidad y evidencia;
-- split/merge y transformaciones conservan mass balance o yield documentado;
-- GS1 Identity Registry está reconciliado con Neon objetivo;
-- GTIN/GLN/SSCC sólo existen cuando hay código real + fuente + estado de revisión;
-- no se generan identificadores GS1 desde IDs internos;
-- Event Graph tiene mapping explícito hacia GDST/EPCIS donde existe evidencia;
-- lo no soportado queda marcado `missing`, no simulado;
-- serializer EPCIS JSON-LD read-only sólo se habilita cuando los campos mínimos están disponibles y validados;
-- no se declara “GDST Capable” hasta superar el capability test aplicable.
+Cierre técnico alcanzado:
+- Event Graph cubre recepción, producción, packing, pallet, frío, inventario, compromiso comercial y despacho con mappings explícitos;
+- GS1 Identity Registry está reconciliado con Neon y no contiene identificadores inventados;
+- GTIN/GLN/SSCC sólo pueden existir como vínculos externos con evidencia y revisión;
+- serializer EPCIS 2.0 JSON-LD está implementado en modo read-only y fail-closed;
+- datos insuficientes se reportan como faltantes, nunca se sustituyen por IDs internos;
+- no se declara `GDST Capable`; Query, Capture, resolver/master data y Capability Test siguen fuera del claim actual;
+- Quality, contratos, Chromium y Vercel pasaron sobre el baseline técnico.
 
-Stop condition: cuando estos criterios pasan, no se agregan más estándares antes del piloto.
+Pendiente sólo de evidencia real:
+- primer lote físico completo para demostrar el recorrido con datos vivos;
+- identidades GS1 reales aportadas/verificadas por la operación cuando correspondan;
+- input/split/merge y mass balance real cuando el proceso efectivamente lo requiera;
+- Capability Test GDST sólo cuando existan todas las capacidades y datos exigidos.
+
+**Freeze:** no agregar más estándares o exportadores antes del piloto salvo P0/P1 o requisito comprobado del piloto.
 
 ---
 
 # Gate 3 — Operación mínima de planta
 
-**Estado:** `EN CURSO`
+**Estado:** `REQUIERE PILOTO REAL`
 
 Owners: Seafood Chile Core + Hume + Marmush + Qalito.
 
 Objetivo: que pocas personas puedan operar la planta capturando una vez y atendiendo sólo excepciones.
 
 Camino principal:
-`recepción → calidad → producción → packing/pallet → inventario/frío → comercial/despacho → cierre diario`
+`recepción → calidad → producción → packing → pallet → frío → inventario → compromiso comercial → despacho → cierre diario`
 
-Criterios:
-- no doble entrada evitable;
-- datos heredables se arrastran desde evidencia upstream;
-- una acción dominante por pantalla;
-- owner primario y escalamiento explícitos;
-- estados loading/empty/error/disabled honestos;
-- operación móvil usable;
-- excepciones separadas del camino normal;
-- mismo lote completa la cadena requerida por `PILOT_ACCEPTANCE.md`.
+Cierre técnico alcanzado:
+- Ficha 360 guía la continuidad usando evidencia del Seafood Event Graph;
+- packing hereda lote/planta y deja scanner/corrección manual como excepción;
+- palletización hereda lote/planta y limita cajas al mismo `reception_id`;
+- frío hereda planta/pallet y selecciona automáticamente contexto sólo cuando es inequívoco;
+- inventario mantiene el lote activo y no mezcla prioridades de otros lotes de la planta;
+- órdenes de venta consumen `receptionId` y priorizan ese lote en la reserva;
+- ubicación física exige movimiento con destino real;
+- compromiso comercial exige asignación positiva a orden no cancelada;
+- despacho/venta ya no se usan como sustituto silencioso de ubicación o compromiso;
+- una acción dominante, estados honestos, owners y excepciones quedan protegidos por contratos CI;
+- desktop/mobile Chromium y Vercel pasaron sobre el baseline técnico.
 
-Lo que dependa de operador/planta/día real pasa a `REQUIERE PILOTO REAL`, no genera features simuladas.
+Pendiente sólo de piloto:
+- ejecutar el mismo `reception_id` con personas, pesos, evidencia y decisiones reales;
+- completar la matriz de roles de `PILOT_ACCEPTANCE.md`;
+- registrar el cierre diario real de la planta;
+- demostrar tres días consecutivos cuando corresponda a la revisión LIVE;
+- aceptación humana explícita.
+
+**Freeze:** no agregar más pasos al flujo mínimo antes del piloto. Cualquier nueva automatización operacional pasa a POST-PILOT / WATCH salvo P0/P1.
 
 ---
 
@@ -218,55 +232,4 @@ Criterios ingeniería/seguridad:
 
 **Estado:** `REQUIERE PILOTO REAL`
 
-No se cierra con mocks, seeds o inferencias.
-
-Por planta:
-- usuarios reales y scopes reales;
-- recepción real + evidencia real;
-- Calidad real;
-- Producción del mismo lote;
-- Inventario físico del mismo lote;
-- señal comercial vigente del mismo lote;
-- cierre diario;
-- auditoría de actores;
-- 3 días consecutivos cuando aplique;
-- cero P0/P1;
-- aceptación humana del responsable.
-
-El piloto global sólo pasa cuando se cumplen los criterios de `PILOT_ACCEPTANCE.md`.
-
----
-
-# Orden de ejecución bloqueado
-
-1. Gate 2 — Trazabilidad/interoperabilidad.
-2. Gate 3 — Operación mínima.
-3. Gate 4 — Seafood AI.
-4. Gate 5 — Uni/visión.
-5. Gate 6 — Comercial/finanzas.
-6. Gate 7 — Simplificación/hardening/release.
-7. Pilot Gate — operación real y aceptación humana.
-
-Un gate puede tener trabajo ya adelantado, pero no se abre un octavo frente.
-
-## Regla BET NOW
-
-Borat puede mantener **una sola** apuesta experimental activa. Si no ayuda a cerrar el gate actual, se mueve a `WATCH`.
-
-## Regla de salida
-
-Pescamar deja de estar en desarrollo horizontal cuando:
-
-- Gates 1–7 están `CERRADO`;
-- Qalito tiene release técnico `PASS` sobre el SHA exacto;
-- todo requisito físico/humano restante está clasificado `REQUIERE PILOTO REAL`;
-- no existe P0/P1 conocido;
-- no hay feature pendiente que sea necesaria para ejecutar el piloto.
-
-A partir de ahí sólo se aceptan:
-- defectos del piloto;
-- cambios regulatorios;
-- necesidades comprobadas por operación real;
-- mejoras post-pilot explícitamente priorizadas.
-
-**Fin del desarrollo horizontal.**
+El piloto sólo puede cerrarse con datos, personas, operación física y aceptación humana conforme a `PILOT_ACCEPTANCE.md`. No se crean seeds, simulaciones ni hechos sintéticos para obtener PASS.
