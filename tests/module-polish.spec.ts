@@ -30,7 +30,7 @@ test('820px shell uses the navigation drawer instead of an icon-only rail',async
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
   await trigger.click()
   await expect(sidebar).toHaveClass(/is-open/)
-  await expect(page.getByRole('link',{name:'Operación',exact:true})).toBeVisible()
+  await expect(page.getByRole('link',{name:'Plantas',exact:true})).toBeVisible()
   await expect(page.getByRole('button',{name:'Cerrar menú'})).toBeVisible()
   await page.screenshot({path:testInfo.outputPath('tablet-production-drawer.png'),fullPage:true})
 })
