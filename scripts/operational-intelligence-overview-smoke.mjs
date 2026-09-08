@@ -40,7 +40,7 @@ assert(copilot.includes("const intelligenceCapabilities={canAssessCommercialComm
 assert(copilot.includes('buildOperationalIntelligence(ordered,intelligenceCapabilities)'),'Seafood AI must use permission-aware Operational Intelligence')
 assert(copilot.includes("commercialRole?sql`select a.id allocation_id")&&copilot.includes("commercialRole?sql`select s.id,s.dispatch_id"),'Seafood AI must not retrieve restricted commercial evidence merely to suppress a false positive')
 assert(brief.includes("fetch('/api/operational-intelligence-overview'"),'Executive Decision Brief must consume the live overview')
-assert(brief.includes('topOperational?.')&&brief.includes('topOperational.signal.title')&&brief.includes('Hacer: {topOperational.signal.action}'),'Control Tower must surface one dominant operational priority and next action')
+assert(brief.includes('topOperational?<Link')&&brief.includes('topOperational.signal.title')&&brief.includes('Hacer: {topOperational.signal.action}'),'Control Tower must surface one dominant operational priority and next action')
 assert(brief.includes('ownerForPath')&&brief.includes('<b>Responsable:</b> {operationalOwner}'),'Control Tower must route the dominant exception to one responsible function without pretending an individual assignment')
 assert(brief.includes("return 'Comercial'")&&brief.includes("return 'Gerencia'")&&brief.includes("return 'Operación'")&&brief.includes("return 'Administración'"),'responsible routing must cover commercial, management, operations and technical administration functions')
 assert(brief.includes('topOperational.signal.blockers'),'Control Tower must expose blockers before continuation')
