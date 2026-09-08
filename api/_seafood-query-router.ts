@@ -61,6 +61,9 @@ function hasAny(value:string,patterns:RegExp[]){return patterns.some(pattern=>pa
 const investigationPatterns=[
  /\bpor que\b/,/\bporque\b/,/\bexplica/,/\bcompar/,/\bhistor/,/\btendenc/,/\bcausa/,/\brelacion/,/\bcorrel/,/\binvestig/,/\banomali/,/\bdesviacion/,/\bevolucion/,/\brentabil/,/\btrazab/,/\blinaje/,/\bmejor\b.*\bproveedor/,/\bpeor\b.*\bproveedor/,/\bmejor\b.*\brendimiento/,/\bpeor\b.*\brendimiento/
 ]
+const historicalComparisonPatterns=[
+ /\bcompar/,/\bhistor/,/\btendenc/,/\bproveedor/,/\bevolucion/,/\brentabil/,/\btrazab/,/\blinaje/,/\bmejor\b/,/\bpeor\b/
+]
 const deterministicLotPatterns=[
  /\bque bloquea/,/\bbloqueo/,/\bestado\b/,/\bsiguiente accion/,/\bque hago/,/\bque sigue/,/\blisto\b/,/\bapto\b/,/\bjapon\b/,/\bliberad/,/\bgrade\b/,/\bcolor\b/,/\bxray\b/,/\brayos? x/,/\bhold\b/,/\bpuedo despachar/
 ]
@@ -82,11 +85,12 @@ function fastCapabilities(question:string,hasLot:boolean):SeafoodCapability[]{
 export function routeSeafoodQuery(input:{question:string;hasLot:boolean;hasPhotos:boolean;seniorUrchin:boolean}):SeafoodQueryRoute{
  const question=normalize(input.question)
  const investigative=hasAny(question,investigationPatterns)
+ const historicalComparison=hasAny(question,historicalComparisonPatterns)
  const urchinSpecific=input.seniorUrchin||/\berizo|\burchin|\bjapon\b|\bgrade\b|\bxray\b|\brayos? x|\bcolor\b/.test(question)
  if(input.hasLot&&!input.hasPhotos&&!investigative&&hasAny(question,deterministicLotPatterns)){
   const required:SeafoodCapability[]=['lot_control','operational_intelligence']
-  if(urchinSpecific)required.push('urchin_graph')
-  return {version:SEAFOOD_QUERY_ROUTER_VERSION,route:'deterministic',intent:urchinSpecific?'lot_specialist_status':'lot_operational_status',requiredCapabilities:unique(required),optionalCapabilities:[],writesAllowed:false,humanGate:/\bjapon\b|\bliberad|\bdespach|\brechaz|\bgrade\b/.test(question)?'material_action_review':'none'}
+  if(input.seniorUrchin||/\bxray\b|\brayos? x/.test(question))required.push('urchin_graph')
+  return {version:SEAFOOD_QUERY_ROUTER_VERSION,route:'deterministic',intent:urchinSpecific?'lot_specialist_status':'lot_operational_status',requiredCapabilities:unique(required),optionalCapabilities:urchinSpecific&&!required.includes('urchin_graph')?['urchin_graph']:[],writesAllowed:false,humanGate:/\bjapon\b|\bliberad|\bdespach|\brechaz|\bgrade\b/.test(question)?'material_action_review':'none'}
  }
  const fast=fastCapabilities(question,input.hasLot)
  if(input.hasPhotos&&!investigative){
@@ -100,10 +104,16 @@ export function routeSeafoodQuery(input:{question:string;hasLot:boolean;hasPhoto
   if(input.hasLot)required.push('lot_control')
   return {version:SEAFOOD_QUERY_ROUTER_VERSION,route:'fast_evidence',intent:fast.length===1?`direct_${fast[0]}`:'direct_cross_domain',requiredCapabilities:unique(required),optionalCapabilities:[],writesAllowed:false,humanGate:/\bdespach|\bliberad|\brechaz|\baprobar/.test(question)?'material_action_review':'none'}
  }
- const required:SeafoodCapability[]=[...fast,'historical_lineage','canonical_intelligence']
+ const required:SeafoodCapability[]=[...fast]
+ const optional:SeafoodCapability[]=[]
  if(input.hasLot)required.push('lot_control','operational_intelligence')
+ if(historicalComparison)required.push('historical_lineage','canonical_intelligence')
+ else optional.push('historical_lineage','canonical_intelligence')
+ if(!input.hasLot&&!required.length)required.push('canonical_intelligence')
  if(urchinSpecific)required.push('urchin_graph')
- return {version:SEAFOOD_QUERY_ROUTER_VERSION,route:'investigative',intent:fast.length?`investigate_${fast.join('_')}`:'investigate_cross_domain',requiredCapabilities:unique(required),optionalCapabilities:input.hasLot?['receptions','production','quality','inventory','orders']:['receptions','production','quality','inventory'],writesAllowed:false,humanGate:'material_action_review'}
+ if(input.hasLot)optional.push('receptions','production','quality','inventory','orders')
+ else optional.push('receptions','production','quality','inventory')
+ return {version:SEAFOOD_QUERY_ROUTER_VERSION,route:'investigative',intent:historicalComparison?'investigate_historical_comparison':fast.length?`investigate_${fast.join('_')}`:'investigate_cross_domain',requiredCapabilities:unique(required),optionalCapabilities:unique(optional.filter(capability=>!required.includes(capability))),writesAllowed:false,humanGate:'material_action_review'}
 }
 
 export function evaluateEvidenceSufficiency(route:SeafoodQueryRoute,sources:SeafoodEvidenceSource[]):SeafoodEvidenceGate{
