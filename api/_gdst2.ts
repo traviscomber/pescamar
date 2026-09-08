@@ -18,19 +18,20 @@ export type Gdst2EventMapping={
   blockers:readonly string[]
 }
 
-export const gdst2EventMappings:readonly Gdst2EventMapping[]=[
-  {seafoodEventType:'reception',cte:'receiving',epcisType:'ObjectEvent',action:'OBSERVE',bizStep:'receiving',state:'candidate',condition:'Sólo aplica como receiving cuando el movimiento es land-facility → land-facility. Landing o transshipment requieren un CTE distinto y evidencia de origen/transporte.',blockers:['product EPC/lot identity','source and destination location identifiers','location classifications','readPoint','product owner / information provider master data']},
-  {seafoodEventType:'production',cte:'transformation',epcisType:'TransformationEvent',action:null,bizStep:'commissioning',state:'candidate',condition:'Requiere identidad explícita de productos de entrada y salida; el yield por sí solo no crea una transformación GDST exportable.',blockers:['input product identity','output product identity','output product classification=Seafood+Processed','readPoint','product owner / information provider master data']},
-  {seafoodEventType:'dispatch',cte:'shipping',epcisType:'ObjectEvent',action:'OBSERVE',bizStep:'shipping',state:'candidate',condition:'Requiere identificar producto/lote y origen/destino con master data resolvible.',blockers:['product EPC/lot identity','source and destination location identifiers','source and destination party identifiers','location classifications','readPoint','product owner / information provider master data']},
-  {seafoodEventType:'evidence',cte:null,epcisType:null,action:null,bizStep:null,state:'supporting_evidence',condition:'Documento/provenance puede respaldar KDEs pero no constituye por sí solo un CTE.',blockers:[]},
-  {seafoodEventType:'quality',cte:null,epcisType:null,action:null,bizStep:null,state:'supporting_evidence',condition:'Control de calidad es evidencia operacional; sólo se exporta cuando un perfil GDST específico lo vincula a un CTE/KDE.',blockers:[]},
-  {seafoodEventType:'vision',cte:null,epcisType:null,action:null,bizStep:null,state:'supporting_evidence',condition:'Uni Vision es evidencia complementaria y no reemplaza KDEs ni master data GDST.',blockers:[]},
-  {seafoodEventType:'inventory',cte:null,epcisType:null,action:null,bizStep:null,state:'internal_only',condition:'Un movimiento interno de inventario no se convierte automáticamente en CTE GDST.',blockers:[]},
-  {seafoodEventType:'commercial_commitment',cte:null,epcisType:null,action:null,bizStep:null,state:'internal_only',condition:'Una reserva/orden comercial no es por sí sola un evento EPCIS.',blockers:[]},
-  {seafoodEventType:'sale',cte:null,epcisType:null,action:null,bizStep:null,state:'internal_only',condition:'La venta puede aportar contexto de propiedad/comercial, pero no se exporta automáticamente como CTE.',blockers:[]},
-  {seafoodEventType:'note',cte:null,epcisType:null,action:null,bizStep:null,state:'supporting_evidence',condition:'Notas permanecen como evidencia interna salvo mapping explícito.',blockers:[]},
-] as const
+const gdst2EventMappingByType:Record<SeafoodEventType,Gdst2EventMapping>={
+  reception:{seafoodEventType:'reception',cte:'receiving',epcisType:'ObjectEvent',action:'OBSERVE',bizStep:'receiving',state:'candidate',condition:'Sólo aplica como receiving cuando el movimiento es land-facility → land-facility. Landing o transshipment requieren un CTE distinto y evidencia de origen/transporte.',blockers:['product EPC/lot identity','source and destination location identifiers','location classifications','readPoint','product owner / information provider master data']},
+  evidence:{seafoodEventType:'evidence',cte:null,epcisType:null,action:null,bizStep:null,state:'supporting_evidence',condition:'Documento/provenance puede respaldar KDEs pero no constituye por sí solo un CTE.',blockers:[]},
+  quality:{seafoodEventType:'quality',cte:null,epcisType:null,action:null,bizStep:null,state:'supporting_evidence',condition:'Control de calidad es evidencia operacional; sólo se exporta cuando un perfil GDST específico lo vincula a un CTE/KDE.',blockers:[]},
+  production:{seafoodEventType:'production',cte:'transformation',epcisType:'TransformationEvent',action:null,bizStep:'commissioning',state:'candidate',condition:'Requiere identidad explícita de productos de entrada y salida; el yield por sí solo no crea una transformación GDST exportable.',blockers:['input product identity','output product identity','output product classification=Seafood+Processed','readPoint','product owner / information provider master data']},
+  vision:{seafoodEventType:'vision',cte:null,epcisType:null,action:null,bizStep:null,state:'supporting_evidence',condition:'Uni Vision es evidencia complementaria y no reemplaza KDEs ni master data GDST.',blockers:[]},
+  note:{seafoodEventType:'note',cte:null,epcisType:null,action:null,bizStep:null,state:'supporting_evidence',condition:'Notas permanecen como evidencia interna salvo mapping explícito.',blockers:[]},
+  inventory:{seafoodEventType:'inventory',cte:null,epcisType:null,action:null,bizStep:null,state:'internal_only',condition:'Un movimiento interno de inventario no se convierte automáticamente en CTE GDST.',blockers:[]},
+  commercial_commitment:{seafoodEventType:'commercial_commitment',cte:null,epcisType:null,action:null,bizStep:null,state:'internal_only',condition:'Una reserva/orden comercial no es por sí sola un evento EPCIS.',blockers:[]},
+  dispatch:{seafoodEventType:'dispatch',cte:'shipping',epcisType:'ObjectEvent',action:'OBSERVE',bizStep:'shipping',state:'candidate',condition:'Requiere identificar producto/lote y origen/destino con master data resolvible.',blockers:['product EPC/lot identity','source and destination location identifiers','source and destination party identifiers','location classifications','readPoint','product owner / information provider master data']},
+  sale:{seafoodEventType:'sale',cte:null,epcisType:null,action:null,bizStep:null,state:'internal_only',condition:'La venta puede aportar contexto de propiedad/comercial, pero no se exporta automáticamente como CTE.',blockers:[]},
+}
 
+export const gdst2EventMappings:readonly Gdst2EventMapping[]=Object.values(gdst2EventMappingByType)
 export const gdst2RequiredQueryParameters=['LT_eventTime','LT_recordTime','EQ_bizStep','EQ_transformationID','EQ_bizLocation'] as const
 
 export const gdst2CapabilityProfile={
@@ -42,7 +43,7 @@ export const gdst2CapabilityProfile={
   canClaimGdstCapable:false,
   capabilities:[
     {id:'seafood-event-graph',state:'evidenced' as const,evidence:'Seafood Event Graph v1 expone lineage lot-scoped y organization-scoped en modo read-only.'},
-    {id:'event-profile-mapping',state:'foundation' as const,evidence:'Receiving, transformation y shipping tienen mapping candidato explícito con blockers.'},
+    {id:'event-profile-mapping',state:'foundation' as const,evidence:'Receiving, transformation y shipping tienen mapping candidato explícito; todos los SeafoodEventType requieren clasificación GDST explícita en compile-time.'},
     {id:'epcis-jsonld-serialization',state:'missing' as const,evidence:'No existe todavía serializer EPCIS 2.0 JSON-LD habilitado.'},
     {id:'epcis-query-interface',state:'missing' as const,evidence:'No existe endpoint EPCIS Query Interface compatible con el Capability Test.'},
     {id:'epcis-capture-write',state:'missing' as const,evidence:'No existe Capture Interface GDST; el write plane externo permanece OFF.'},
