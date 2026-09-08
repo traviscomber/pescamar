@@ -24,7 +24,7 @@ export const integrationAdapters:readonly IntegrationAdapter[]=[
   {id:'industrial-opcua',label:'OPC-UA gateway',direction:'southbound',protocol:'opc-ua',status:'planned',mapsTo:'machine / process events',idempotency:'required',evidence:'Se habilitará sólo con equipo y contrato real.'},
   {id:'industrial-modbus',label:'Modbus gateway',direction:'southbound',protocol:'modbus',status:'planned',mapsTo:'machine / sensor events',idempotency:'required',evidence:'Se habilitará sólo con equipo y contrato real.'},
   {id:'vision-rtsp-onvif',label:'RTSP / ONVIF vision gateway',direction:'southbound',protocol:'rtsp/onvif',status:'planned',mapsTo:'EdgeVision evidence',idempotency:'required',evidence:'No se declara cámara industrial conectada todavía.'},
-  {id:'traceability-epcis-gdst',label:'GS1 EPCIS / GDST export',direction:'northbound',protocol:'epcis/gdst',status:'planned',mapsTo:'external traceability events',idempotency:'not_applicable',evidence:'Pendiente de mapping y requisitos comerciales concretos antes de declarar conformidad.'},
+  {id:'traceability-epcis-gdst',label:'GS1 EPCIS / GDST 2.0',direction:'northbound',protocol:'epcis/gdst',status:'foundation',mapsTo:'seafood.event.v1 → GDST 2.0 candidate event profiles',idempotency:'not_applicable',evidence:'Mapping candidato y capability profile read-only implementados. EPCIS JSON-LD, Query/Capture, Digital Link, master data y Capability Test oficial siguen pendientes; no se declara GDST Capable.'},
 ] as const
 
 export const integrationContract={
