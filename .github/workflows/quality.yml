@@ -72,6 +72,8 @@ jobs:
         run: node scripts/organization-context-smoke.mjs
       - name: Integration data plane contract
         run: node scripts/integration-data-plane-smoke.mjs
+      - name: GS1 identity registry contract
+        run: node scripts/gs1-identity-smoke.mjs
       - name: GDST 2.0 capability foundation
         run: node scripts/gdst2-capability-smoke.mjs
       - name: Canonical data quality contract
