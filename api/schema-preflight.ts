@@ -30,7 +30,8 @@ export default async function handler(req:Request,res:Response){
         to_regclass('public.regulatory_holds') is not null regulatory_holds,
         to_regclass('public.japan_export_release_evidence') is not null japan_export_release_evidence,
         to_regclass('public.lot_lifecycle_events') is not null lot_lifecycle_events,
-        to_regclass('public.sea_urchin_external_references') is not null sea_urchin_external_references`,
+        to_regclass('public.sea_urchin_external_references') is not null sea_urchin_external_references,
+        to_regclass('public.gs1_identity_links') is not null gs1_identity_links`,
       sql`select schemaname,tablename from pg_tables where schemaname not in ('pg_catalog','information_schema') and (tablename ilike '%migration%' or tablename ilike '%schema%') order by schemaname,tablename`
     ])
     const landmarkRow=((Array.isArray(landmarkRaw)?landmarkRaw:[])[0]??{}) as LandmarkRow
@@ -58,17 +59,7 @@ export default async function handler(req:Request,res:Response){
       ok:true,
       expected:{count:expectedMigrations.length,first:expectedMigrations[0],latest,migrations:expectedMigrations},
       runtimeCompatibility:{status:runtimeCompatible?'compatible':'incomplete',present:presentLandmarks,total:landmarks.length,landmarks},
-      executionEvidence:{
-        status:trackerVerified?'inventory_verified':registryPresent?'tracker_present_unverified':'missing',
-        tracked:trackerVerified,
-        trackerTables,
-        baselineRows,
-        reconciledRows,
-        appliedRows,
-        missing,
-        unexpected,
-        invalid
-      },
+      executionEvidence:{status:trackerVerified?'inventory_verified':registryPresent?'tracker_present_unverified':'missing',tracked:trackerVerified,trackerTables,baselineRows,reconciledRows,appliedRows,missing,unexpected,invalid},
       pilotGate:{
         status:trackerVerified?'pass':'hold',
         reason:trackerVerified
