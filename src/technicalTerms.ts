@@ -30,4 +30,7 @@ export const technicalTerms:Record<TechnicalTermId,TechnicalTerm>={
  onvif:{code:'ONVIF',name:{es:'Estándar abierto de interoperabilidad para cámaras IP',en:'Open interoperability standard for IP cameras'},plain:{es:'Permite descubrir y controlar cámaras compatibles sin depender de un fabricante.',en:'Lets compatible cameras be discovered and controlled without depending on one manufacturer.'},use:{es:'Complementa RTSP para integrar cámaras de visión de planta.',en:'Complements RTSP when integrating plant vision cameras.'}},
 }
 
-export function technicalTerm(id:TechnicalTermId,locale:Locale){return technicalTerms[id][locale]}
+export function technicalTerm(id:TechnicalTermId,locale:Locale){
+ const term=technicalTerms[id]
+ return {code:term.code,name:term.name[locale],plain:term.plain[locale],use:term.use[locale]}
+}
