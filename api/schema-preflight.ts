@@ -29,7 +29,8 @@ export default async function handler(req:Request,res:Response){
         to_regclass('public.cold_runs') is not null cold_runs,
         to_regclass('public.regulatory_holds') is not null regulatory_holds,
         to_regclass('public.japan_export_release_evidence') is not null japan_export_release_evidence,
-        to_regclass('public.lot_lifecycle_events') is not null lot_lifecycle_events`,
+        to_regclass('public.lot_lifecycle_events') is not null lot_lifecycle_events,
+        to_regclass('public.sea_urchin_external_references') is not null sea_urchin_external_references`,
       sql`select schemaname,tablename from pg_tables where schemaname not in ('pg_catalog','information_schema') and (tablename ilike '%migration%' or tablename ilike '%schema%') order by schemaname,tablename`
     ])
     const landmarkRow=((Array.isArray(landmarkRaw)?landmarkRaw:[])[0]??{}) as LandmarkRow
