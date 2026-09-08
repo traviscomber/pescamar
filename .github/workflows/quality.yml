@@ -76,6 +76,8 @@ jobs:
         run: node scripts/gs1-identity-smoke.mjs
       - name: GDST 2.0 capability foundation
         run: node scripts/gdst2-capability-smoke.mjs
+      - name: EPCIS 2.0 serializer contract
+        run: node scripts/epcis2-serializer-smoke.mjs
       - name: Canonical data quality contract
         run: node scripts/canonical-data-quality-smoke.mjs
       - name: Seafood AI foundation contract
