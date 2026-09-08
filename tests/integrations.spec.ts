@@ -37,6 +37,6 @@ test('Integration Data Plane distinguishes evidenced, foundation and planned ada
 test('Integration Data Plane is not exposed to viewer role',async({page})=>{
  await mockApp(page,'viewer')
  await page.goto('/integrations')
- await expect(page).toHaveURL(/\/$/)
+ await expect(page).toHaveURL(/\/es\/?$/)
  await expect(page.getByRole('heading',{name:'Integrations',exact:true})).toHaveCount(0)
 })
