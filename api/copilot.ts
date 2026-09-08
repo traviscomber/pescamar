@@ -1,11 +1,9 @@
 import { requireOperator } from './_auth.js'
 import { resolveCopilotPlant } from './_copilot-context.js'
-import { buildCopilotContextWithLot } from './_copilot-context-with-lot.js'
-import { buildHistoricalLineageEvidence } from './_copilot-historical-lineage.js'
-import { buildCanonicalBusinessIntelligence } from './_canonical-business-intelligence.js'
-import { buildSeaUrchinCopilotEvidence } from './_copilot-sea-urchin.js'
+import { buildRoutedCopilotEvidence } from './_copilot-route-evidence.js'
 import { activeOrganization } from './_organization.js'
 import { evidenceClassForSource, invalidSourceTags, SEAFOOD_AI_POLICY_VERSION, seafoodAiSystemPrompt } from './_seafood-ai-policy.js'
+import { evaluateEvidenceSufficiency, routeSeafoodQuery, SEAFOOD_QUERY_ROUTER_VERSION } from './_seafood-query-router.js'
 
 declare const process:{env:Record<string,string|undefined>}
 declare function fetch(input:string,init?:{method?:string;headers?:Record<string,string>;body?:string}):Promise<{ok:boolean;status:number;json:()=>Promise<unknown>}>
@@ -19,15 +17,42 @@ type OpenAIContent={type:'input_text';text:string}|{type:'input_image';image_url
 type OpenAIMessage={role:'developer'|'user';content:OpenAIContent[]}
 
 const MODEL='gpt-5.6-terra',MAX_QUESTION=1800,MAX_HISTORY=6,MAX_IMAGES=3,MAX_IMAGE_CHARS=1800000
+const LOT_ID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
-function history(value:unknown):HistoryTurn[]{if(!Array.isArray(value))return[];return value.slice(-MAX_HISTORY).flatMap(item=>{if(!item||typeof item!=='object')return[];const row=item as Record<string,unknown>,question=typeof row.question==='string'?row.question.trim().slice(0,MAX_QUESTION):'',answer=typeof row.answer==='string'?row.answer.trim().slice(0,5000):'';return question&&answer?[{question,answer}]:[]})}
+function history(value:unknown):HistoryTurn[]{
+ if(!Array.isArray(value))return[]
+ return value.slice(-MAX_HISTORY).flatMap(item=>{
+  if(!item||typeof item!=='object')return[]
+  const row=item as Record<string,unknown>,question=typeof row.question==='string'?row.question.trim().slice(0,MAX_QUESTION):'',answer=typeof row.answer==='string'?row.answer.trim().slice(0,5000):''
+  return question&&answer?[{question,answer}]:[]
+ })
+}
 function images(value:unknown){if(!Array.isArray(value))return[] as string[];return value.slice(0,MAX_IMAGES).flatMap(item=>typeof item==='string'&&/^data:image\/(jpeg|png|webp);base64,/i.test(item)&&item.length<=MAX_IMAGE_CHARS?[item]:[])}
 function suggestedQuestions(text:string){try{const parsed=JSON.parse(text) as unknown;if(!Array.isArray(parsed))return[];return parsed.flatMap(item=>typeof item==='string'?[item.trim().slice(0,140)]:[]).filter(Boolean).slice(0,2)}catch{return[]}}
 function record(value:unknown):Record<string,unknown>|null{return value&&typeof value==='object'&&!Array.isArray(value)?value as Record<string,unknown>:null}
 function finite(value:unknown){const parsed=Number(value);return Number.isFinite(parsed)?parsed:null}
 function strings(value:unknown){return Array.isArray(value)?value.flatMap(item=>typeof item==='string'&&item.trim()?[item.trim()]:[]):[] as string[]}
-function outputText(payload:unknown){if(!payload||typeof payload!=='object')return'';const row=payload as Record<string,unknown>;if(typeof row.output_text==='string')return row.output_text.trim();if(!Array.isArray(row.output))return'';return row.output.flatMap(item=>{if(!item||typeof item!=='object')return[];const content=(item as Record<string,unknown>).content;if(!Array.isArray(content))return[];return content.flatMap(part=>part&&typeof part==='object'&&typeof (part as Record<string,unknown>).text==='string'?[(part as Record<string,unknown>).text as string]:[])}).join('\n').trim()}
-function visualMeasurements(value:unknown):VisualMeasurement[]{if(!Array.isArray(value))return[];return value.slice(0,MAX_IMAGES).flatMap(item=>{const row=record(item);if(!row)return[];const index=finite(row.index),usableRatio=finite(row.usableRatio),borderCandidateRatio=finite(row.borderCandidateRatio),lMean=finite(row.lMean),aMean=finite(row.aMean),bMean=finite(row.bMean),dispersion=finite(row.dispersion),chroma=finite(row.chroma),hueDeg=finite(row.hueDeg),pixelCount=finite(row.pixelCount);if(index==null||usableRatio==null||borderCandidateRatio==null||lMean==null||aMean==null||bMean==null||dispersion==null||chroma==null||hueDeg==null||pixelCount==null)return[];return[{index:Math.max(0,Math.min(MAX_IMAGES-1,Math.trunc(index))),name:typeof row.name==='string'?row.name.slice(0,160):null,confidence:row.confidence==='good'?'good':'review',usableRatio:Math.max(0,Math.min(1,usableRatio)),borderCandidateRatio:Math.max(0,Math.min(1,borderCandidateRatio)),lMean,aMean,bMean,dispersion:Math.max(0,dispersion),chroma:Math.max(0,chroma),hueDeg:((hueDeg%360)+360)%360,pixelCount:Math.max(0,Math.trunc(pixelCount))}]})}
+function outputText(payload:unknown){
+ if(!payload||typeof payload!=='object')return''
+ const row=payload as Record<string,unknown>
+ if(typeof row.output_text==='string')return row.output_text.trim()
+ if(!Array.isArray(row.output))return''
+ return row.output.flatMap(item=>{
+  if(!item||typeof item!=='object')return[]
+  const content=(item as Record<string,unknown>).content
+  if(!Array.isArray(content))return[]
+  return content.flatMap(part=>part&&typeof part==='object'&&typeof (part as Record<string,unknown>).text==='string'?[(part as Record<string,unknown>).text as string]:[])
+ }).join('\n').trim()
+}
+function visualMeasurements(value:unknown):VisualMeasurement[]{
+ if(!Array.isArray(value))return[]
+ return value.slice(0,MAX_IMAGES).flatMap(item=>{
+  const row=record(item);if(!row)return[]
+  const index=finite(row.index),usableRatio=finite(row.usableRatio),borderCandidateRatio=finite(row.borderCandidateRatio),lMean=finite(row.lMean),aMean=finite(row.aMean),bMean=finite(row.bMean),dispersion=finite(row.dispersion),chroma=finite(row.chroma),hueDeg=finite(row.hueDeg),pixelCount=finite(row.pixelCount)
+  if(index==null||usableRatio==null||borderCandidateRatio==null||lMean==null||aMean==null||bMean==null||dispersion==null||chroma==null||hueDeg==null||pixelCount==null)return[]
+  return[{index:Math.max(0,Math.min(MAX_IMAGES-1,Math.trunc(index))),name:typeof row.name==='string'?row.name.slice(0,160):null,confidence:row.confidence==='good'?'good':'review',usableRatio:Math.max(0,Math.min(1,usableRatio)),borderCandidateRatio:Math.max(0,Math.min(1,borderCandidateRatio)),lMean,aMean,bMean,dispersion:Math.max(0,dispersion),chroma:Math.max(0,chroma),hueDeg:((hueDeg%360)+360)%360,pixelCount:Math.max(0,Math.trunc(pixelCount))}]
+ })
+}
 function canonicalLotLab(data:Record<string,unknown>|null){const vision=record(data?.vision),latest=record(vision?.latest),lab=record(latest?.lab),l=finite(lab?.l),a=finite(lab?.a),b=finite(lab?.b);return l==null||a==null||b==null?null:{l,a,b}}
 function compareVisualToLot(measurements:VisualMeasurement[],data:Record<string,unknown>|null){const canonical=canonicalLotLab(data);if(!canonical)return[];return measurements.map(measurement=>({index:measurement.index,deltaE76:Number(Math.sqrt((measurement.lMean-canonical.l)**2+(measurement.aMean-canonical.a)**2+(measurement.bMean-canonical.b)**2).toFixed(3)),canonicalLab:canonical,interpretation:'distance_only_no_acceptance_threshold'}))}
 function fmt(value:number,digits=1){return value.toLocaleString('es-CL',{maximumFractionDigits:digits})}
@@ -59,10 +84,19 @@ function fallbackSuggestions(hasLot:boolean,hasPhotos:boolean){if(hasLot&&hasPho
 
 function deterministicAnswer(question:string,lotControl:Record<string,unknown>|null,graph:Record<string,unknown>|null,measurements:VisualMeasurement[],comparison:Array<{index:number;deltaE76:number}>,seniorUrchin:boolean){
  const q=question.toLocaleLowerCase('es-CL'),state=record(lotControl?.state),diagnosis=record(lotControl?.diagnosis),signals=record(lotControl?.signals),quality=record(signals?.quality),balance=record(signals?.balance),release=record(signals?.release),blockers=strings(diagnosis?.blockers),nextAction=typeof diagnosis?.nextAction==='string'?diagnosis.nextAction:'',asksJapan=/jap[oó]n|export|liberad|apto/.test(q),asksPhoto=/foto|fotograf|imagen|visual|color|lab|homogene/.test(q)
- if(lotControl){const lines:string[]=[];lines.push(String(state?.label??(blockers.length?'REQUIERE ATENCIÓN':'LOTE EN CURSO')));if(seniorUrchin&&graph){const processData=record(graph.process);lines.push(`Grade ${String(processData?.grade??'—')} · Color ${String(processData?.colorStatus??'pendiente')} · RX ${String(processData?.xrayStatus??'pendiente')}.`)}else{const yieldPct=finite(balance?.yieldPct);lines.push(`Calidad ${String(quality?.label??'—')}${yieldPct==null?'':` · Yield ${fmt(yieldPct)}%`}${release?.label!=null?` · ${release?.kind==='japan'?'Japón':'Evidencia'} ${String(release.label)}`:''}.`)}if(measurements.length&&(asksPhoto||seniorUrchin)){const m=measurements[0];lines.push(`Visual Twin: LAB ${fmt(m.lMean)} / ${fmt(m.aMean)} / ${fmt(m.bMean)} · dispersión ${fmt(m.dispersion)}${comparison[0]?` · ΔE76 ${fmt(comparison[0].deltaE76,2)}`:''}.`)}if(blockers[0])lines.push(`Bloqueo: ${blockers[0]}.`);if(nextAction)lines.push(`Siguiente: ${nextAction}`);return lines.slice(0,5).join('\n')}
+ if(lotControl){
+  const lines:string[]=[]
+  lines.push(String(state?.label??(blockers.length?'REQUIERE ATENCIÓN':'LOTE EN CURSO'))
+  if(seniorUrchin&&graph){const processData=record(graph.process);lines.push(`Grade ${String(processData?.grade??'—')} · Color ${String(processData?.colorStatus??'pendiente')} · RX ${String(processData?.xrayStatus??'pendiente')}.`)}
+  else{const yieldPct=finite(balance?.yieldPct);lines.push(`Calidad ${String(quality?.label??'—')}${yieldPct==null?'':` · Yield ${fmt(yieldPct)}%`}${release?.label!=null?` · ${release?.kind==='japan'?'Japón':'Evidencia'} ${String(release.label)}`:''}.`)}
+  if(measurements.length&&(asksPhoto||seniorUrchin)){const m=measurements[0];lines.push(`Visual Twin: LAB ${fmt(m.lMean)} / ${fmt(m.aMean)} / ${fmt(m.bMean)} · dispersión ${fmt(m.dispersion)}${comparison[0]?` · ΔE76 ${fmt(comparison[0].deltaE76,2)}`:''}.`)}
+  if(blockers[0])lines.push(`Bloqueo: ${blockers[0]}.`)
+  if(nextAction)lines.push(`Siguiente: ${nextAction}`)
+  return lines.slice(0,5).join('\n')
+ }
  if(seniorUrchin&&asksJapan)return 'JAPÓN NO EVALUABLE SIN LOTE\nPara verificar un embarque hay que vincular el Digital Twin del lote.'
  if(seniorUrchin&&measurements.length){const m=measurements[0];return `VISUAL TWIN DISPONIBLE\nLAB ${fmt(m.lMean)} / ${fmt(m.aMean)} / ${fmt(m.bMean)} · dispersión ${fmt(m.dispersion)}.\nSiguiente: vincula un lote para cruzarlo con la operación.`}
- return 'SEAFOOD AI OPERATIVA\nNo hay un lote seleccionado para construir una decisión determinística.\nSiguiente: selecciona un lote o pregunta por la operación agregada.'
+ return 'SEAFOOD AI OPERATIVA\nNo hay evidencia determinística suficiente para responder esta consulta.\nSiguiente: revisa las fuentes disponibles o selecciona un lote.'
 }
 
 export default async function handler(req:Request,res:Response){
@@ -72,19 +106,35 @@ export default async function handler(req:Request,res:Response){
  const body=req.body&&typeof req.body==='object'?req.body as Record<string,unknown>:{},imageData=images(body.images),visualTwinMeasurements=visualMeasurements(body.visualMeasurements),question=(typeof body.question==='string'?body.question.trim().slice(0,MAX_QUESTION):'')||(imageData.length?'Analiza estas fotos y dime qué ves, qué significa y qué debería revisar después.':'')
  if(!question)return res.status(400).json({ok:false,error:'Escribe una pregunta o agrega una foto'})
  const seniorUrchin=body.mode==='sea_urchin_senior',plantId=resolveCopilotPlant(operator,body.plantId);if(plantId===undefined)return res.status(403).json({ok:false,error:'Planta fuera de tu alcance'})
+ const receptionId=typeof body.receptionId==='string'?body.receptionId.trim():'',hasLot=LOT_ID.test(receptionId),hasPhotoEvidence=imageData.length>0||visualTwinMeasurements.length>0
+ const queryRoute=routeSeafoodQuery({question,hasLot,hasPhotos:hasPhotoEvidence,seniorUrchin})
  try{
-  const [context,historicalLineage,canonicalIntelligence,urchinGraph,photoObservation]=await Promise.all([buildCopilotContextWithLot(operator,plantId,body.receptionId),buildHistoricalLineageEvidence(operator),buildCanonicalBusinessIntelligence(operator),buildSeaUrchinCopilotEvidence(operator,body.receptionId),inspectPhotos(imageData,question).catch(error=>{console.error('copilot_photo_degraded',error instanceof Error?error.message:'unknown');return null})])
-  const lotControl=record(context.data.lot_control),graphData=urchinGraph?.data??null,visualComparison=compareVisualToLot(visualTwinMeasurements,graphData),hasPhotoEvidence=imageData.length>0||visualTwinMeasurements.length>0
+  const [{context,urchinGraph,loadedCapabilities},photoObservation]=await Promise.all([
+   buildRoutedCopilotEvidence(operator,plantId,body.receptionId,queryRoute),
+   inspectPhotos(imageData,question).catch(error=>{console.error('copilot_photo_degraded',error instanceof Error?error.message:'unknown');return null}),
+  ])
+  const lotControl=record(context.data.lot_control),graphData=urchinGraph?.data??null,visualComparison=compareVisualToLot(visualTwinMeasurements,graphData)
   const photoSource:Source|null=hasPhotoEvidence?{id:'photo_observation',label:visualTwinMeasurements.length?`Visual Twin · ${Math.max(imageData.length,visualTwinMeasurements.length)} foto${Math.max(imageData.length,visualTwinMeasurements.length)===1?'':'s'}`:`Fotos adjuntas · ${imageData.length}`,path:'/proceso-erizo',rows:Math.max(imageData.length,visualTwinMeasurements.length),freshness:new Date().toISOString()}:null
-  const extraSources=[historicalLineage?.source,canonicalIntelligence?.source,urchinGraph?.source,photoSource].filter((source):source is Source=>Boolean(source)),baseSources=[...context.sources,...extraSources],sources=baseSources.map(source=>{const evidenceClass=evidenceClassForSource(source.id);if(!evidenceClass)throw new Error(`unclassified_source:${source.id}`);return {...source,evidenceClass}})
-  const extraData={...(historicalLineage?{historical_lineage:historicalLineage.data}:{}),...(canonicalIntelligence?{canonical_intelligence:canonicalIntelligence.data}:{}),...(urchinGraph?{urchin_graph:urchinGraph.data}:{}),...(hasPhotoEvidence?{photo_observation:{images:imageData.length,analysis:photoObservation,persistence:'ephemeral_user_attachment',linkedReceptionId:lotControl?body.receptionId??null:null,visualTwin:{method:'univision_cielab_v1',measurements:visualTwinMeasurements,comparisonToCanonicalLot:visualComparison,rule:'descriptive_only_no_grade_or_acceptance_threshold'}}}:{})},scopedContext={...context,scope:{...context.scope,organizationId:operator.organizationId},sources,data:{...context.data,...extraData}}
+  const baseSources=[...context.sources,...(photoSource?[photoSource]:[])],sources=baseSources.map(source=>{const evidenceClass=evidenceClassForSource(source.id);if(!evidenceClass)throw new Error(`unclassified_source:${source.id}`);return {...source,evidenceClass}})
+  const evidenceGate=evaluateEvidenceSufficiency(queryRoute,sources)
+  const extraData=hasPhotoEvidence?{photo_observation:{images:imageData.length,analysis:photoObservation,persistence:'ephemeral_user_attachment',linkedReceptionId:lotControl?body.receptionId??null:null,visualTwin:{method:'univision_cielab_v1',measurements:visualTwinMeasurements,comparisonToCanonicalLot:visualComparison,rule:'descriptive_only_no_grade_or_acceptance_threshold'}}}:{}
+  const scopedContext={...context,scope:{...context.scope,organizationId:operator.organizationId},sources,data:{...context.data,...extraData},router:{...queryRoute,loadedCapabilities},evidenceGate}
+  if(queryRoute.route==='deterministic'&&lotControl&&evidenceGate.status!=='insufficient'){
+   const answer=deterministicAnswer(question,lotControl,graphData,visualTwinMeasurements,visualComparison,seniorUrchin)
+   return res.status(200).json({ok:true,answer,suggestedQuestions:seniorUrchin?fallbackSuggestions(true,hasPhotoEvidence):[],engine:seniorUrchin?'Asistente Senior de Erizo':'Seafood AI',implementation:activeOrganization.implementationName,policyVersion:SEAFOOD_AI_POLICY_VERSION,routerVersion:SEAFOOD_QUERY_ROUTER_VERSION,router:queryRoute,evidenceGate,model:'deterministic-router-v1',generatedAt:context.generatedAt,scope:scopedContext.scope,sources,photoAnalysis:Boolean(photoObservation),visualTwin:visualTwinMeasurements.length>0,degraded:false,provider:'deterministic-router'})
+  }
   const conversation=history(body.history).map((turn,index)=>`TURNO ${index+1}\nPREGUNTA: ${turn.question}\nRESPUESTA: ${turn.answer}`).join('\n\n')||'Sin turnos previos.',sourceLegend=sources.map(source=>`[${source.id}] ${source.label} · class=${source.evidenceClass} · rows=${source.rows} · freshness=${source.freshness??'unknown'}`).join('\n')
   const seniorPrompt=seniorUrchin?(urchinGraph?`\n\nMODO ASISTENTE SENIOR DE ERIZO — LOTE ESPECÍFICO:\n- lot_control es la decisión operacional determinística primaria: estado, bloqueos y siguiente acción.\n- urchin_graph amplía esa decisión con proceso, Color/Grade, RX, packing, frío, regulación y Japón.\n- Usa photo_observation como evidencia visual complementaria, nunca como sustituto de un gate.\n- Si photo_observation.visualTwin.measurements existe, es una medición cuantitativa CIELAB y homogeneidad descriptiva.\n- Si visualTwin.comparisonToCanonicalLot contiene deltaE76, úsalo sólo como distancia objetiva; no existe umbral PASS/FAIL.\n- Tu salida normal debe ser una ficha operacional de máximo 5 líneas: estado, señal, bloqueo, siguiente acción y límite si aporta valor.\n- Para Japón usa «APTO JAPÓN» sólo si urchin_graph.japan.releasable es true; en cualquier otro caso «NO LIBERADO JAPÓN».\n- Nunca reemplaces lot_control.nextAction por una acción más agresiva.`:`\n\nMODO ASISTENTE SENIOR DE ERIZO — VISIÓN GENERAL:\n- La selección de lote es opcional. Sin lote, una foto sólo permite descripción prudente.\n- Si preguntan aprobación Japón sin lote, responde «JAPÓN NO EVALUABLE SIN LOTE».\n- No inventes Grade, umbrales ni aprobación regulatoria.`):''
+  const routePrompt=`\n\nROUTER SEAFOOD AI:\n- route=${queryRoute.route}\n- intent=${queryRoute.intent}\n- requiredCapabilities=${queryRoute.requiredCapabilities.join(',')}\n- loadedCapabilities=${loadedCapabilities.join(',')}\n- evidenceGate=${evidenceGate.status} (${evidenceGate.coveragePct}% coverage)\n- missing=${evidenceGate.missing.join(',')||'none'}\n- empty=${evidenceGate.empty.join(',')||'none'}\n- writesAllowed=false\n- Si evidenceGate no es sufficient, declara explícitamente el límite antes de inferir. No solicites ni supongas capabilities que no estén en SEAFOOD_SNAPSHOT.`
   try{
-   const answer=await openAI([{role:'developer',content:[{type:'input_text',text:seafoodAiSystemPrompt(activeOrganization.implementationName)+seniorPrompt}]},{role:'user',content:[{type:'input_text',text:`SOURCES:\n${sourceLegend}\n\nHISTORIAL:\n${conversation}\n\nPREGUNTA:\n${question}\n\nSEAFOOD_SNAPSHOT:\n${JSON.stringify(scopedContext)}`}]}],seniorUrchin?900:1800,seniorUrchin?'medium':'low')
+   const answer=await openAI([{role:'developer',content:[{type:'input_text',text:seafoodAiSystemPrompt(activeOrganization.implementationName)+routePrompt+seniorPrompt}]},{role:'user',content:[{type:'input_text',text:`SOURCES:\n${sourceLegend}\n\nHISTORIAL:\n${conversation}\n\nPREGUNTA:\n${question}\n\nSEAFOOD_SNAPSHOT:\n${JSON.stringify(scopedContext)}`}]}],seniorUrchin?900:queryRoute.route==='investigative'?1800:1200,seniorUrchin||queryRoute.route==='investigative'?'medium':'low')
    const invalidTags=invalidSourceTags(answer,new Set(sources.map(source=>source.id)));if(invalidTags.length)throw new Error(`invalid_source_tags:${invalidTags.join(',')}`)
    const suggestions=seniorUrchin?await buildSuggestions(answer,question,Boolean(lotControl),hasPhotoEvidence):[]
-   return res.status(200).json({ok:true,answer,suggestedQuestions:suggestions,engine:seniorUrchin?'Asistente Senior de Erizo':'Seafood AI',implementation:activeOrganization.implementationName,policyVersion:SEAFOOD_AI_POLICY_VERSION,model:MODEL,generatedAt:context.generatedAt,scope:scopedContext.scope,sources,photoAnalysis:Boolean(photoObservation),visualTwin:visualTwinMeasurements.length>0,degraded:false,provider:'openai-direct'})
-  }catch(modelError){console.error('copilot_model_degraded',modelError instanceof Error?modelError.message:'unknown');const answer=deterministicAnswer(question,lotControl,graphData,visualTwinMeasurements,visualComparison,seniorUrchin);return res.status(200).json({ok:true,answer,suggestedQuestions:fallbackSuggestions(Boolean(lotControl),hasPhotoEvidence),engine:seniorUrchin?'IA Erizo · modo canónico':'Seafood AI · modo canónico',implementation:activeOrganization.implementationName,policyVersion:SEAFOOD_AI_POLICY_VERSION,model:'deterministic-canonical-fallback',generatedAt:context.generatedAt,scope:scopedContext.scope,sources,photoAnalysis:Boolean(photoObservation),visualTwin:visualTwinMeasurements.length>0,degraded:true,provider:'canonical-fallback'})}
+   return res.status(200).json({ok:true,answer,suggestedQuestions:suggestions,engine:seniorUrchin?'Asistente Senior de Erizo':'Seafood AI',implementation:activeOrganization.implementationName,policyVersion:SEAFOOD_AI_POLICY_VERSION,routerVersion:SEAFOOD_QUERY_ROUTER_VERSION,router:queryRoute,evidenceGate,model:MODEL,generatedAt:context.generatedAt,scope:scopedContext.scope,sources,photoAnalysis:Boolean(photoObservation),visualTwin:visualTwinMeasurements.length>0,degraded:false,provider:'openai-direct'})
+  }catch(modelError){
+   console.error('copilot_model_degraded',modelError instanceof Error?modelError.message:'unknown')
+   const answer=deterministicAnswer(question,lotControl,graphData,visualTwinMeasurements,visualComparison,seniorUrchin)
+   return res.status(200).json({ok:true,answer,suggestedQuestions:fallbackSuggestions(Boolean(lotControl),hasPhotoEvidence),engine:seniorUrchin?'IA Erizo · modo canónico':'Seafood AI · modo canónico',implementation:activeOrganization.implementationName,policyVersion:SEAFOOD_AI_POLICY_VERSION,routerVersion:SEAFOOD_QUERY_ROUTER_VERSION,router:queryRoute,evidenceGate,model:'deterministic-canonical-fallback',generatedAt:context.generatedAt,scope:scopedContext.scope,sources,photoAnalysis:Boolean(photoObservation),visualTwin:visualTwinMeasurements.length>0,degraded:true,provider:'canonical-fallback'})
+  }
  }catch(error){console.error('copilot_error',error instanceof Error?error.message:'unknown');return res.status(502).json({ok:false,error:'Pescamar IA no pudo responder en este momento'})}
 }
