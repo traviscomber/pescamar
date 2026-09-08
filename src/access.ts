@@ -9,6 +9,7 @@ const access:Record<string,AppRole[]|"all">={
   "/uni":"all",
   "/organization":["admin","operations"],
   "/integrations":["admin","operations"],
+  "/identidades-gs1":["admin","operations"],
   "/pescamar-ia":"all",
   "/comunicaciones":["admin","operations","finance","quality","viewer"],
   "/auditoria":["admin","operations"],
@@ -46,15 +47,7 @@ const access:Record<string,AppRole[]|"all">={
 };
 
 const plantAgentExecutors:Record<PlantAgentAction,AppRole[]>={
-  process:["admin","operations"],
-  quality:["admin","quality"],
-  packing:["admin","operations","quality"],
-  inventory:["admin","operations"],
-  cold:["admin","operations","quality"],
-  orders:["admin","operations","finance"],
-  dispatch:["admin","operations","finance"],
-  costs:["admin","operations","finance"],
-  close:["admin","operations","finance"],
+  process:["admin","operations"],quality:["admin","quality"],packing:["admin","operations","quality"],inventory:["admin","operations"],cold:["admin","operations","quality"],orders:["admin","operations","finance"],dispatch:["admin","operations","finance"],costs:["admin","operations","finance"],close:["admin","operations","finance"],
 };
 
 export function canAccessPath(role:AppRole,path:string){const key=Object.keys(access).filter(candidate=>candidate==="/"?path==="/":path===candidate||path.startsWith(`${candidate}/`)).sort((a,b)=>b.length-a.length)[0];if(!key)return false;const roles=access[key];return roles==="all"||roles.includes(role)}
