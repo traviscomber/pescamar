@@ -44,11 +44,12 @@ export const gdst2CapabilityProfile={
   capabilities:[
     {id:'seafood-event-graph',state:'evidenced' as const,evidence:'Seafood Event Graph v1 expone lineage lot-scoped y organization-scoped en modo read-only.'},
     {id:'event-profile-mapping',state:'foundation' as const,evidence:'Receiving, transformation y shipping tienen mapping candidato explícito; todos los SeafoodEventType requieren clasificación GDST explícita en compile-time.'},
+    {id:'gs1-identity-registry',state:'foundation' as const,evidence:'Existe contrato y esquema versionado para vincular GTIN/GLN/SSCC con checksum, provenance y revisión humana. Esto no implica que existan identificadores reales confirmados ni que haya resolver/master data publicados.'},
     {id:'epcis-jsonld-serialization',state:'missing' as const,evidence:'No existe todavía serializer EPCIS 2.0 JSON-LD habilitado.'},
     {id:'epcis-query-interface',state:'missing' as const,evidence:'No existe endpoint EPCIS Query Interface compatible con el Capability Test.'},
     {id:'epcis-capture-write',state:'missing' as const,evidence:'No existe Capture Interface GDST; el write plane externo permanece OFF.'},
     {id:'digital-link-resolver-1.2',state:'missing' as const,evidence:'No existe resolver RFC 9264 Linkset para gs1:epcis / gs1:masterData.'},
-    {id:'master-data-resolution',state:'missing' as const,evidence:'Productos, locations y parties aún no se publican como GS1 Web Vocabulary JSON-LD resolvible.'},
+    {id:'master-data-resolution',state:'missing' as const,evidence:'El registry de identidad no publica productos, locations o parties como GS1 Web Vocabulary JSON-LD resolvible.'},
     {id:'product-location-classification',state:'missing' as const,evidence:'El modelo interno no declara todavía productClassification/locationClassification GDST 2.0.'},
     {id:'decommission-event',state:'missing' as const,evidence:'Seafood Event Graph v1 no proyecta todavía el nuevo CTE decommission.'},
     {id:'required-query-parameters',state:'missing' as const,evidence:`Pendiente soporte ${gdst2RequiredQueryParameters.join(', ')} y demás parámetros exigidos por Capability Test.`},
