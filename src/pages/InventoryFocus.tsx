@@ -11,23 +11,27 @@ const kg=(value:number)=>`${value.toLocaleString('es-CL',{maximumFractionDigits:
 export function InventoryFocus(){
   const [params]=useSearchParams()
   const plantId=params.get('plantId')??''
+  const receptionId=params.get('receptionId')??''
   const [data,setData]=useState<Payload|null>(null)
   const [loading,setLoading]=useState(true)
   const [error,setError]=useState('')
   useEffect(()=>{let active=true;void fetch('/api/inventory',{cache:'no-store'}).then(async response=>{const payload=await response.json() as Payload;if(!response.ok)throw new Error(payload.error??'No fue posible cargar inventario');if(active)setData(payload)}).catch(cause=>{if(active)setError(cause instanceof Error?cause.message:'No fue posible cargar inventario')}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[])
-  const lots=useMemo(()=>plantId?(data?.lots??[]).filter(lot=>lot.plant_id===plantId):(data?.lots??[]),[data,plantId])
+  const lots=useMemo(()=>{const scoped=plantId?(data?.lots??[]).filter(lot=>lot.plant_id===plantId):(data?.lots??[]);return receptionId?scoped.filter(lot=>lot.reception_id===receptionId):scoped},[data,plantId,receptionId])
   const totals=useMemo(()=>lots.reduce((acc,lot)=>({physical:acc.physical+lot.availablePhysicalKg,planning:acc.planning+lot.planningAvailableKg,unlocated:acc.unlocated+lot.unlocatedKg,blocked:acc.blocked+(lot.releaseStatus==='blocked'?1:0)}),{physical:0,planning:0,unlocated:0,blocked:0}),[lots])
   const firstBlocked=lots.find(lot=>lot.releaseStatus==='blocked')
-  const detailPath=plantId?`/inventario/detalle?plantId=${encodeURIComponent(plantId)}`:'/inventario/detalle'
+  const detailParams=new URLSearchParams();if(plantId)detailParams.set('plantId',plantId);if(receptionId)detailParams.set('receptionId',receptionId)
+  const detailPath=detailParams.size?`/inventario/detalle?${detailParams.toString()}`:'/inventario/detalle'
+  const orderParams=new URLSearchParams();if(plantId)orderParams.set('plantId',plantId);if(receptionId)orderParams.set('receptionId',receptionId)
+  const ordersPath=orderParams.size?`/ordenes-venta?${orderParams.toString()}`:'/ordenes-venta'
   const primary=totals.unlocated>0
     ?{tone:'warning',icon:<MapPin size={20}/>,eyebrow:'REQUIERE ACCIÓN',title:`Ubicar ${kg(totals.unlocated)}`,text:'Hay producto sin ubicación registrada.',label:'Ubicar producto',to:detailPath}
     :firstBlocked
       ?{tone:'warning',icon:<AlertTriangle size={20}/>,eyebrow:'REQUIERE ACCIÓN',title:`${totals.blocked} lote${totals.blocked===1?'':'s'} retenido${totals.blocked===1?'':'s'}`,text:firstBlocked.releaseBlockReasons.slice(0,2).join(' · ')||'El lote todavía no está listo para despacho o venta.',label:'Revisar lote',to:firstBlocked.species.toLowerCase().includes('eriz')?`/proceso-erizo?receptionId=${encodeURIComponent(firstBlocked.reception_id)}`:`/etiquetas?receptionId=${encodeURIComponent(firstBlocked.reception_id)}`}
       :totals.planning>0
-        ?{tone:'success',icon:<CheckCircle2 size={20}/>,eyebrow:'DISPONIBLE',title:`${kg(totals.planning)} disponibles`,text:'Producto disponible para pedidos comerciales.',label:'Abrir Comercial',to:'/ordenes-venta'}
-        :{tone:'neutral',icon:<PackageCheck size={20}/>,eyebrow:'SIN STOCK ACTUAL',title:'Sin movimientos nuevos todavía',text:'El stock histórico sigue disponible para consulta. El stock actual comienza con los movimientos nuevos.',label:'Ir a Operación',to:'/recepciones'}
+        ?{tone:'success',icon:<CheckCircle2 size={20}/>,eyebrow:'DISPONIBLE',title:`${kg(totals.planning)} disponibles`,text:receptionId?'Este lote ya puede participar en una orden comercial.':'Producto disponible para pedidos comerciales.',label:'Abrir órdenes de venta',to:ordersPath}
+        :{tone:'neutral',icon:<PackageCheck size={20}/>,eyebrow:'SIN STOCK ACTUAL',title:receptionId?'Este lote aún no tiene stock disponible':'Sin movimientos nuevos todavía',text:receptionId?'La Ficha 360 mantendrá este mismo lote cuando exista disponibilidad física.':'El stock histórico sigue disponible para consulta. El stock actual comienza con los movimientos nuevos.',label:'Ir a Operación',to:'/recepciones'}
   return <>
-    <PageHeader eyebrow="Inventario" title="Inventario" description="Producto disponible hoy y stock histórico, claramente separados."/>
+    <PageHeader eyebrow="Inventario" title="Inventario" description={receptionId?'Disponibilidad y próxima acción del lote activo, sin mezclarlo con otros lotes de la planta.':'Producto disponible hoy y stock histórico, claramente separados.'}/>
     {error?<div className="system-banner error" role="alert">{error}</div>:null}
     {loading?<div className="system-banner">Calculando disponibilidad…</div>:null}
     {!loading&&!error?<>
