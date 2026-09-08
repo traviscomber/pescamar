@@ -15,17 +15,21 @@ for(const marker of [
   "label:'Registrar packing'",
   "label:'Conformar pallet'",
   "label:'Registrar frío'",
-  "label:'Ubicar y comprometer producto'",
+  "label:'Ubicar producto'",
+  "label:'Comprometer producto'",
   "label:'Preparar despacho'",
   "label:'Cerrar liquidación'",
 ])assert(rail.includes(marker),`next-action rail must include ${marker}`)
 assert(rail.includes('coverage.production===true'),'production completion must come from physical Event Graph evidence')
 assert(rail.includes('coverage.packing===true')&&rail.includes('coverage.pallet===true')&&rail.includes('coverage.cold===true'),'packing, pallet and cold completion must come from physical Event Graph evidence')
+assert(rail.includes('coverage.inventory===true')&&rail.includes("event.type==='inventory'")&&rail.includes('toLocationId'),'inventory completion must require an Event Graph movement with a real destination location')
+assert(rail.includes('coverage.commercialCommitment===true')&&rail.includes("event.type==='commercial_commitment'")&&rail.includes('allocatedKg')&&rail.includes("!=='cancelled'"),'commercial commitment must require a positive, non-cancelled sales-order allocation')
 assert(rail.includes("to:`/floor/detalle?${q}`"),'packing action must preserve lot and plant context')
 assert(rail.includes("to:`/pallets/detalle?${q}`"),'pallet action must preserve lot and plant context')
 assert(rail.includes("to:`/frio/detalle?${coldQuery}`"),'cold action must preserve lot, plant and pallet context when known')
+assert(rail.includes("to:`/ordenes-venta?${q}`"),'commercial commitment action must preserve lot and plant context into sales orders')
 assert(rail.includes('palletEvent?.metrics?.palletId'),'cold handoff must reuse the pallet identity already present in lineage evidence')
-assert(!rail.includes("if(!hasProduction)return{label:'Ubicar y comprometer producto'"),'the operator flow must not skip physical packing/pallet/cold after production')
+assert(!rail.includes("if(!hasDispatch&&!hasSale)"),'dispatch or sale must not be used as a proxy for inventory placement and commercial commitment')
 
 assert(floor.includes('useSearchParams'),'packing station must accept inherited route context')
 assert(floor.includes('params.get("receptionId")')&&floor.includes('params.get("plantId")'),'packing station must read inherited lot and plant identity')
@@ -40,4 +44,4 @@ if(failures.length){
  for(const failure of failures)console.error(`- ${failure}`)
  process.exit(1)
 }
-console.log('Lot action continuity smoke PASS: Ficha 360 follows quality → process → packing → pallet → cold → inventory/commercial → dispatch → settlement, and packing inherits canonical lot/plant context with scanner as an exception path')
+console.log('Lot action continuity smoke PASS: Ficha 360 follows quality → process → packing → pallet → cold → located stock → real commercial commitment → dispatch → settlement using Event Graph evidence, while packing inherits canonical lot/plant context')
