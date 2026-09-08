@@ -37,6 +37,7 @@
     { "source": "/operacion-2025", "destination": "/index.html" },
     { "source": "/planificacion", "destination": "/index.html" },
     { "source": "/etiquetas", "destination": "/index.html" },
+    { "source": "/proceso", "destination": "/index.html" },
     { "source": "/proceso-erizo", "destination": "/index.html" },
     { "source": "/proceso-erizo/detalle", "destination": "/index.html" },
     { "source": "/proceso-erizo/grafo", "destination": "/index.html" },
