@@ -2,11 +2,13 @@ import {readFile} from 'node:fs/promises'
 
 const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
-const [contract,migration,endpoint,page,app,access,modules,vercel,gdst]=await Promise.all([
+const [contract,migration,endpoint,page,glossary,glossaryPanel,app,access,modules,vercel,gdst]=await Promise.all([
  readFile(new URL('../api/_gs1-identity.ts',import.meta.url),'utf8'),
  readFile(new URL('../db/migrations/052_gs1_identity_registry.sql',import.meta.url),'utf8'),
  readFile(new URL('../api/gs1-identities.ts',import.meta.url),'utf8'),
  readFile(new URL('../src/pages/Gs1Identities.tsx',import.meta.url),'utf8'),
+ readFile(new URL('../src/technicalTerms.ts',import.meta.url),'utf8'),
+ readFile(new URL('../src/components/TechnicalGlossary.tsx',import.meta.url),'utf8'),
  readFile(new URL('../src/App.tsx',import.meta.url),'utf8'),
  readFile(new URL('../src/access.ts',import.meta.url),'utf8'),
  readFile(new URL('../src/pages/Modules.tsx',import.meta.url),'utf8'),
@@ -40,13 +42,30 @@ assert(endpoint.includes('schemaReady:false')&&endpoint.includes('No se inventan
 assert(endpoint.includes('where g.organization_id=${organization.organizationId}'),'registry rows must be organization scoped')
 
 assert(page.includes("fetch('/api/gs1-identities'"),'GS1 UI must use authenticated registry endpoint')
+assert(page.includes('Identidades comerciales y logísticas (GS1)'),'GS1 UI must lead with a human concept before the acronym')
+assert(page.includes('Código global de producto (GTIN)')&&page.includes('Código global de ubicación física (GLN)')&&page.includes('Código único de unidad logística (SSCC)'),'GS1 UI must explain what each standard identity represents')
+assert(page.includes('Identificador de aplicación GS1 (AI)'),'GS1 UI must expand AI before showing the GS1 application identifier codes')
 assert(page.includes('Los IDs internos nunca se convierten en identificadores GS1'),'GS1 UI must expose non-generation boundary')
-assert(page.includes('checksum válido sólo valida la estructura'),'GS1 UI must not confuse checksum with ownership or assignment')
-assert(page.includes('no convierte Seafood Intelligence OS en GDST Capable'),'GS1 UI must not imply GDST capability')
+assert(page.includes('Un dígito de control válido sólo confirma que el código tiene la estructura esperada'),'GS1 UI must not confuse check-digit validity with ownership or assignment')
+assert(page.includes('todavía no convierte Seafood Intelligence OS en una solución compatible certificada con GDST'),'GS1 UI must explain the GDST non-claim in plain language')
+assert(page.includes('<TechnicalGlossary'),'GS1 UI must expose the reusable acronym glossary')
 assert(!page.includes("method:'POST'")&&!page.includes("method:'PATCH'")&&!page.includes("method:'DELETE'"),'GS1 foundation UI must remain read-only')
+
+for(const marker of [
+ "code:'GTIN',name:{es:'Global Trade Item Number · código global de producto'",
+ "code:'GLN',name:{es:'Global Location Number · código global de ubicación o empresa'",
+ "code:'SSCC',name:{es:'Serial Shipping Container Code · código único de unidad logística'",
+ "code:'AI',name:{es:'Application Identifier · identificador de aplicación GS1'",
+ 'Aquí AI no significa inteligencia artificial',
+ "code:'GDST',name:{es:'Global Dialogue on Seafood Traceability'",
+ "code:'EPCIS',name:{es:'Electronic Product Code Information Services'",
+])assert(glossary.includes(marker),`plain-language glossary missing ${marker}`)
+assert(glossaryPanel.includes('¿Qué significan estas siglas?')&&glossaryPanel.includes('term.plain[locale]')&&glossaryPanel.includes('term.use[locale]'),'reusable glossary must show meaning and practical use')
+
 assert(app.includes('path="/identidades-gs1"'),'GS1 identity page must be routed')
 assert(access.includes('"/identidades-gs1":["admin","operations"]'),'GS1 route must be restricted')
-assert(modules.includes("to:'/identidades-gs1'")&&modules.includes("label:'Identidades GS1'")&&modules.includes("label:'GS1 identities'"),'admin console must expose GS1 identities in ES/EN')
+assert(modules.includes("to:'/identidades-gs1'")&&modules.includes("label:'Identidades estándar (GS1)'")&&modules.includes("label:'Standard identities (GS1)'"),'admin console must expose GS1 identities with human-first labels in ES/EN')
+assert(modules.includes('Códigos de producto, ubicación, empresa y pallet'),'admin entry must explain GS1 without requiring acronym knowledge')
 assert(vercel.includes('"source": "/identidades-gs1"'),'Vercel must deep-link GS1 registry')
 
 assert(gdst.includes("id:'gs1-identity-registry',state:'foundation'"),'GDST profile must recognize GS1 identity foundation')
@@ -54,4 +73,4 @@ assert(gdst.includes("id:'master-data-resolution',state:'missing'"),'GS1 registr
 assert(gdst.includes('canClaimGdstCapable:false'),'GS1 foundation must not change GDST claim boundary')
 
 if(failures.length){console.error('GS1 identity registry smoke FAILED');for(const failure of failures)console.error(`- ${failure}`);process.exit(1)}
-console.log('GS1 identity registry smoke PASS: GTIN/GLN/SSCC semantics, checksum, evidence, human review, organization scope, read-only UI and GDST non-claim boundary verified')
+console.log('GS1 identity registry smoke PASS: standard identities stay evidence-backed/read-only and every user-facing acronym is explained in plain language')
