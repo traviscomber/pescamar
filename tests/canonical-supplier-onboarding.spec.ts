@@ -29,7 +29,7 @@ test('canonical supplier gap prepares a master record but never writes before ex
 
  await expect(page.getByRole('heading',{name:'Crear proveedor'})).toBeVisible()
  await expect(page.getByLabel('Razón social')).toHaveValue('Patricio Diaz')
- await expect(page.getByText('Alta preparada desde evidencia canónica')).toBeVisible()
+ await expect(page.getByText('Alta preparada desde historial')).toBeVisible()
  await expect(page.getByText(/Se precargó sólo el nombre normalizado/)).toBeVisible()
  expect(partnerPosts).toBe(0)
 
