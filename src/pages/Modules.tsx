@@ -27,7 +27,7 @@ const groupCopies:Record<'es'|'en',AdminGroup[]>={
   {label:'Datos e integración',description:'Administra archivos, conexiones y datos generales de Pescamar.',items:[
    {to:'/importaciones',label:'Archivos de origen',description:'Archivos auditados y cobertura histórica.',icon:FileSpreadsheet},
    {to:'/integrations',label:'Integraciones',description:'Conexiones con otros sistemas y fuentes.',icon:Link2},
-   {to:'/identidades-gs1',label:'Identidades GS1',description:'GTIN, GLN y SSCC vinculados sólo con evidencia real.',icon:Database},
+   {to:'/identidades-gs1',label:'Identidades estándar (GS1)',description:'Códigos de producto, ubicación, empresa y pallet vinculados sólo con evidencia real.',icon:Database},
    {to:'/organization',label:'Organización',description:'Datos generales, alcance y acceso.',icon:Building2},
    {to:'/identidades-plantas',label:'Identidades históricas',description:'Equivalencias y referencias heredadas.',icon:Database},
   ]},
@@ -53,7 +53,7 @@ const groupCopies:Record<'es'|'en',AdminGroup[]>={
   {label:'Data and integrations',description:'Manage source files, connections and general Pescamar data.',items:[
    {to:'/importaciones',label:'Source files',description:'Audited files and historical coverage.',icon:FileSpreadsheet},
    {to:'/integrations',label:'Integrations',description:'Connections to other systems and sources.',icon:Link2},
-   {to:'/identidades-gs1',label:'GS1 identities',description:'GTIN, GLN and SSCC linked only from real evidence.',icon:Database},
+   {to:'/identidades-gs1',label:'Standard identities (GS1)',description:'Evidence-backed product, location, company and pallet codes.',icon:Database},
    {to:'/organization',label:'Organization',description:'General data, scope and access.',icon:Building2},
    {to:'/identidades-plantas',label:'Historical identities',description:'Inherited equivalences and references.',icon:Database},
   ]},
