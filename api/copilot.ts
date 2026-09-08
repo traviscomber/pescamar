@@ -86,7 +86,7 @@ function deterministicAnswer(question:string,lotControl:Record<string,unknown>|n
  const q=question.toLocaleLowerCase('es-CL'),state=record(lotControl?.state),diagnosis=record(lotControl?.diagnosis),signals=record(lotControl?.signals),quality=record(signals?.quality),balance=record(signals?.balance),release=record(signals?.release),blockers=strings(diagnosis?.blockers),nextAction=typeof diagnosis?.nextAction==='string'?diagnosis.nextAction:'',asksJapan=/jap[oó]n|export|liberad|apto/.test(q),asksPhoto=/foto|fotograf|imagen|visual|color|lab|homogene/.test(q)
  if(lotControl){
   const lines:string[]=[]
-  lines.push(String(state?.label??(blockers.length?'REQUIERE ATENCIÓN':'LOTE EN CURSO'))
+  lines.push(String(state?.label??(blockers.length?'REQUIERE ATENCIÓN':'LOTE EN CURSO')))
   if(seniorUrchin&&graph){const processData=record(graph.process);lines.push(`Grade ${String(processData?.grade??'—')} · Color ${String(processData?.colorStatus??'pendiente')} · RX ${String(processData?.xrayStatus??'pendiente')}.`)}
   else{const yieldPct=finite(balance?.yieldPct);lines.push(`Calidad ${String(quality?.label??'—')}${yieldPct==null?'':` · Yield ${fmt(yieldPct)}%`}${release?.label!=null?` · ${release?.kind==='japan'?'Japón':'Evidencia'} ${String(release.label)}`:''}.`)}
   if(measurements.length&&(asksPhoto||seniorUrchin)){const m=measurements[0];lines.push(`Visual Twin: LAB ${fmt(m.lMean)} / ${fmt(m.aMean)} / ${fmt(m.bMean)} · dispersión ${fmt(m.dispersion)}${comparison[0]?` · ΔE76 ${fmt(comparison[0].deltaE76,2)}`:''}.`)}
