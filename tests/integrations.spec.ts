@@ -19,24 +19,27 @@ async function mockApp(page:Page,role:Role){
  })
 }
 
-test('Integration Data Plane distinguishes evidenced, foundation and planned adapters with write plane off',async({page},testInfo)=>{
+test('Connections explain verified, prepared and future adapters while external writes remain off',async({page},testInfo)=>{
  await mockApp(page,'admin')
  await page.goto('/integrations')
- await expect(page.getByRole('heading',{name:'Integrations',exact:true})).toBeVisible()
+ await expect(page.getByRole('heading',{name:'Conexiones con otros sistemas',exact:true})).toBeVisible()
  await expect(page.getByText('1',{exact:true})).toHaveCount(3)
  await expect(page.getByText('OFF',{exact:true})).toBeVisible()
- await expect(page.getByText('Pescamar · canonical workbook',{exact:true})).toBeVisible()
- await expect(page.getByText('Generic REST inbound',{exact:true})).toBeVisible()
- await expect(page.getByText('MQTT edge gateway',{exact:true})).toBeVisible()
- await expect(page.getByText(/ningún adapter genérico de escritura está habilitado/i)).toBeVisible()
- await expect(page.getByText('seafood.integration.v1',{exact:true})).toBeVisible()
+ await expect(page.getByText('Archivos históricos auditados de Pescamar',{exact:true})).toBeVisible()
+ await expect(page.getByText('Entrada desde otros sistemas por API',{exact:true})).toBeVisible()
+ await expect(page.getByText('Sensores y dispositivos livianos',{exact:true})).toBeVisible()
+ await expect(page.getByText('Qué entra, qué sale y para qué sirve',{exact:true})).toBeVisible()
+ await expect(page.getByText('¿Qué significan estas siglas?',{exact:true})).toBeVisible()
+ await expect(page.getByText('Application Programming Interface · interfaz entre sistemas',{exact:true})).toBeVisible()
+ await expect(page.getByText('Protocolo liviano de mensajería para dispositivos',{exact:true})).toBeVisible()
+ await expect(page.getByText(/La escritura externa permanece apagada/)).toBeVisible()
  expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
  await page.screenshot({path:testInfo.outputPath('integration-data-plane.png'),fullPage:true})
 })
 
-test('Integration Data Plane is not exposed to viewer role',async({page})=>{
+test('Connections are not exposed to viewer role',async({page})=>{
  await mockApp(page,'viewer')
  await page.goto('/integrations')
  await expect(page).toHaveURL(/\/es\/?$/)
- await expect(page.getByRole('heading',{name:'Integrations',exact:true})).toHaveCount(0)
+ await expect(page.getByRole('heading',{name:'Conexiones con otros sistemas',exact:true})).toHaveCount(0)
 })
