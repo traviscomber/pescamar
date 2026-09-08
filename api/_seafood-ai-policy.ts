@@ -1,4 +1,4 @@
-export const SEAFOOD_AI_POLICY_VERSION='seafood.ai.evidence.v8' as const
+export const SEAFOOD_AI_POLICY_VERSION='seafood.ai.evidence.v9' as const
 
 export type SeafoodAiEvidenceClass='live_observation'|'derived_live'|'canonical_reference'|'canonical_history'|'partial_financial'
 
@@ -27,7 +27,15 @@ export function evidenceClassForSource(id:string):SeafoodAiEvidenceClass|null{
 
 export function invalidSourceTags(answer:string,allowed:ReadonlySet<string>){
   const tags=[...answer.matchAll(/\[([a-z_]+)\]/g)].map(match=>match[1])
-  return [...new Set(tags.filter(tag=>!allowed.has(tag)))]
+  const invalid=new Set(tags.filter(tag=>!allowed.has(tag)))
+  const allowedTags=tags.filter(tag=>allowed.has(tag))
+  if(allowed.size>0&&allowedTags.length===0)invalid.add('missing_source_tag')
+  for(const line of answer.split(/\r?\n/).map(value=>value.trim()).filter(Boolean)){
+    const lineTags=[...line.matchAll(/\[([a-z_]+)\]/g)].map(match=>match[1]).filter(tag=>allowed.has(tag))
+    if(/^Cálculo:/i.test(line)&&lineTags.length===0)invalid.add('uncited_calculation')
+    if(/^Inferencia:/i.test(line)&&lineTags.length===0)invalid.add('uncited_inference')
+  }
+  return [...invalid]
 }
 
 export function seafoodAiSystemPrompt(implementationName:string){return `Eres Seafood AI, motor de inteligencia evidence-native de Seafood Intelligence OS, operando para la implementación ${implementationName}. Responde exclusivamente desde SEAFOOD_SNAPSHOT, ya limitado en servidor a la organización, rol, plantas y capabilities autorizadas por Seafood AI Router. HISTORIAL sirve sólo para resolver referencias conversacionales y nunca como evidencia factual.
@@ -41,10 +49,10 @@ Reglas obligatorias:
 - route='investigative' permite sintetizar relaciones entre las capabilities cargadas, pero no convierte correlación, proximidad temporal o patrón histórico en causalidad.
 - router.writesAllowed=false es vinculante para todas las rutas. Una recomendación nunca equivale a una acción ejecutada.
 - router.humanGate='material_action_review' exige revisión humana antes de cualquier decisión material regulatoria, de calidad, comercial o de liberación.
-- Cada afirmación factual debe terminar con una o más etiquetas exactas disponibles en SOURCES. No cites una fuente ausente.
+- Cada afirmación factual debe terminar con una o más etiquetas exactas disponibles en SOURCES. No cites una fuente ausente. Runtime rechaza respuestas sin ninguna etiqueta válida y también Cálculos o Inferencias sin cita.
 - Hecho observado: afirma sólo lo que aparece directamente en evidencia live/canónica.
-- Cálculo: inicia con «Cálculo:» cuando derives aritmética o agregación a partir de datos observados.
-- Inferencia: inicia con «Inferencia:» cuando interpretes o recomiendes más allá del dato directo.
+- Cálculo: inicia con «Cálculo:» cuando derives aritmética o agregación a partir de datos observados, y termina esa línea con su fuente.
+- Inferencia: inicia con «Inferencia:» cuando interpretes o recomiendes más allá del dato directo, y termina esa línea con la evidencia que la sustenta.
 - Dato faltante: dilo explícitamente cuando la evidencia necesaria no esté en el snapshot.
 - No inventes registros, fechas, kilos, precios, rendimientos, estados, SLA ni causalidad.
 - canonical_sources prueba existencia, período y frescura de una fuente, no prueba por sí sola un hecho operacional contenido en ella.
