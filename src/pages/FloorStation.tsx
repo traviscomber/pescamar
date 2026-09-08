@@ -1,5 +1,6 @@
 import {useCallback,useEffect,useMemo,useState} from "react";
 import {CloudOff,PackagePlus,Scale,ScanLine,ShieldCheck,Wifi} from "lucide-react";
+import {useSearchParams} from "react-router-dom";
 import {PageHeader} from "../components/PageHeader";
 import {useAuth} from "../auth";
 import {useLots} from "../store";
@@ -22,8 +23,13 @@ const newPackingRequest=(stationId:string,receptionId:string,plantId:string,netK
 export function FloorStation(){
  const {operator}=useAuth();
  const {lots,loading,error}=useLots();
+ const [params]=useSearchParams();
+ const requestedReceptionId=params.get("receptionId")?.trim()??"";
+ const requestedPlantId=params.get("plantId")?.trim()??"";
  const scopedLots=useMemo(()=>operator?.role==="admin"?lots:lots.filter(lot=>operator?.plantIds.includes(lot.plantId)),[lots,operator]);
  const plantIds=useMemo(()=>[...new Set(scopedLots.map(lot=>lot.plantId).filter((id):id is string=>Boolean(id)))],[scopedLots]);
+ const requestedLot=scopedLots.find(lot=>lot.receptionId===requestedReceptionId);
+ const inheritedPlant=requestedLot?.plantId||(plantIds.includes(requestedPlantId)?requestedPlantId:"");
  const [plantId,setPlantId]=useState("");
  const [lotId,setLotId]=useState("");
  const [stationId,setStationId]=useState("");
@@ -37,9 +43,11 @@ export function FloorStation(){
  const [saving,setSaving]=useState(false);
  const [queueState,setQueueState]=useState({pending:0,attention:0,total:0});
  const [online,setOnline]=useState(()=>navigator.onLine);
- const effectivePlant=plantId||plantIds[0]||"";
+ const effectivePlant=plantId||inheritedPlant||plantIds[0]||"";
  const plantLots=scopedLots.filter(lot=>lot.plantId===effectivePlant);
- const selected=plantLots.find(lot=>lot.receptionId===lotId)||plantLots[0];
+ const inheritedLotId=requestedLot?.plantId===effectivePlant?requestedReceptionId:"";
+ const selected=plantLots.find(lot=>lot.receptionId===(lotId||inheritedLotId))||plantLots[0];
+ const inheritedContext=Boolean(requestedLot&&selected?.receptionId===requestedReceptionId&&!lotId&&!plantId);
  const plantStations=stations.filter(station=>station.active&&station.plant_id===effectivePlant&&floorStationType(station.station_type));
  const selectedStation=plantStations.find(station=>station.id===stationId)||plantStations[0];
  const normalizedWeight=Number(weight.replace(",","."));
@@ -123,22 +131,22 @@ export function FloorStation(){
  const modeLabel=writesEnabled===null?"Verificando gate":writesEnabled?selectedStation?"Escritura habilitada":"Sin estación configurada":"Modo seguro";
  const queueLabel=queueState.attention?`${queueState.attention} requiere${queueState.attention===1?"":"n"} revisión`:queueState.pending?`${queueState.pending} pendiente${queueState.pending===1?"":"s"} de sync`:"Sin cola pendiente";
  return <>
-  <PageHeader eyebrow="Operación · Packing" title="Packing" description={writesEnabled?"Escanea el lote, confirma el peso y continúa. Planta, lote y estación se heredan del contexto; sólo corrígelos cuando sea necesario.":"Captura física conectada al lote real. Las escrituras permanecen bloqueadas hasta habilitar Plant Execution en un entorno DB verificado."}/>
+  <PageHeader eyebrow="Operación · Packing" title="Packing" description={writesEnabled?"Confirma el peso y continúa. Planta y lote se heredan de la Ficha 360 cuando están disponibles; el scanner queda para verificación o corrección.":"Captura física conectada al lote real. Las escrituras permanecen bloqueadas hasta habilitar Plant Execution en un entorno DB verificado."}/>
   {loading?<div className="system-banner">Sincronizando lotes autorizados…</div>:null}
   {error?<div className="system-banner error" role="alert">{error}</div>:null}
   {stationError?<div className="system-banner error" role="alert">{stationError}</div>:null}
   <section className="floor-status-strip" aria-label="Estado de estación">
    <div>{online?<Wifi size={18}/>:<CloudOff size={18}/>}<span><b>{online?"Aplicación conectada":"Sin conexión"}</b><small>{queueLabel}</small></span></div>
-   <div><ScanLine size={18}/><span><b>Scanner</b><small>USB HID / teclado listo</small></span></div>
+   <div><ScanLine size={18}/><span><b>Scanner</b><small>{inheritedContext?"Verificación opcional":"USB HID / teclado listo"}</small></span></div>
    <div><Scale size={18}/><span><b>Balanza</b><small>Entrada manual · adapter pendiente</small></span></div>
    <div><ShieldCheck size={18}/><span><b>{modeLabel}</b><small>{writesEnabled?selectedStation?.name??"Configure estación real":"Sin escrituras DB"}</small></span></div>
   </section>
   <section className="floor-console" aria-label="Consola de operación">
    <div className="floor-controls minimum-team">
-    <div className="floor-step-label"><span>1</span><div><b>Escanear lote</b><small>El sistema recupera su contexto operacional.</small></div></div>
-    <label>Scanner HID<input aria-label="Scanner HID" autoFocus autoComplete="off" spellCheck={false} placeholder="Escanee lote + Enter" value={scanCode} onChange={event=>{setScanCode(event.target.value);setScanFeedback(null)}} onKeyDown={event=>{if(event.key==="Enter"){event.preventDefault();applyScan()}}}/></label>
+    <div className="floor-step-label"><span>1</span><div><b>{inheritedContext?"Contexto heredado":"Escanear lote"}</b><small>{inheritedContext?"Ficha 360 ya entregó lote y planta. Escanea sólo si necesitas verificar o cambiar el lote físico.":"El sistema recupera su contexto operacional."}</small></div></div>
+    <label>Scanner HID<input aria-label="Scanner HID" autoFocus={!inheritedContext} autoComplete="off" spellCheck={false} placeholder={inheritedContext?"Opcional: escanee para verificar":"Escanee lote + Enter"} value={scanCode} onChange={event=>{setScanCode(event.target.value);setScanFeedback(null)}} onKeyDown={event=>{if(event.key==="Enter"){event.preventDefault();applyScan()}}}/></label>
     {scanFeedback?<p className={`floor-scan-feedback ${scanFeedback.kind}`} role={scanFeedback.kind==="error"?"alert":"status"}>{scanFeedback.message}</p>:null}
-    <div className="floor-auto-context" aria-label="Contexto heredado"><small>Contexto automático</small><b>{selected?`${selected.id} · ${effectivePlant}`:'Sin lote'}</b><span>{selectedStation?.name??'Estación pendiente'}</span></div>
+    <div className="floor-auto-context" aria-label="Contexto heredado"><small>{inheritedContext?"Heredado de Ficha 360":"Contexto automático"}</small><b>{selected?`${selected.id} · ${effectivePlant}`:'Sin lote'}</b><span>{selectedStation?.name??'Estación pendiente'}</span></div>
     <details className="floor-manual-context">
      <summary>Corregir contexto manualmente</summary>
      <div className="floor-manual-grid">
@@ -161,6 +169,6 @@ export function FloorStation(){
     </div>
    </div>:<div className="floor-empty"><Scale size={30}/><h2>Sin lotes disponibles</h2><p>La estación sólo muestra recepciones reales dentro del alcance de planta del operador.</p></div>}
   </section>
-  <section className="floor-next-gate panel"><div><span className="overline">Automatización operacional</span><h2>{writesEnabled?"Dos acciones humanas: escanear y pesar":"Escritura aislada pendiente"}</h2><p>{writesEnabled?"El sistema conserva identidad, lote, planta, estación, hora, idempotencia y sincronización. Sólo un error de contrato o una corrección de contexto vuelve a una persona.":"El frontend conoce el gate real y no intenta escrituras mientras Plant Execution permanezca deshabilitado."}</p></div><span className={`status-pill ${writesEnabled&&queueState.attention===0?"":"warning"}`}>{writesEnabled?queueState.attention?`${queueState.attention} revisar`:`${queueState.pending} pendientes`:"Bloqueado por #68"}</span></section>
+  <section className="floor-next-gate panel"><div><span className="overline">Automatización operacional</span><h2>{writesEnabled?inheritedContext?"Una captura: confirmar peso":"Dos acciones humanas: escanear y pesar":"Escritura aislada pendiente"}</h2><p>{writesEnabled?"El sistema conserva identidad, lote, planta, estación, hora, idempotencia y sincronización. Sólo un error de contrato o una corrección de contexto vuelve a una persona.":"El frontend conoce el gate real y no intenta escrituras mientras Plant Execution permanezca deshabilitado."}</p></div><span className={`status-pill ${writesEnabled&&queueState.attention===0?"":"warning"}`}>{writesEnabled?queueState.attention?`${queueState.attention} revisar`:`${queueState.pending} pendientes`:"Bloqueado por #68"}</span></section>
  </>;
 }
