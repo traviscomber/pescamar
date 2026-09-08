@@ -78,6 +78,7 @@ Desde `041_schema_migration_baseline.sql`, Neon conserva un registro explícito 
 | `049_reception_vision_file_provenance.sql` | provenance Vision server-side en el archivo fuente almacenado para impedir metadata IA inventada por el cliente |
 | `050_uni_vision_quality_feedback.sql` | feedback humano de Calidad para etiquetar ejemplos Uni Vision `good/bad`, registrar motivo de rechazo y habilitar aprendizaje supervisado sin reentrenamiento automático |
 | `051_sea_urchin_external_references.sql` | catálogo de referencias visuales externas de Uni con provenance/licencia, siempre separado de evidencia operacional y sin labels humanos precargados |
+| `052_gs1_identity_registry.sql` | registry versionado de identidades GS1 GTIN/GLN/SSCC con checksum, evidencia obligatoria y revisión humana |
 
 El inventario anterior describe el repositorio actual. Si se agrega una migración, debe agregarse también a esta tabla; CI verifica esa correspondencia y que los landmarks del preflight sigan alineados con el manifiesto runtime.
 
@@ -108,11 +109,15 @@ El inventario anterior describe el repositorio actual. Si se agrega una migraci�
 - El gate regulatorio de despacho existe también en PostgreSQL sobre `lot_dispatches`; no depende de que la UI recuerde validar el hold.
 - Para destinos Japón, el despacho queda en fail-closed: proceso de erizo, etiquetas, holds regulatorios y los 10 requisitos Japan Release deben estar completos antes de confirmar la salida.
 - Una aprobación Japan Release requiere documento o evidencia, actor verificador y vigencia cuando corresponda; no se acepta una casilla sin provenance.
-- La integración Sernapesca XML/Siscomex no forma parte de 037–051 y sólo debe implementarse cuando exista contrato oficial de endpoint, autenticación y formato.
+- La integración Sernapesca XML/Siscomex no forma parte de 037–052 y sólo debe implementarse cuando exista contrato oficial de endpoint, autenticación y formato.
 - La provenance Vision válida nace server-side en `reception_evidence_files` y se copia a `reception_evidence`; metadata equivalente enviada por el navegador no es fuente de verdad.
 - Confidence de Vision es evidencia de extracción, no certeza sobre calidad, origen, peso físico, cumplimiento regulatorio ni decisión comercial.
 - El feedback de Calidad para Uni Vision sólo es `learning_eligible` después de una decisión humana final. `review` no entra al dataset; `accepted` etiqueta `good` y `ng` etiqueta `bad` con motivo obligatorio. Esta evidencia puede usarse para evaluación o entrenamiento futuro, pero nunca reentrena ni modifica decisiones automáticamente.
 - `sea_urchin_external_references` guarda sólo referencias externas y su provenance. Siempre quedan `unlabeled`, `official_grade = null`, no son evidencia de lote/planta y no son elegibles automáticamente para entrenamiento supervisado.
+- `gs1_identity_links` sólo vincula identificadores GS1 externos respaldados por evidencia. Nunca deriva ni genera GTIN, GLN o SSCC desde UUID, nombres, lotes, códigos de pallet o secuencias internas.
+- La semántica GS1 queda explícita: GTIN → `packing_spec`; GLN físico → `plant` o `inventory_location`; GLN de parte → `party`; SSCC → `pallet`. El checksum valida estructura, no demuestra propiedad ni asignación.
+- Un vínculo GS1 parte como `candidate`. `confirmed` o `rejected` exige revisión humana identificable, timestamp y nota. La ausencia de un vínculo confirmado no demuestra que la entidad externa no tenga identificador GS1.
+- El registry GS1 es foundation de master-data readiness. No equivale a Digital Link Resolver, publicación de master data, export EPCIS ni aprobación del Capability Test GDST.
 
 ## Seguridad y tenancy operacional
 
