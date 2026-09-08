@@ -2,7 +2,10 @@ import {readFile} from 'node:fs/promises'
 
 const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
-const rail=await readFile(new URL('../src/components/LiveLotActionRail.tsx',import.meta.url),'utf8')
+const [rail,floor]=await Promise.all([
+ readFile(new URL('../src/components/LiveLotActionRail.tsx',import.meta.url),'utf8'),
+ readFile(new URL('../src/pages/FloorStation.tsx',import.meta.url),'utf8'),
+])
 
 assert(rail.includes("json<LineagePayload>(`/api/lot-lineage?receptionId=${encoded}`)"),'Ficha 360 must read the Seafood Event Graph for physical progress')
 assert(rail.includes('const TOTAL_STEPS=8'),'lot continuity must represent the complete minimum-team chain')
@@ -24,9 +27,17 @@ assert(rail.includes("to:`/frio/detalle?${coldQuery}`"),'cold action must preser
 assert(rail.includes('palletEvent?.metrics?.palletId'),'cold handoff must reuse the pallet identity already present in lineage evidence')
 assert(!rail.includes("if(!hasProduction)return{label:'Ubicar y comprometer producto'"),'the operator flow must not skip physical packing/pallet/cold after production')
 
+assert(floor.includes('useSearchParams'),'packing station must accept inherited route context')
+assert(floor.includes('params.get("receptionId")')&&floor.includes('params.get("plantId")'),'packing station must read inherited lot and plant identity')
+assert(floor.includes('const inheritedPlant=requestedLot?.plantId'),'canonical lot plant must take precedence over a loose route plant hint')
+assert(floor.includes('const inheritedLotId=requestedLot?.plantId===effectivePlant?requestedReceptionId:""'),'inherited lot must remain plant-scoped')
+assert(floor.includes('autoFocus={!inheritedContext}'),'scanner must become optional when canonical context is already inherited')
+assert(floor.includes('"Una captura: confirmar peso"'),'minimum-team packing must explicitly reduce the inherited path to one physical capture')
+assert(floor.includes('Corregir contexto manualmente'),'manual correction must remain available as an exception path')
+
 if(failures.length){
  console.error('Lot action continuity smoke FAILED')
  for(const failure of failures)console.error(`- ${failure}`)
  process.exit(1)
 }
-console.log('Lot action continuity smoke PASS: Ficha 360 follows quality → process → packing → pallet → cold → inventory/commercial → dispatch → settlement using Event Graph evidence and inherited context')
+console.log('Lot action continuity smoke PASS: Ficha 360 follows quality → process → packing → pallet → cold → inventory/commercial → dispatch → settlement, and packing inherits canonical lot/plant context with scanner as an exception path')
