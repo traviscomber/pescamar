@@ -58,6 +58,6 @@ test('read-only gate disables station and device mutations',async({page})=>{
 test('operations cannot enter station administration',async({page})=>{
  await mock(page,'operations')
  await page.goto('/estaciones')
- await expect(page).toHaveURL(/\/$/)
+ await expect(page).toHaveURL(/\/es\/?$/)
  await expect(page.getByRole('heading',{name:'Estaciones y dispositivos',exact:true})).toHaveCount(0)
 })
