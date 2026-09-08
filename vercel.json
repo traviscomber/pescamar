@@ -17,6 +17,7 @@
     { "source": "/edgevision", "destination": "/index.html" },
     { "source": "/organization", "destination": "/index.html" },
     { "source": "/integrations", "destination": "/index.html" },
+    { "source": "/identidades-gs1", "destination": "/index.html" },
     { "source": "/pescamar-ia", "destination": "/index.html" },
     { "source": "/comunicaciones", "destination": "/index.html" },
     { "source": "/comunicaciones/detalle", "destination": "/index.html" },
