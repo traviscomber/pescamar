@@ -15,7 +15,8 @@ assert(control.includes("contextRuns=openRuns.filter(run=>!plantId||run.plant_id
 assert(control.includes("if(!runId&&contextRuns.length===1)setRunId(contextRuns[0].id)"),'cold chain must auto-select the only unambiguous open cycle')
 assert(control.includes("eligiblePallets.some(pallet=>pallet.id===inheritedPallet)"),'cold chain must only inherit a pallet when it is eligible for the selected run')
 assert(control.includes('Sólo confirma la carga y la medición física.'),'cold chain must present the minimum human action clearly')
-assert(floor.includes("const inheritedReception=searchParams.get('receptionId')")&&floor.includes("const inheritedPlant=searchParams.get('plantId')"),'packing must inherit reception and plant')
+assert(floor.includes('const requestedReceptionId=params.get("receptionId")')&&floor.includes('const requestedPlantId=params.get("plantId")'),'packing must inherit reception and plant')
+assert(floor.includes('const inheritedPlant=requestedLot?.plantId')&&floor.includes('const inheritedLotId=requestedLot?.plantId===effectivePlant?requestedReceptionId'), 'packing must prefer the canonical lot plant and inherited reception identity')
 assert(rail.includes("to:`/pallets/detalle?${q}`")&&rail.includes("to:`/frio/detalle?${coldQuery}`"),'Ficha 360 must carry inherited context into pallet and cold steps')
 
 if(failures.length){
