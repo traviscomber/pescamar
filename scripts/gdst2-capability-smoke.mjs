@@ -44,7 +44,7 @@ for(const registry of [serverRegistry,clientRegistry]){
   const adapter=registry.split("id:'traceability-epcis-gdst'")[1]?.split('},')[0]??''
   assert(adapter.includes("status:'foundation'"),'GDST adapter must remain foundation')
   assert(adapter.includes('GS1 identity registry foundation'),'GDST adapter must disclose GS1 identity readiness')
-  assert(adapter.includes('no se declara GDST Capable'),'GDST adapter must state that capability is not claimed')
+  assert(adapter.toLowerCase().includes('no se declara gdst capable'),'GDST adapter must state that capability is not claimed')
   assert(!adapter.includes("status:'evidenced'"),'GDST adapter must not be evidenced before official capability test')
 }
 assert(serverRegistry.split("id:'traceability-epcis-gdst'")[1]?.split('},')[0]?.includes('mutationEnabled:false'),'server GDST adapter must remain non-mutating')
