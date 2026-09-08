@@ -11,27 +11,27 @@ async function mockApp(page:Page,role:Role){
  })
 }
 
-test('EdgeVision separates available software evidence from planned capabilities',async({page},testInfo)=>{
+test('Uni separates available software evidence from planned capabilities',async({page},testInfo)=>{
  await mockApp(page,'admin')
  await page.goto('/edgevision')
+ await expect(page).toHaveURL(/\/es\/uni$/)
  const main=page.locator('#main-content')
- await expect(main.getByRole('heading',{name:'EdgeVision',exact:true})).toBeVisible()
- await expect(main.getByText('2',{exact:true}).first()).toBeVisible()
+ await expect(main.getByRole('heading',{name:'Uni',exact:true})).toBeVisible()
  await expect(main.getByText('Pescamar · Uni Vision',{exact:true})).toBeVisible()
  await expect(main.getByText(/revisión humana obligatoria/i)).toBeVisible()
  await expect(main.getByText(/versionado reusable de modelo\/engine: pendiente/i)).toBeVisible()
- await expect(main.getByText('Sin modelo operacional conectado todavía.')).toHaveCount(3)
+ await expect(main.getByText(/no se presentan como operativas/i)).toBeVisible()
  await expect(main.getByRole('link',{name:/Seafood Event Graph/})).toBeVisible()
  await expect(main.getByRole('link',{name:'Estaciones',exact:true})).toBeVisible()
  expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
- await page.screenshot({path:testInfo.outputPath('edgevision-foundation.png'),fullPage:true})
+ await page.screenshot({path:testInfo.outputPath('uni-foundation.png'),fullPage:true})
 })
 
-test('EdgeVision does not expose admin station configuration to viewers',async({page})=>{
+test('Uni does not expose admin station configuration to viewers',async({page})=>{
  await mockApp(page,'viewer')
- await page.goto('/edgevision')
+ await page.goto('/uni')
  const main=page.locator('#main-content')
- await expect(main.getByRole('heading',{name:'EdgeVision',exact:true})).toBeVisible()
+ await expect(main.getByRole('heading',{name:'Uni',exact:true})).toBeVisible()
  await expect(main.getByRole('link',{name:/Seafood Event Graph/})).toBeVisible()
  await expect(main.getByRole('link',{name:'Estaciones',exact:true})).toHaveCount(0)
 })
