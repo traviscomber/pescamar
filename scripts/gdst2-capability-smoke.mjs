@@ -20,12 +20,19 @@ for(const contract of [
   ["seafoodEventType:'dispatch'","cte:'shipping'","epcisType:'ObjectEvent'","bizStep:'shipping'"],
 ])for(const marker of contract)assert(foundation.includes(marker),`GDST event mapping must include ${marker}`)
 
+for(const type of ['packing','pallet','cold']){
+  const mapping=foundation.split(`${type}:{seafoodEventType:'${type}'`)[1]?.split('},')[0]??''
+  assert(mapping.includes("state:'supporting_evidence'"),`${type} must remain supporting evidence until an explicit GDST/EPCIS profile is implemented`)
+  assert(mapping.includes('cte:null')&&mapping.includes('epcisType:null'),`${type} must not silently become a GDST CTE`)
+}
+
 assert(foundation.includes('Landing o transshipment requieren un CTE distinto'),'reception mapping must not silently reinterpret landing/transshipment as land receiving')
 assert(foundation.includes("id:'gs1-identity-registry',state:'foundation'"),'GS1 identity registry may be foundation once validation/schema contract exists')
 assert(foundation.includes('no implica que existan identificadores reales confirmados'),'GS1 foundation must not imply real confirmed identifiers')
 assert(foundation.includes("id:'product-location-classification',state:'missing'"),'GDST 2.0 classification gap must remain explicit')
 assert(foundation.includes("id:'decommission-event',state:'missing'"),'GDST 2.0 decommission gap must remain explicit')
-assert(foundation.includes("id:'epcis-jsonld-serialization',state:'missing'"),'serializer must remain missing until implemented')
+assert(foundation.includes("id:'epcis-jsonld-serialization',state:'foundation'"),'implemented fail-closed serializer must be represented as foundation')
+assert(foundation.includes('External export permanece OFF')&&foundation.includes('no se emiten eventos parciales'),'serializer foundation must preserve the external-export and partial-event boundary')
 assert(foundation.includes("id:'epcis-query-interface',state:'missing'"),'query interface must remain missing until implemented')
 assert(foundation.includes("id:'epcis-capture-write',state:'missing'"),'capture/write must remain missing until implemented')
 assert(foundation.includes("id:'digital-link-resolver-1.2',state:'missing'"),'Digital Link Resolver must remain missing until implemented')
@@ -54,4 +61,4 @@ if(failures.length){
   for(const failure of failures)console.error(`- ${failure}`)
   process.exit(1)
 }
-console.log('GDST 2.0 capability smoke PASS: Event Graph mappings and GS1 identity foundation are explicit, missing EPCIS/Digital Link/master-data capabilities remain visible, writes are disabled and no GDST Capable claim is allowed')
+console.log('GDST 2.0 capability smoke PASS: Event Graph mappings, EPCIS serializer foundation and GS1 boundaries are explicit; Query/Capture/Resolver/master data remain missing and no GDST Capable claim is allowed')
