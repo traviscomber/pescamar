@@ -14,9 +14,12 @@ const [handler,context,contextWithLot,operationalContext,policy,intelligence,pag
   readFile(new URL('../src/auth.tsx',import.meta.url),'utf8'),
 ])
 
-assert(policy.includes("SEAFOOD_AI_POLICY_VERSION='seafood.ai.evidence.v8'"),'Seafood AI policy must be explicitly versioned at v8')
+assert(policy.includes("SEAFOOD_AI_POLICY_VERSION='seafood.ai.evidence.v9'"),'Seafood AI policy must be explicitly versioned at v9')
 for(const [source,evidenceClass] of Object.entries({receptions:'live_observation',production:'derived_live',quality:'live_observation',inventory:'derived_live',orders:'live_observation',canonical_sources:'canonical_reference',canonical_inventory:'canonical_history',finance:'partial_financial',operational_intelligence:'derived_live'}))assert(policy.includes(`${source}:'${evidenceClass}'`),`${source} must have evidence class ${evidenceClass}`)
 assert(policy.includes('Cálculo:')&&policy.includes('Inferencia:')&&policy.includes('Dato faltante:'),'Seafood AI must distinguish calculation, inference and missing evidence')
+assert(policy.includes("invalid.add('missing_source_tag')"),'model answers with available evidence but no valid source tag must fail closed')
+assert(policy.includes("invalid.add('uncited_calculation')")&&policy.includes("invalid.add('uncited_inference')"),'calculation and inference lines must fail closed when uncited')
+assert(policy.includes('Runtime rechaza respuestas sin ninguna etiqueta válida'),'system policy must tell the model about runtime citation enforcement')
 assert(policy.includes('Nunca afirmes que ejecutaste, aprobaste o modificaste algo'),'Seafood AI must remain read-only in its policy')
 assert(policy.includes('missingGuidePrice')&&policy.includes('missingReceivedKg')&&policy.includes('missingProcessDate')&&policy.includes('missingProductionDate'),'Seafood AI policy must treat canonical production completeness gaps as missing evidence')
 assert(policy.includes('transactionalRows incluye exclusivamente filas con fecha Y al menos un movimiento monetario'),'Seafood AI policy must define the audited ledger movement boundary')
@@ -35,7 +38,7 @@ assert(authClient.includes('organizationId: operator.organizationId || organizat
 assert(handler.includes('evidenceClassForSource(source.id)'),'every source returned to the model must be classified')
 assert(handler.includes('unclassified_source:'),'unclassified evidence sources must fail closed')
 assert(handler.includes('invalidSourceTags(answer,new Set(sources.map(source=>source.id)))'),'model citations must be validated against available evidence sources')
-assert(handler.includes('invalid_source_tags:'),'invalid model evidence tags must fail closed')
+assert(handler.includes('invalid_source_tags:'),'invalid or missing model evidence tags must fail closed')
 assert(handler.includes("engine:seniorUrchin?'Asistente Senior de Erizo':'Seafood AI'")&&handler.includes('policyVersion:SEAFOOD_AI_POLICY_VERSION'),'API must expose engine mode and evidence policy version')
 assert(context.includes('writesLiveInventory:false'),'canonical packing evidence must remain explicitly non-live inventory')
 assert(contextWithLot.includes('buildCopilotOperationalIntelligence'),'lot-scoped context must attach Event Graph operational intelligence')
@@ -67,4 +70,4 @@ if(failures.length){
  for(const failure of failures)console.error(`- ${failure}`)
  process.exit(1)
 }
-console.log('Seafood AI smoke PASS: evidence classes, organization scope, persisted Vision provenance, Event Graph operational priorities, canonical production gaps, audited ledger grain, read-only policy and source validation verified')
+console.log('Seafood AI smoke PASS: evidence classes, organization scope, citation fail-closed policy, persisted Vision provenance, Event Graph priorities, canonical gaps, audited ledger grain, read-only policy and source validation verified')
