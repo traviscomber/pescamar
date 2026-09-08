@@ -92,6 +92,8 @@ jobs:
         run: node scripts/seafood-ai-router-smoke.mjs
       - name: Seafood AI router benchmark
         run: node scripts/seafood-ai-router-eval.mjs
+      - name: Seafood AI grounded answer contract
+        run: node scripts/seafood-ai-answer-contract-eval.mjs
       - name: Operational form safety
         run: node scripts/form-safety-smoke.mjs
       - name: Stable operator identity
