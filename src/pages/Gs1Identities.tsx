@@ -1,5 +1,5 @@
 import {Database,ExternalLink,RefreshCw,ShieldCheck} from 'lucide-react'
-import {useEffect,useState} from 'react'
+import {useCallback,useEffect,useState} from 'react'
 import {PageHeader} from '../components/PageHeader'
 import {useLocale} from '../i18n'
 
@@ -16,8 +16,8 @@ const entityEn:Record<string,string>={packing_spec:'Packing specification',plant
 export function Gs1Identities(){
  const {locale}=useLocale(),en=locale==='en'
  const [payload,setPayload]=useState<Payload>({}),[loading,setLoading]=useState(true),[error,setError]=useState('')
- const load=async()=>{setLoading(true);setError('');try{const response=await fetch('/api/gs1-identities',{cache:'no-store'});const body=await response.json() as Payload;if(!response.ok)throw new Error(body.error??(en?'Could not load GS1 identities':'No fue posible cargar identidades GS1'));setPayload(body)}catch(cause){setError(cause instanceof Error?cause.message:(en?'Could not load GS1 identities':'No fue posible cargar identidades GS1'))}finally{setLoading(false)}}
- useEffect(()=>{void load()},[])
+ const load=useCallback(async()=>{setLoading(true);setError('');try{const response=await fetch('/api/gs1-identities',{cache:'no-store'});const body=await response.json() as Payload;if(!response.ok)throw new Error(body.error??(en?'Could not load GS1 identities':'No fue posible cargar identidades GS1'));setPayload(body)}catch(cause){setError(cause instanceof Error?cause.message:(en?'Could not load GS1 identities':'No fue posible cargar identidades GS1'))}finally{setLoading(false)}},[en])
+ useEffect(()=>{void load()},[load])
  const identities=payload.identities??[],summary=payload.summary??{},statusLabel=en?statusEn:statusEs,entityLabel=en?entityEn:entityEs
  const rules=en?[
   ['GTIN','AI 01 · 14 digits','Packing specification'],['GLN · physical location','AI 414 · 13 digits','Plant / inventory location'],['GLN · party','AI 417 · 13 digits','Supplier / customer'],['SSCC','AI 00 · 18 digits','Pallet'],
