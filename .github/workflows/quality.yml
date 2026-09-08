@@ -72,6 +72,8 @@ jobs:
         run: node scripts/organization-context-smoke.mjs
       - name: Integration data plane contract
         run: node scripts/integration-data-plane-smoke.mjs
+      - name: GDST 2.0 capability foundation
+        run: node scripts/gdst2-capability-smoke.mjs
       - name: Canonical data quality contract
         run: node scripts/canonical-data-quality-smoke.mjs
       - name: Seafood AI foundation contract
