@@ -89,14 +89,14 @@ const materialActionPatterns=[
 function fastCapabilities(question:string,hasLot:boolean):SeafoodCapability[]{
  const capabilities:SeafoodCapability[]=[]
  if(/\bstock\b|\binventar|\binventory\b|\bsaldo\b|\bbalance\b|\bdisponib|\bavailab/.test(question))capabilities.push('inventory')
- if(/\brecepcion|\breceiv|\bingreso|\bintake\b|\blanding\b|\bdescarga/.test(question))capabilities.push('receptions')
+ if(/\brecepcion|\brecib|\breceiv|\bingreso|\bintake\b|\blanding\b|\bdescarga/.test(question))capabilities.push('receptions')
  if(/\bproduccion|\bproduction\b|\bproceso\b|\bprocess\b|\byield\b|\brendimiento\b|\bkilos? procesad|\bprocessed kg\b|\bthroughput\b|\bmerma\b|\bshrinkage\b|\bwaste\b/.test(question))capabilities.push('production')
  if(/\bcalidad\b|\bquality\b|\bhold\b|\balerta\b|\balert\b|\brechazo|\breject|\bdefect|\bconformidad\b|\bcompliance\b/.test(question))capabilities.push('quality')
  if(/\borden|\border\b|\bpedido|\bcustomer\b|\bcliente|\bcommitment\b|\bcompromiso|\bsale\b|\bventa\b|\bdispatch\b|\bdespacho|\bshipment\b/.test(question))capabilities.push('orders')
  if(/\bliquidacion|\bsettlement\b|\bfinanz|\bfinance\b|\bmonto\b|\bamount\b|\bcosto\b|\bcost\b|\bcuenta\b|\baccount\b|\bpago\b|\bpayment\b|\bmargen\b|\bmargin\b/.test(question))capabilities.push('finance')
  if(/\bfuente|\bsource\b|\barchivo|\bfile\b|\bcobertura\b|\bcoverage\b|\bplanilla|\bspreadsheet\b|\bdocumento|\bdocument\b|\bprovenance\b/.test(question))capabilities.push('canonical_sources')
  if(/\bpacking\b|\bcaja\b|\bbox\b|\bcarton\b|\bpackage\b|\binventario histor|\bhistorical inventory\b/.test(question))capabilities.push('canonical_inventory')
- if(!hasLot&&/\batencion\b|\battention\b|\bprioridad\b|\bpriority\b|\bpendiente\b|\bpending\b|\bbloque|\bblocker/.test(question))capabilities.push('quality','orders','inventory')
+ if(!hasLot&&!capabilities.length&&/\batencion\b|\battention\b|\bprioridad\b|\bpriority\b|\bpendient|\bpending\b|\bbloque|\bblocker/.test(question))capabilities.push('quality','orders','inventory')
  return unique(capabilities)
 }
 
