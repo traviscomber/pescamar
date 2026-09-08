@@ -27,6 +27,6 @@ test('Organization Context exposes current boundary without claiming multi-tenan
 test('Organization Context is not exposed to viewer role',async({page})=>{
  await mockApp(page,'viewer')
  await page.goto('/organization')
- await expect(page).toHaveURL(/\/$/)
+ await expect(page).toHaveURL(/\/es\/?$/)
  await expect(page.getByRole('heading',{name:'Organization Context',exact:true})).toHaveCount(0)
 })
