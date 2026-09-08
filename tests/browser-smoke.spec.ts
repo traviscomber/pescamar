@@ -24,7 +24,8 @@ async function openNavigation(page:Page,projectName:string){
 async function expectAuthenticatedNavigation(page:Page,projectName:string){
   await expect(page.getByRole('heading',{name:'Acceso'})).toHaveCount(0)
   await openNavigation(page,projectName)
-  await expect(page.getByRole('link',{name:'Operación',exact:true})).toBeVisible()
+  await expect(page.getByRole('link',{name:'Plantas',exact:true})).toBeVisible()
+  await expect(page.getByRole('link',{name:'Inteligencia',exact:true})).toBeVisible()
 }
 
 async function visibleCount(locator:ReturnType<Page['getByRole']>){
@@ -75,9 +76,9 @@ test('canonical home starts with operational hierarchy and stable theme switchin
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
   const h1Size=await h1.evaluate(element=>Number.parseFloat(getComputedStyle(element).fontSize))
   expect(h1Size).toBeGreaterThanOrEqual(20)
-  const brief=page.getByRole('region',{name:'Centro de decisión'})
+  const brief=page.getByRole('region',{name:'Qué requiere atención'})
   await expect(brief).toBeVisible()
-  await expect(brief.getByRole('heading',{name:'Qué necesita atención ahora',exact:true})).toBeVisible()
+  await expect(brief.getByRole('heading',{name:'Qué requiere atención',exact:true})).toBeVisible()
   const [h1Box,briefBox]=await Promise.all([h1.boundingBox(),brief.boundingBox()])
   expect(h1Box&&briefBox?h1Box.y<briefBox.y:false).toBe(true)
   const theme=page.getByRole('button',{name:'Cambiar a tema oscuro'})
@@ -124,7 +125,7 @@ for(const denied of [
   test(`${denied.role} is redirected away from ${denied.path}`,async({page},testInfo)=>{
     await mockAuthenticatedApp(page,denied.role)
     await page.goto(denied.path)
-    await expect(page).toHaveURL(/\/$/)
+    await expect(page).toHaveURL(/\/es\/?$/)
     await expectAuthenticatedNavigation(page,testInfo.project.name)
   })
 }
@@ -132,7 +133,7 @@ for(const denied of [
 test('plant-scoped operator sees its assigned coverage',async({page})=>{
   await mockAuthenticatedApp(page,'operations',['ancud','quellon'])
   await page.goto('/')
-  const plantScope=page.getByLabel('Planta')
+  const plantScope=page.getByRole('combobox',{name:'Planta'})
   await expect(plantScope).toBeVisible()
   await expect(plantScope).toContainText('Planta Ancud')
   await expect(plantScope).toContainText('Planta Quellón')
@@ -159,9 +160,11 @@ test('inventory focus shell remains stable',async({page},testInfo)=>{
   await mockAuthenticatedApp(page,'operations',['ancud'])
   await page.goto('/inventario')
   await expect(page.getByRole('heading',{name:'Inventario',exact:true})).toBeVisible()
-  await expect(page.getByText('Planificable',{exact:true})).toBeVisible()
-  await expect(page.getByText('Bloqueados',{exact:true})).toBeVisible()
-  await expect(page.getByText('Por ubicar',{exact:true})).toBeVisible()
+  const summary=page.getByRole('region',{name:'Resumen de inventario actual'})
+  await expect(summary).toBeVisible()
+  await expect(summary.getByText('Disponible',{exact:true})).toBeVisible()
+  await expect(summary.getByText('Lotes retenidos',{exact:true})).toBeVisible()
+  await expect(summary.getByText('Por ubicar',{exact:true})).toBeVisible()
   await expect(page.getByRole('link',{name:/Ver inventario completo/})).toBeVisible()
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
   await page.screenshot({path:testInfo.outputPath('inventory-shell.png'),fullPage:true})
@@ -173,8 +176,9 @@ test('Seafood AI shell keeps stage and module hierarchy',async({page},testInfo)=
   await page.goto('/pescamar-ia')
   const main=page.locator('#main-content')
   await expect(main.getByRole('heading',{name:'Seafood AI',exact:true})).toBeVisible()
-  await expect(main.getByText('Inteligencia y control',{exact:true})).toBeVisible()
+  await expect(page.locator('.topbar-context').getByText('Inteligencia y control',{exact:true})).toBeVisible()
   await expect(main.getByText(/Seafood AI · evidence-native/)).toBeVisible()
+  await expect(main.getByText(/Sin escrituras ni acciones/)).toBeVisible()
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
   await page.screenshot({path:testInfo.outputPath('pescamar-ia-shell.png'),fullPage:true})
 })
