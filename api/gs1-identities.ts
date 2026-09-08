@@ -20,7 +20,7 @@ export default async function handler(request:Request,response:Response){
   const readiness=await sql`select to_regclass('public.gs1_identity_links') is not null ready`
   const readinessRows=(Array.isArray(readiness)?readiness:[]) as ReadinessRow[]
   const schemaReady=Boolean(readinessRows[0]?.ready)
-  if(!schemaReady)return response.status(200).json({ok:true,schemaVersion:gs1IdentityContract.schemaVersion,standardVersion:gs1IdentityContract.digitalLinkVersion,schemaReady:false,summary:{total:0,candidate:0,confirmed:0,rejected:0,gtin:0,gln_location:0,gln_party:0,sscc:0},identities:[],contract:gs1IdentityContract,message:'La migración 052 aún no está aplicada en esta base. No se inventan ni derivan identificadores GS1.'})
+  if(!schemaReady)return response.status(200).json({ok:true,schemaVersion:gs1IdentityContract.schemaVersion,standardVersion:gs1IdentityContract.digitalLinkVersion,schemaReady:false,summary:{total:0,candidate:0,confirmed:0,rejected:0,gtin:0,gln_location:0,gln_party:0,sscc:0},identities:[],contract:gs1IdentityContract,message:'La migración 053 de identidades estándar aún no está aplicada en esta base. No se inventan ni derivan identificadores GS1.'})
   const raw=await sql`
    select g.id,g.key_type,g.gs1_value,g.entity_type,g.link_status,g.source_system,g.source_reference,g.evidence,g.reviewed_at,g.review_note,
     case
