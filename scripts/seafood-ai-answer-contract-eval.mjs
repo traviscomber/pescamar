@@ -1,0 +1,30 @@
+import {invalidSourceTags} from '../api/_seafood-ai-policy.ts'
+
+const allowed=new Set(['inventory','orders','operational_intelligence'])
+const cases=[
+ {id:'grounded_fact',answer:'Hay 120 kg disponibles. [inventory]',expected:[]},
+ {id:'grounded_calculation',answer:'Cálculo: 80 + 40 = 120 kg disponibles. [inventory]',expected:[]},
+ {id:'grounded_inference',answer:'Inferencia: conviene revisar primero el lote retenido. [operational_intelligence]',expected:[]},
+ {id:'missing_evidence_statement',answer:'Dato faltante: no hay evidencia suficiente para confirmar la reserva.',expected:['missing_source_tag']},
+ {id:'no_citation',answer:'Hay 120 kg disponibles.',expected:['missing_source_tag']},
+ {id:'unknown_source',answer:'Hay 120 kg disponibles. [warehouse]',expected:['warehouse','missing_source_tag']},
+ {id:'uncited_calculation',answer:'Cálculo: 80 + 40 = 120 kg.\nEvidencia observada. [inventory]',expected:['uncited_calculation']},
+ {id:'uncited_inference',answer:'Inferencia: este proveedor probablemente rendirá mejor.\nHistórico disponible. [orders]',expected:['uncited_inference']},
+ {id:'mixed_grounding',answer:'Hecho observado: hay una orden pendiente. [orders]\nCálculo: quedan 40 kg por cubrir. [orders]\nInferencia: revisar disponibilidad antes de prometer más. [inventory]',expected:[]},
+]
+
+const failures=[]
+for(const test of cases){
+ const actual=[...invalidSourceTags(test.answer,allowed)].sort()
+ const expected=[...test.expected].sort()
+ if(actual.join('|')!==expected.join('|'))failures.push(`${test.id}: expected [${expected.join(',')}] got [${actual.join(',')}]`)
+}
+const noEvidence=invalidSourceTags('Dato faltante: no se cargó evidencia.',new Set())
+if(noEvidence.length)failures.push(`empty evidence set must not manufacture a citation requirement: ${noEvidence.join(',')}`)
+
+if(failures.length){
+ console.error('Seafood AI answer contract eval FAILED')
+ failures.forEach(failure=>console.error(`- ${failure}`))
+ process.exit(1)
+}
+console.log(`Seafood AI answer contract eval PASS · ${cases.length} grounded/adversarial cases · missing citations, unknown sources and uncited calculations/inferences fail closed`)
