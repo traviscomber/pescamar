@@ -1,10 +1,12 @@
 import {readFile} from 'node:fs/promises'
-const [access,api,page,shell,modules]=await Promise.all([
+const [access,api,page,shell,modules,securityApi,securityUi]=await Promise.all([
   readFile(new URL('../src/access.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/audit.ts',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/Audit.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/components/AppShell.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/Modules.tsx',import.meta.url),'utf8'),
+  readFile(new URL('../api/security-audit.ts',import.meta.url),'utf8'),
+  readFile(new URL('../src/components/SecurityAudit.tsx',import.meta.url),'utf8'),
 ])
 const failures=[]
 const check=(ok,msg)=>{if(!ok)failures.push(msg)}
@@ -21,5 +23,8 @@ check(page.includes('Auditoría operacional')&&page.includes('Identidad no enlaz
 check(page.includes('data-label="Fecha"')&&page.includes('audit-table'),'audit UI must include mobile-readable table semantics')
 check(shell.includes('to="/modulos"')&&shell.includes("t('nav.admin')"),'management navigation must expose the localized administration hub')
 check(modules.includes("to:'/auditoria'")||modules.includes('to:"/auditoria"')||modules.includes('to="/auditoria"'),'audit must be reachable from the administration hub')
+check(!securityApi.includes('e.metadata'),'security audit API must not select auth event metadata for the browser')
+check(!securityUi.includes('metadata?:'),'security audit client DTO must not accept hidden auth metadata')
+check(securityApi.includes('e.event_type,e.occurred_at,o.full_name as operator_name'),'security audit browser event projection must remain minimal and explicit')
 if(failures.length){console.error('Operational audit smoke FAILED');failures.forEach(f=>console.error(`- ${f}`));process.exit(1)}
 console.log('Operational audit smoke PASS')

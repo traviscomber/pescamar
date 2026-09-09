@@ -21,7 +21,7 @@ export default async function handler(request:Request,response:Response){
         count(*) filter(where event_type='logout' and occurred_at>=now()-interval '24 hours')::int as logouts,
         (select count(*)::int from auth_login_limits where blocked_until>now()) as active_blocks
         from auth_events`,
-      sql`select e.event_type,e.occurred_at,o.full_name as operator_name,e.metadata
+      sql`select e.event_type,e.occurred_at,o.full_name as operator_name
         from auth_events e left join operators o on o.id=e.operator_id
         order by e.occurred_at desc limit 20`,
     ]);
