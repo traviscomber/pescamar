@@ -50,6 +50,8 @@ jobs:
         run: node scripts/release-smoke.mjs
       - name: Navigation flow contract
         run: node scripts/navigation-flow-smoke.mjs
+      - name: UX language and navigation contract
+        run: node scripts/ux-language-smoke.mjs
       - name: Minimum-team operational flow contract
         run: node scripts/minimum-team-flow-smoke.mjs
       - name: Lot next-action continuity contract

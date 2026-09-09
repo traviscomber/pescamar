@@ -1,0 +1,46 @@
+/* Canonical UX convergence layer.
+   This file intentionally targets shared shell and interaction primitives only.
+   It must remain data-agnostic and may not hide evidence, permissions or operational states. */
+
+.brand-copy{min-width:0;display:grid;gap:1px}
+.brand-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand-product{display:block;margin:0!important;font:600 9px/1.25 Montserrat,sans-serif!important;letter-spacing:.055em;color:#7896A3!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.workspace-tabs{position:sticky;top:66px;z-index:9;scroll-snap-type:x proximity;overscroll-behavior-x:contain}
+.workspace-tabs a{scroll-snap-align:start}
+.workspace-tabs a.active{background:color-mix(in srgb,var(--ocean-soft) 44%,transparent)}
+.operation-flow a,.commercial-flow a,.intelligence-flow a{min-height:48px}
+
+.page-header{align-items:flex-start}
+.page-header>.page-actions{max-width:min(100%,620px)}
+.inline-field{display:grid;gap:5px;align-items:start;font-size:11px;font-weight:600;color:var(--muted)}
+.inline-field>input,.inline-field>select{min-width:160px}
+
+.toolbar{align-items:center;flex-wrap:wrap}
+.toolbar>.search-box{min-width:min(100%,240px)}
+
+.notice,.system-banner,.daily-clear-note{box-shadow:none!important}
+.empty-state{min-height:280px}
+.empty-state p{max-width:560px}
+
+.admin-hub-group>header p{max-width:58ch}
+.admin-hub-links>a{min-height:58px}
+.admin-hub-links>a:focus-visible{outline:0;box-shadow:var(--ds-focus)!important}
+
+@media(max-width:1000px){
+ .workspace-tabs{padding-right:20px}
+ .operation-flow a{padding-left:9px;padding-right:14px}
+}
+
+@media(max-width:760px){
+ .workspace-tabs{top:64px;scroll-padding-inline:14px}
+ .workspace-tabs a,.operation-flow a,.commercial-flow a,.intelligence-flow a{min-height:44px}
+ .main-content{padding-top:24px}
+ .page-header{display:grid;gap:16px}
+ .page-header>.page-actions{width:100%;justify-content:flex-start}
+ .page-header>.page-actions>*{max-width:100%}
+ .page-header .inline-field{width:100%}
+ .page-header .inline-field>input,.page-header .inline-field>select{width:100%;min-width:0;min-height:44px}
+ .button,.icon-btn,.row-action,.row-actions button{min-height:44px}
+ .admin-hub-links>a{padding-block:14px}
+}

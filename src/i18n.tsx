@@ -5,7 +5,7 @@ export type Locale='es'|'en'
 type CopyKey=
  |'loading.module'|'loading.session'|'loading.receptions'
  |'nav.today'|'nav.plants'|'nav.operation'|'nav.commercial'|'nav.intelligence'|'nav.admin'
- |'nav.overview'|'nav.reception'|'nav.production'|'nav.process'|'nav.packing'|'nav.inventory'|'nav.cold'
+ |'nav.overview'|'nav.reception'|'nav.production'|'nav.process'|'nav.packing'|'nav.pallets'|'nav.inventory'|'nav.cold'
  |'nav.orders'|'nav.dispatch'|'nav.settlement'|'nav.ask'|'nav.investigate'|'nav.decide'|'nav.history'
  |'role.admin'|'role.operations'|'role.finance'|'role.quality'|'role.viewer'
  |'shell.todayContext'|'shell.checking'|'shell.active'|'shell.review'|'shell.syncing'|'shell.databaseConnected'|'shell.databasePending'|'shell.session'
@@ -17,7 +17,7 @@ const copy:Record<Locale,Record<CopyKey,string>>={
  es:{
   'loading.module':'Cargando módulo…','loading.session':'Validando sesión…','loading.receptions':'Sincronizando recepciones…',
   'nav.today':'Hoy','nav.plants':'Plantas','nav.operation':'Operación','nav.commercial':'Comercial','nav.intelligence':'Inteligencia','nav.admin':'Administración',
-  'nav.overview':'Planta','nav.reception':'Recepción','nav.production':'Producción','nav.process':'Proceso','nav.packing':'Packing','nav.inventory':'Inventario','nav.cold':'Frío',
+  'nav.overview':'Planta','nav.reception':'Recepción','nav.production':'Producción','nav.process':'Proceso','nav.packing':'Packing','nav.pallets':'Pallets','nav.inventory':'Inventario','nav.cold':'Frío',
   'nav.orders':'Órdenes','nav.dispatch':'Despacho','nav.settlement':'Liquidación','nav.ask':'Preguntar','nav.investigate':'Investigar','nav.decide':'Decidir','nav.history':'Historia',
   'role.admin':'Administrador','role.operations':'Gerente de Operaciones','role.finance':'Finanzas','role.quality':'Calidad','role.viewer':'Lectura',
   'shell.todayContext':'Estado operativo de hoy','shell.checking':'Verificando','shell.active':'Plataforma activa','shell.review':'Revisar plataforma','shell.syncing':'Sincronizando estado','shell.databaseConnected':'Base de Datos conectada','shell.databasePending':'Base de Datos pendiente','shell.session':'Sesión operativa',
@@ -28,7 +28,7 @@ const copy:Record<Locale,Record<CopyKey,string>>={
  en:{
   'loading.module':'Loading module…','loading.session':'Validating session…','loading.receptions':'Syncing receptions…',
   'nav.today':'Today','nav.plants':'Plants','nav.operation':'Operations','nav.commercial':'Commercial','nav.intelligence':'Intelligence','nav.admin':'Administration',
-  'nav.overview':'Plant','nav.reception':'Reception','nav.production':'Production','nav.process':'Process','nav.packing':'Packing','nav.inventory':'Inventory','nav.cold':'Cold chain',
+  'nav.overview':'Plant','nav.reception':'Reception','nav.production':'Production','nav.process':'Process','nav.packing':'Packing','nav.pallets':'Pallets','nav.inventory':'Inventory','nav.cold':'Cold chain',
   'nav.orders':'Orders','nav.dispatch':'Dispatch','nav.settlement':'Settlement','nav.ask':'Ask','nav.investigate':'Investigate','nav.decide':'Decide','nav.history':'History',
   'role.admin':'Administrator','role.operations':'Operations Manager','role.finance':'Finance','role.quality':'Quality','role.viewer':'Read only',
   'shell.todayContext':'Today’s operational status','shell.checking':'Checking','shell.active':'Platform active','shell.review':'Review platform','shell.syncing':'Syncing status','shell.databaseConnected':'Database connected','shell.databasePending':'Database pending','shell.session':'Operational session',
