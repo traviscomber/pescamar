@@ -5,12 +5,15 @@ import { getSql } from "./_db.js";
 type Request = { method?: string; body?: unknown; headers?: Record<string, string | string[] | undefined> };
 type Response = { status: (code: number) => Response; setHeader: (name: string, value: string) => void; json: (body: unknown) => void };
 type SettlementInput = { receptionId?: unknown; pricePerKg?: unknown; otherDeductions?: unknown; comment?: unknown };
+const financialReadRoles=new Set(["admin","operations","finance","viewer"]);
+const canReadFinancial=(operator:SessionOperator)=>financialReadRoles.has(operator.role);
 
 export default async function handler(request: Request, response: Response) {
   response.setHeader("Cache-Control", "no-store");
   try {
     const operator = await requireOperator(request);
     if (!operator) return response.status(401).json({ ok: false, error: "Sesión requerida" });
+    if (!canReadFinancial(operator)) return response.status(403).json({ ok: false, error: "Tu rol no tiene acceso a información financiera" });
     await ensureReceptionSchema();
     if (request.method === "GET") return await listSettlements(response, operator);
     if (request.method === "POST") {
@@ -31,7 +34,7 @@ async function listSettlements(response: Response, operator: SessionOperator) {
   const sql = getSql(),admin = operator.role === "admin",plantIds = operator.plantIds;
   const [settlementRows, eligibleRows] = await Promise.all([
     sql`select s.id,s.status,s.gross_amount_clp,s.other_deductions_clp,s.credit_recovery_clp,s.net_amount_clp,s.price_per_kg_clp,s.created_at,s.settled_at,s.created_by,s.created_by_operator_id,s.approved_by,s.approved_by_operator_id,r.id as reception_id,r.reception_number,r.plant_id,r.guide_kg,r.accepted_kg,r.species,p.legal_name as supplier from settlements s join receptions r on r.id=s.reception_id join parties p on p.id=s.supplier_id where ${admin} or r.plant_id=any(${plantIds}::text[]) order by s.created_at desc limit 300`,
-    sql`select r.id,r.reception_number,r.plant_id,r.guide_kg,r.accepted_kg,r.species,r.received_at,p.legal_name as supplier,coalesce(b.balance_clp,0) as credit_balance_clp from receptions r join parties p on p.id=r.supplier_id left join lateral(select cb.balance_clp from credit_accounts ca join parties cp on cp.id=ca.party_id left join credit_account_balances cb on cb.account_id=ca.id where ca.party_id=r.supplier_id or lower(trim(cp.legal_name))=lower(trim(p.legal_name)) order by(ca.party_id=r.supplier_id) desc limit 1)b on true left join settlements s on s.reception_id=r.id where r.status='approved' and r.accepted_kg is not null and s.id is null and (${admin} or r.plant_id=any(${plantIds}::text[])) order by r.received_at asc limit 200`,
+    sql`select r.id,r.reception_number,r.plant_id,r.guide_kg,r.accepted_kg,r.species,r.received_at,p.legal_name as supplier,coalesce(cb.balance_clp,0) as credit_balance_clp from receptions r join parties p on p.id=r.supplier_id left join credit_accounts ca on ca.party_id=r.supplier_id left join credit_account_balances cb on cb.account_id=ca.id left join settlements s on s.reception_id=r.id where r.status='approved' and r.accepted_kg is not null and s.id is null and (${admin} or r.plant_id=any(${plantIds}::text[])) order by r.received_at asc limit 200`,
   ]);
   return response.status(200).json({ ok: true, settlements: Array.isArray(settlementRows)?settlementRows:[], eligible: Array.isArray(eligibleRows)?eligibleRows:[] });
 }
