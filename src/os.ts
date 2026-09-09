@@ -40,7 +40,7 @@ export const osStages:readonly OsStage[]=[
   {path:'/pescamar-ia',label:'Asistente Pescamar',description:'Preguntas sobre la operación con evidencia disponible'},
   {path:'/lineage',label:'Trazabilidad del lote',description:'Recorrido actual e histórico de la evidencia',technicalIdentity:'Seafood Event Graph'},
   {path:'/organization',label:'Organización',description:'Contexto de la instancia y alcance del producto'},
-  {path:'/integrations',label:'Conexiones con otros sistemas',description:'Fuentes, sensores y sistemas externos conectados'},
+  {path:'/integrations',label:'Conexiones con otros sistemas',description:'Fuentes, sensores y sistemas externos conectados',technicalIdentity:'Seafood Integration Data Plane'},
   {path:'/aprobaciones',label:'Decisiones',description:'Excepciones que requieren una persona'},
   {path:'/timeline',label:'Historial operativo',description:'Continuidad histórica y operación actual'},
   {path:'/auditoria',label:'Auditoría operacional',description:'Actor, acción, fecha y planta'},

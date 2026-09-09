@@ -52,7 +52,7 @@ assert(glossaryPanel.includes('¿Qué significan estas siglas?'),'technical glos
 
 assert(app.includes('path="/integrations"'),'integration data plane page must be routed')
 assert(access.includes('"/integrations":["admin","operations"]'),'integration data plane route must be restricted')
-assert(os.includes("{path:'/integrations'")&&os.includes("Adapters, protocolos y contratos de interoperabilidad"),'OS map must retain integration data plane capability even when the user-facing label is simplified')
+assert(os.includes("{path:'/integrations',label:'Conexiones con otros sistemas'")&&os.includes("technicalIdentity:'Seafood Integration Data Plane'"),'OS map must retain integration data plane capability as technical identity while keeping operator copy simple')
 assert(vercel.includes('"source": "/integrations"'),'Vercel must deep-link the integration data plane route')
 
 if(failures.length){
