@@ -20,6 +20,6 @@ test('shell presents Seafood Intelligence OS as product and Pescamar as implemen
   await expect(attribution).toBeVisible()
   await expect(attribution).toHaveAttribute('href','https://www.n3uralia.com')
   await expect(navigation.getByText('Pescamar',{exact:true})).toHaveCount(0)
-  await expect(page.locator('.topbar-context')).toContainText('Pescamar · Implementation 01')
+  await expect(page.locator('.topbar-context')).toContainText('Pescamar · Implementación 01')
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
 })
