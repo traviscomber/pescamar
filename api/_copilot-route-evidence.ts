@@ -45,7 +45,7 @@ export async function buildRoutedCopilotEvidence(operator:SessionOperator,plantI
   needBase?buildCopilotContext(operator,plantId):Promise.resolve(null),
   needLot?buildLotControlCard(operator,receptionId):Promise.resolve(null),
   selected.includes('operational_intelligence')?buildCopilotOperationalIntelligence(operator,receptionId):Promise.resolve(null),
-  selected.includes('historical_lineage')?buildHistoricalLineageEvidence(operator):Promise.resolve(null),
+  selected.includes('historical_lineage')?buildHistoricalLineageEvidence(operator,route.focusHistoricalLotCode??null):Promise.resolve(null),
   selected.includes('canonical_intelligence')?buildCanonicalBusinessIntelligence(operator):Promise.resolve(null),
   selected.includes('urchin_graph')?buildSeaUrchinCopilotEvidence(operator,receptionId):Promise.resolve(null),
   sourceHealthAllowed?buildCanonicalSourceHealth():Promise.resolve(null),
