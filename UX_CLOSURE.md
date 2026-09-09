@@ -8,7 +8,7 @@ Una mejora UX entra en este programa sólo si reduce fricción de una tarea real
 
 Canonical Intake protege la fuente de verdad: etiquetas normalizadas y ayudas de interfaz pueden ser más simples, pero nunca reescriben valores fuente, lotes, proveedores, fechas, pesos, moneda, calidad ni lineage.
 
-## UX-1 · Navegación y lenguaje — EN CURSO
+## UX-1 · Navegación y lenguaje — IMPLEMENTADO · VERIFICACIÓN EN UX-4
 
 Criterio de salida:
 - cuatro workspaces diarios claros;
@@ -16,19 +16,21 @@ Criterio de salida:
 - Packing y Pallets separados;
 - Pescamar visible como implementación del Seafood Intelligence OS;
 - conceptos humanos antes que siglas o nombres internos;
+- identidades técnicas preservadas como metadata separada cuando son canónicas;
 - administración reservada para tareas poco frecuentes;
 - contrato CI que impida regresar a jerga o navegación ambigua.
 
-## UX-2 · Jerarquía de tareas — PENDIENTE
+## UX-2 · Jerarquía de tareas — IMPLEMENTADO · VERIFICACIÓN EN UX-4
 
 Criterio de salida:
 - una tarea principal por pantalla crítica;
 - siguiente acción evidente;
 - estados normales silenciosos y excepciones primero;
 - detalle técnico bajo demanda;
-- sin doble frame ni CTA primarios competidores en Recepciones, Ficha 360, Packing, Pallets, Frío, Inventario, Órdenes, Liquidaciones y Hoy.
+- sin doble frame ni CTA primarios repetidos en Recepciones, Ficha 360, Packing, Pallets, Frío, Inventario y Órdenes;
+- contrato CI que impida volver a títulos genéricos o acciones duplicadas.
 
-## UX-3 · Mobile y accesibilidad — PENDIENTE
+## UX-3 · Mobile y accesibilidad — EN CURSO
 
 Criterio de salida:
 - navegación utilizable con una mano;

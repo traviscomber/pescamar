@@ -19,7 +19,7 @@ export function FloorFocus(){
  const state=writes===null?'Verificando':writes!==true?'Estación no habilitada':floorStations.length===0?'Falta estación':allowedLots.length===0?'Sin lotes disponibles':'Lista para operar'
  const next=writes!==true?'Habilitar la estación':floorStations.length===0?'Configurar estación de producción':allowedLots.length===0?'Esperar o registrar recepción':'Registrar la siguiente unidad de packing'
  return <>
-  <PageHeader eyebrow="Piso / packing" title="Siguiente acción" description="Estado de la estación, lotes disponibles y siguiente tarea de producción."/>
+  <PageHeader eyebrow="Operación de planta" title="Packing" description="Registra peso y cajas del lote activo. Si planta y lote ya están definidos, el sistema conserva ese contexto."/>
   <section className="panel decision-focus">
    <div className="section-heading"><div><span className="overline">Estado</span><h2>{state}</h2></div>{writes===false?<WifiOff size={22}/>:<ShieldCheck size={22}/>}</div>
    <div className="decision-copy"><b>{next}</b><p>{ready?'La estación está lista y tiene lotes disponibles para continuar.':'No se registrarán movimientos hasta que la estación y el lote estén listos.'}</p></div>

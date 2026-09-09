@@ -9,9 +9,9 @@ type SensorState='not_configured'|'ready_for_test'|'observed'
 type SensorStatus={state:SensorState;activeSensors:number;sensorObservationCount:number;lastObservedAt:string|null;error?:string}
 
 const sensorCopy=(status:SensorStatus|null)=>{
- if(status?.state==='observed')return {label:'Lecturas automáticas activas',note:`${status.activeSensors} sensor${status.activeSensors===1?'':'es'} activo${status.activeSensors===1?'':'s'} · ${status.sensorObservationCount} lectura${status.sensorObservationCount===1?'':'s'} registradas`}
- if(status?.state==='ready_for_test')return {label:'Listo para prueba',note:`${status.activeSensors} sensor${status.activeSensors===1?'':'es'} activo${status.activeSensors===1?'':'s'} · falta registrar la primera lectura automática`}
- return {label:'Sin sensores configurados',note:'La operación puede seguir registrando la temperatura manualmente.'}
+ if(status?.state==='observed')return {value:'Automáticas',note:`${status.activeSensors} sensor${status.activeSensors===1?'':'es'} activo${status.activeSensors===1?'':'s'} · ${status.sensorObservationCount} lectura${status.sensorObservationCount===1?'':'s'} registradas`}
+ if(status?.state==='ready_for_test')return {value:'Listo para prueba',note:`${status.activeSensors} sensor${status.activeSensors===1?'':'es'} activo${status.activeSensors===1?'':'s'} · falta registrar la primera lectura automática`}
+ return {value:'Registro manual',note:'No hay sensores configurados. La operación puede seguir registrando temperatura manualmente.'}
 }
 
 export function ColdChainFocus(){
@@ -22,16 +22,15 @@ export function ColdChainFocus(){
  ]).then(([cold,status])=>{if(!active)return;if(!cold.r.ok)throw new Error(cold.p.error??'No fue posible cargar cadena de frío');setData(cold.p);if(status?.r.ok)setSensorStatus(status.p);setError('')}).catch(e=>{if(active)setError(e instanceof Error?e.message:'No fue posible cargar cadena de frío')}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[])
  const runs=data?.runs??[],open=runs.filter(r=>r.status==='open'),deviated=runs.filter(r=>r.status==='deviation'||Number(r.deviation_count)>0),priority=deviated[0]??open[0],telemetry=sensorCopy(sensorStatus)
  return <>
-  <PageHeader eyebrow="Producción" title="Cadena de frío" description="Temperaturas, ciclos abiertos y cualquier desviación que requiera revisión."/>
+  <PageHeader eyebrow="Operación de planta" title="Cadena de frío" description="Revisa temperatura, ciclos abiertos y sólo las desviaciones que requieren una decisión."/>
   {error?<div className="system-banner error" role="alert">{error}</div>:null}
   {loading?<div className="system-banner">Actualizando cadena de frío…</div>:null}
   {!loading&&!error?<>
    <section className={`daily-cockpit ${deviated.length?'has-attention':'is-clear'}`}>
-    <div className="daily-cockpit-copy"><span className="overline">Estado</span><h2>{deviated.length?`${deviated.length} desviación${deviated.length===1?'':'es'} de temperatura`:open.length?'Ciclos en proceso':'Frío en orden'}</h2><p>{deviated.length?`${priority?.asset_name??'Un equipo'} requiere revisión antes de liberar producto.`:open.length?`${open.length} ciclo${open.length===1?'':'s'} abierto${open.length===1?'':'s'} sin desviaciones registradas.`:'No hay ciclos abiertos ni desviaciones registradas.'}</p><div className="daily-cockpit-actions"><Link className="button primary" to="/frio/detalle">{deviated.length?'Revisar desviación':open.length?'Abrir control de frío':'Abrir detalle'}<ArrowRight size={15}/></Link></div></div>
+    <div className="daily-cockpit-copy"><span className="overline">Estado</span><h2>{deviated.length?`${deviated.length} desviación${deviated.length===1?'':'es'} de temperatura`:open.length?'Ciclos en proceso':'Frío en orden'}</h2><p>{deviated.length?`${priority?.asset_name??'Un equipo'} requiere revisión antes de liberar producto.`:open.length?`${open.length} ciclo${open.length===1?'':'s'} abierto${open.length===1?'':'s'} sin desviaciones registradas.`:'No hay ciclos abiertos ni desviaciones registradas.'}</p><div className="daily-cockpit-actions"><Link className="button primary" to="/frio/detalle">{deviated.length?'Revisar desviación':open.length?'Abrir control de frío':'Abrir control'}<ArrowRight size={15}/></Link></div></div>
     <div className="daily-status-mark" aria-hidden="true"><span>{deviated.length||'✓'}</span><small>{deviated.length?'revisar':'sin alertas'}</small></div>
    </section>
-   <section className="signal-grid"><article className="signal-card"><span><Activity size={16}/>Sensores</span><b>{telemetry.label}</b><small>{telemetry.note}</small></article><article className="signal-card"><span><Thermometer size={16}/>Ciclos</span><b>{open.length}</b><small>abiertos</small></article><article className="signal-card"><span><AlertTriangle size={16}/>Desviaciones</span><b>{deviated.length}</b><small>requieren revisión</small></article></section>
-   <nav className="daily-footer-actions"><Link className="text-action inline-link" to="/frio/detalle">Ver detalle<ArrowRight size={14}/></Link></nav>
+   <section className="signal-grid"><article className="signal-card"><span><Activity size={16}/>Captura de temperatura</span><b>{telemetry.value}</b><small>{telemetry.note}</small></article><article className="signal-card"><span><Thermometer size={16}/>Ciclos</span><b>{open.length}</b><small>abiertos</small></article><article className="signal-card"><span><AlertTriangle size={16}/>Desviaciones</span><b>{deviated.length}</b><small>requieren revisión</small></article></section>
   </>:null}
  </>
 }

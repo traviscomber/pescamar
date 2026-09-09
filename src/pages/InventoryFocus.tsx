@@ -31,7 +31,7 @@ export function InventoryFocus(){
         ?{tone:'success',icon:<CheckCircle2 size={20}/>,eyebrow:'DISPONIBLE',title:`${kg(totals.planning)} disponibles`,text:receptionId?'Este lote ya puede participar en una orden comercial.':'Producto disponible para pedidos comerciales.',label:'Abrir órdenes de venta',to:ordersPath}
         :{tone:'neutral',icon:<PackageCheck size={20}/>,eyebrow:'SIN STOCK ACTUAL',title:receptionId?'Este lote aún no tiene stock disponible':'Sin movimientos nuevos todavía',text:receptionId?'La Ficha 360 mantendrá este mismo lote cuando exista disponibilidad física.':'El stock histórico sigue disponible para consulta. El stock actual comienza con los movimientos nuevos.',label:'Ir a Operación',to:'/recepciones'}
   return <>
-    <PageHeader eyebrow="Inventario" title="Inventario" description={receptionId?'Disponibilidad y próxima acción del lote activo, sin mezclarlo con otros lotes de la planta.':'Producto disponible hoy y stock histórico, claramente separados.'}/>
+    <PageHeader eyebrow="Operación de planta" title="Inventario" description={receptionId?'Disponibilidad y próxima acción del lote activo, sin mezclarlo con otros lotes de la planta.':'Producto disponible hoy y stock histórico, claramente separados.'}/>
     {error?<div className="system-banner error" role="alert">{error}</div>:null}
     {loading?<div className="system-banner">Calculando disponibilidad…</div>:null}
     {!loading&&!error?<>
