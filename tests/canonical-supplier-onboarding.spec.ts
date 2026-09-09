@@ -33,7 +33,7 @@ test('canonical supplier gap prepares a master record but never writes before ex
  await expect(page.getByText('Alta preparada desde historial')).toBeVisible()
  await expect(page.getByText(/Se precargó sólo el nombre normalizado/)).toBeVisible()
  const taxId=page.getByLabel('RUT / Tax ID')
- await expect(taxId).toBeRequired()
+ await expect(taxId).toHaveAttribute('required','')
  expect(partnerPosts).toBe(0)
 
  await page.getByRole('button',{name:'Guardar ficha'}).click()
