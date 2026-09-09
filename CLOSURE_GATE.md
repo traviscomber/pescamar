@@ -3,7 +3,7 @@
 **Producto:** Seafood Intelligence OS  
 **Implementación:** Pescamar — Implementation 01  
 **Modo:** CIERRE FINITO / NO FEATURE CREEP  
-**Baseline técnico:** `28b701d1076692daa1e3e641087ea6247c7eed2f`  
+**Baseline técnico:** `efa8e38a01be2dec87a26af8eee0de79210ebec8`  
 **Fuente superior de alcance:** `ROADMAP.md`  
 **Aceptación de piloto:** `PILOT_ACCEPTANCE.md`  
 **Diseño:** `DESIGN.md`
@@ -132,47 +132,57 @@ Pendiente sólo de piloto:
 
 # Gate 4 — Seafood AI
 
-**Estado:** `EN CURSO`
+**Estado:** `REQUIERE PILOTO REAL`
 
 Owners: Borat + Seafood Chile Core + Databasin + Qalito + Polyglot.
 
-Objetivo: inteligencia evidence-native, no chatbot genérico.
+Objetivo: inteligencia con evidencia, no chatbot genérico.
 
-Criterios:
-- ruta determinística para preguntas que no requieren LLM;
-- Fast Evidence para consulta focalizada;
-- Investigative para síntesis transversal;
-- benchmark ES/EN reproducible;
-- evidencia requerida y evidencia cargada visibles/auditables;
-- `insufficient/limited/sufficient` preservan semántica de faltantes;
-- ausencia de fila nunca significa automáticamente “no ocurrió”;
-- hechos, cálculos, inferencias y faltantes separados;
-- decisiones regulatorias/calidad/comerciales materiales requieren humano;
-- ninguna escritura autónoma desde Seafood AI;
-- respuestas y UI usan lenguaje operativo antes de nombres internos.
+Cierre técnico alcanzado:
+- Seafood AI Router v2 separa rutas determinísticas, consulta focalizada e investigación transversal;
+- benchmark reproducible de 38 preguntas seafood alcanza 100% de routing y 100% de paridad ES/EN;
+- el sistema carga sólo las capacidades requeridas por la pregunta y expone `insufficient/limited/sufficient` sin convertir ausencia de filas en prueba negativa;
+- policy `seafood.ai.evidence.v9` separa hecho observado, cálculo, inferencia y dato faltante;
+- respuestas generativas con evidencia disponible fallan cerrado si no citan fuente válida, citan una fuente inexistente o presentan cálculo/inferencia sin respaldo;
+- decisiones materiales de regulación, Calidad, despacho/liberación o comercial conservan revisión humana;
+- Seafood AI no escribe estado operacional ni afirma acciones ejecutadas;
+- interfaz usa lenguaje operacional —respuestas con evidencia, trazabilidad, información faltante— en vez de obligar al operador a conocer nombres internos;
+- Quality, benchmark, grounded-answer eval, Chromium desktop/mobile y Vercel pasaron sobre el baseline técnico.
 
-Stop condition: después del benchmark y UAT real, nuevas capacidades AI pasan a post-pilot salvo requisito del piloto.
+Pendiente sólo de piloto:
+- UAT con preguntas de operadores reales sobre lotes y operación real;
+- validar utilidad, claridad y suficiencia de evidencia con casos reales, incluyendo faltantes y contradicciones;
+- comprobar que las respuestas no inducen decisiones materiales fuera de la autoridad humana durante operación real.
+
+**Freeze:** no agregar agentes, nuevas rutas ni capacidades AI antes del piloto salvo P0/P1 o requisito demostrado por UAT.
 
 ---
 
 # Gate 5 — Uni / visión
 
-**Estado:** `EN CURSO`
+**Estado:** `REQUIERE PILOTO REAL`
 
 Owners: Seafood Chile Core + Borat + Hume + Qalito.
 
 Objetivo: software listo para evidencia visual real sin fingir hardware ni autonomía de Calidad.
 
-Criterios:
-- Vision observa; Calidad decide;
-- media/hash + modelo + versión + confianza + revisión quedan trazables;
-- sólo evidencia humana confirmada puede alimentar evaluación/aprendizaje supervisado;
-- no automatic retraining;
-- cámaras/sensores inexistentes se muestran como `not configured`/foundation;
-- dataset real y métricas por caso antes de automatizar una decisión;
-- fallback humano y degradación segura.
+Cierre técnico alcanzado:
+- Uni observa y Calidad conserva autoridad final; `decisionAuthority` permanece `human_required`;
+- captura admite cámara real o archivo y conserva hash/provenance de la imagen fuente;
+- mediciones, método, confianza y revisión humana quedan trazables cuando existe evidencia persistida;
+- sólo decisiones humanas confirmadas `good`/`bad` son elegibles para evaluación/aprendizaje supervisado;
+- `automaticTraining=false`: no existe reentrenamiento automático;
+- capacidades disponibles, foundation y planned se muestran separadas; lo no operativo no se presenta como operativo;
+- no existen umbrales canónicos de aceptación inventados: automatización exige dataset real, métricas, thresholds validados, versionado y fallback humano;
+- Quality, EdgeVision foundation, Uni learning, provenance y Chromium pasaron sobre el baseline técnico.
 
-Hardware, cámaras y dataset físico pendiente pasan a `REQUIERE PILOTO REAL`.
+Pendiente sólo de piloto:
+- cámara/hardware físico real cuando Pescamar lo despliegue;
+- dataset representativo validado por Calidad;
+- métricas por caso, errores adversariales y thresholds de aceptación/rechazo antes de cualquier automatización material;
+- validar degradación y fallback humano bajo condiciones reales de planta.
+
+**Freeze:** hardware, nuevas detecciones y automatización visual quedan POST-PILOT / WATCH hasta existir evidencia física y dataset suficiente.
 
 ---
 
