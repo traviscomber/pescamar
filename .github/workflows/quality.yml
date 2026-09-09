@@ -94,6 +94,8 @@ jobs:
         run: node scripts/seafood-ai-router-eval.mjs
       - name: Seafood AI grounded answer contract
         run: node scripts/seafood-ai-answer-contract-eval.mjs
+      - name: Financial read boundary contract
+        run: node scripts/financial-read-boundary-smoke.mjs
       - name: Operational form safety
         run: node scripts/form-safety-smoke.mjs
       - name: Stable operator identity
