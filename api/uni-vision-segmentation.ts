@@ -10,7 +10,7 @@ export default async function handler(request:Request,response:Response){
  response.setHeader('Cache-Control','no-store')
  try{
   if(request.method!=='POST'){response.setHeader('Allow','POST');return response.status(405).json({ok:false,error:'Método no permitido'})}
-  const operator=await requireOperator(request,['admin','operations','quality'])
+  const operator=await requireOperator(request,['admin','operations','quality','finance','viewer'])
   if(!operator)return response.status(401).json({ok:false,error:'Sesión operativa requerida'})
   const body=(request.body??{}) as Body,width=Number(body.width),height=Number(body.height),rgbaBase64=typeof body.rgbaBase64==='string'?body.rgbaBase64:''
   if(!Number.isInteger(width)||!Number.isInteger(height)||width<16||height<16||width>MAX_WIDTH||height>MAX_HEIGHT||width*height>MAX_PIXELS)return response.status(400).json({ok:false,error:'Dimensiones de análisis inválidas'})
