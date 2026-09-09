@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import "./security-audit.css";
 
 type Summary={successful_logins:number;failed_logins:number;logouts:number;active_blocks:number};
-type Event={event_type:string;occurred_at:string;operator_name:string|null;metadata?:Record<string,unknown>};
+type Event={event_type:string;occurred_at:string;operator_name:string|null};
 type Payload={summary?:Summary;events?:Event[];error?:string};
 
 const labels:Record<string,string>={login_success:"Inicio correcto",login_failure:"Intento fallido",login_rate_limited:"Acceso bloqueado",logout:"Cierre de sesión"};
