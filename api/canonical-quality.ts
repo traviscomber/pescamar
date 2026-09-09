@@ -11,6 +11,7 @@ export default async function handler(req:Request,res:Response){
   try{
     const operator=await requireOperator(req,['admin','operations','finance','quality'])
     if(!operator)return res.status(403).json({ok:false,error:'Permisos insuficientes'})
+    const financialDetailVisible=['admin','operations','finance'].includes(operator.role)
     const sql=getSql()
     const [productionRaw,ledgerRaw,packingRaw,stockRaw,transferRaw,sourceRaw]=await Promise.all([
       sql`select
@@ -66,17 +67,28 @@ export default async function handler(req:Request,res:Response){
     if(Number(production.missing_or_nonstandard_guide??0)>0)reviews.push('production_guide_lineage')
     if(Number(packing.missing_lot_boxes??0)>0)reviews.push('packing_lot_traceability')
     if(Number(ledger.reference_rows??0)>0)reviews.push('ledger_reference_rows')
+    const ledgerDataset=financialDetailVisible?ledger:{
+      source_rows:ledger.source_rows,
+      movement_rows:ledger.movement_rows,
+      reference_rows:ledger.reference_rows,
+      pure_summary_rows:ledger.pure_summary_rows,
+      flagged_movements:ledger.flagged_movements,
+      canonical_balance_mismatch_rows:ledger.canonical_balance_mismatch_rows,
+      last_movement_source_row:ledger.last_movement_source_row
+    }
     return res.status(200).json({
       ok:true,
       schemaVersion:'seafood.canonical.quality.v1',
       generatedAt:new Date().toISOString(),
       readOnly:true,
       promotionToLive:'blocked_without_deterministic_reconciliation',
-      datasets:{production,ledger,packing,stock,transfers,sources},
+      financialDetailVisible,
+      datasets:{production,ledger:ledgerDataset,packing,stock,transfers,sources},
       assessment:{blockers,reviews,status:blockers.length?'blocked':reviews.length?'review_required':'clean'},
       rules:{
         ledgerMovement:'dated row with inflow or outflow',
         ledgerBalance:'recomputed from inflow minus outflow in source-row order per source file; differences <= CLP 0.01 are numeric noise; cached workbook balance is evidence only',
+        financialBoundary:'Quality receives ledger quality counts and lineage only; monetary balances and monetary differences remain reserved to admin, operations and finance.',
         packing:'canonical boxes remain historical/imported evidence until deterministic lot reconciliation; never create live packing implicitly',
         production:'date, guide, supplier and price gaps remain explicit quality evidence; never backfill live receptions from ambiguous history'
       }
