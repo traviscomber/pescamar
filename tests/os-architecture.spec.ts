@@ -32,7 +32,7 @@ test('admin console exposes infrequent controls without recreating the full OS m
  await page.goto('/modulos')
  await expect(page.getByRole('heading',{name:'Configuración y control'})).toBeVisible()
  const console=page.getByRole('region',{name:'Administración del sistema'})
- for(const group of ['Operación y planta','Control y cumplimiento','Datos e integración','Usuarios y sistema'])await expect(console.getByRole('heading',{name:group})).toBeVisible()
+ for(const group of ['Operación y planta','Control y cumplimiento','Datos y conexiones','Usuarios y sistema'])await expect(console.getByRole('heading',{name:group})).toBeVisible()
  await expect(console.getByRole('link',{name:/Modelo operativo/})).toBeVisible()
  await expect(console.getByRole('link',{name:/Auditoría operacional/})).toBeVisible()
  await expect(console.getByRole('link',{name:/Uni/})).toBeVisible()
