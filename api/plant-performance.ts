@@ -3,12 +3,14 @@ import {getSql} from './_db.js'
 
 type Request={method?:string;headers?:Record<string,string|string[]|undefined>}
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void}
+const financialReadRoles=new Set(['admin','operations','finance','viewer'])
 
 export default async function handler(req:Request,res:Response){
   res.setHeader('Cache-Control','no-store')
   try{
     const operator=await requireOperator(req)
     if(!operator)return res.status(401).json({ok:false,error:'Sesión requerida'})
+    if(!financialReadRoles.has(operator.role))return res.status(403).json({ok:false,error:'Tu rol no tiene acceso a información financiera de desempeño por planta'})
     if(req.method!=='GET'){res.setHeader('Allow','GET');return res.status(405).json({ok:false,error:'Método no permitido'})}
     const admin=operator.role==='admin',plantIds=operator.plantIds,sql=getSql()
     const [rows,historicalRows,closeMemoryRows]=await Promise.all([
