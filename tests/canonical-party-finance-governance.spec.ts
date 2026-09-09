@@ -27,6 +27,6 @@ test('canonical party evidence never upgrades historical names or bank senders i
   expect(source).toContain('historicalNameOnlyTransfers')
   expect(source).toContain('ambiguousPartyTransfers')
   expect(source).not.toContain('exactSenderMatches')
-  expect(source).toContain("only identity_status=exact_party")
+  expect(source).toContain('Sólo identity_status=exact_party implica vínculo')
   expect(source).toContain('no se crean parties desde similitud, aliases o remitentes')
 })
