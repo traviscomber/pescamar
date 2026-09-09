@@ -7,6 +7,7 @@ export type CanonicalBusinessIntelligence={
   evidenceBoundary:{historicalOnly:true;writesLiveInventory:false;rule:string}
   reception:{rows:number;guideKg:number;receivedKg:number;varianceKg:number;explainedPct:number|null;missingGuidePrice:number;missingReceivedKg:number;missingProcessDate:number;missingProductionDate:number}
   lineage:{direct:number;consolidated:number;review:number;chronologyReview:number}
+  lotReconciliation:{lots:number;resolved:number;review:number;multiGuide:number;missingGuide:number;placeholderGuide:number;missingSupplier:number;supplierConflicts:number;clientConflicts:number;promotionAllowed:false}
   packing:{boxes:number;kg:number;missingLotBoxes:number;traceabilityPct:number|null;observedEnd:string|null;registeredEnd:string|null;metadataCoverageMismatch:boolean}
   stockEvidence:{kg:number;historicalOnly:true}
   finance:null|{importedRows:number;transactionalRows:number;referenceRows:number;summaryRows:number;inflowClp:number;outflowClp:number;balanceDeltaClp:number;movementRule:string}
@@ -19,6 +20,7 @@ const s=(value:unknown)=>value instanceof Date?value.toISOString().slice(0,10):t
 const pct=(part:number,total:number)=>total>0?Number((part/total*100).toFixed(1)):null
 const rows=(value:unknown)=>Array.isArray(value)?value as Record<string,unknown>[]:[]
 const LEDGER_MOVEMENT_RULE='event_date is not null and (inflow_clp is not null or outflow_clp is not null)'
+const GUIDE_TOKEN=`replace(regexp_replace(translate(lower(trim(coalesce(guide_number,''))),'í','i'),'\\s+','','g'),'.','')`
 
 export async function buildCanonicalBusinessIntelligence(operator:SessionOperator):Promise<CanonicalBusinessIntelligence|null>{
  const corporate=operator.role==='admin'||operator.plantIds.length>=6
@@ -28,23 +30,27 @@ export async function buildCanonicalBusinessIntelligence(operator:SessionOperato
  const productionHash=`(select file_hash from canonical_source_files where canonical and file_name='planilla de produccion 2026.xlsx' limit 1)`
  const packingHash=`(select file_hash from canonical_source_files where canonical and file_name='packing pulpo pescamar 2026-2.xlsx' limit 1)`
  const accountHash=`(select file_hash from canonical_source_files where canonical and file_name='CUENTA2.xlsx' limit 1)`
- const [productionRaw,relationshipRaw,packingRaw,stockRaw,ledgerRaw]=await Promise.all([
+ const [productionRaw,relationshipRaw,lotReconciliationRaw,packingRaw,stockRaw,ledgerRaw]=await Promise.all([
   sql.query(`select count(*)::int rows,coalesce(sum(guide_kg),0)::numeric guide_kg,coalesce(sum(received_kg),0)::numeric received_kg,count(*) filter(where process_date is null)::int missing_process_date,count(*) filter(where production_date is null)::int missing_production_date,count(*) filter(where received_kg is null)::int missing_received_kg,count(*) filter(where guide_price_clp is null)::int missing_guide_price,count(*) filter(where (reception_date is not null and process_date is not null and process_date<reception_date) or (process_date is not null and production_date is not null and production_date<process_date) or (reception_date is not null and production_date is not null and production_date<reception_date))::int chronology_review,max(coalesce(production_date,process_date,reception_date,event_date)) latest_date from historical_production_records where record_status='operational' and source_file_hash=${productionHash}`,[]),
   sql.query(`select relationship_status,count(*)::int rows from historical_record_eligibility where source_file_hash=${productionHash} group by relationship_status`,[]),
+  sql.query(`with grouped as (select lower(trim(lot_code)) lot_key,count(distinct guide_number) filter(where guide_number is not null and trim(guide_number)<>'' and ${GUIDE_TOKEN} not in ('singuia','s/guia'))::int valid_guides,count(*) filter(where ${GUIDE_TOKEN} in ('singuia','s/guia'))::int placeholder_rows,count(distinct supplier_name) filter(where supplier_name is not null and trim(supplier_name)<>'')::int suppliers,count(distinct client) filter(where client is not null and trim(client)<>'')::int clients from historical_production_records where record_status='operational' and source_file_hash=${productionHash} and lot_code is not null and trim(lot_code)<>'' group by lower(trim(lot_code))) select count(*)::int lots,count(*) filter(where valid_guides=1 and placeholder_rows=0 and suppliers=1 and clients<=1)::int resolved,count(*) filter(where not(valid_guides=1 and placeholder_rows=0 and suppliers=1 and clients<=1))::int review,count(*) filter(where valid_guides>1)::int multi_guide,count(*) filter(where valid_guides=0)::int missing_guide,count(*) filter(where placeholder_rows>0)::int placeholder_guide,count(*) filter(where suppliers=0)::int missing_supplier,count(*) filter(where suppliers>1)::int supplier_conflicts,count(*) filter(where clients>1)::int client_conflicts from grouped`,[]),
   sql.query(`select count(*)::int boxes,coalesce(sum(total_kg),0)::numeric kg,count(*) filter(where lot_code is null)::int missing_lot,max(production_date) observed_end,(select period_end from canonical_source_files where file_hash=${packingHash} limit 1) registered_end from canonical_packing_boxes where source_file_hash=${packingHash}`,[]),
   sql.query(`select coalesce(sum(total_kg),0)::numeric kg from canonical_stock_records where source_file_hash=${accountHash}`,[]),
   financial?sql.query(`select count(*)::int imported_rows,count(*) filter(where ${LEDGER_MOVEMENT_RULE})::int transactional_rows,count(*) filter(where not (${LEDGER_MOVEMENT_RULE}))::int reference_rows,count(*) filter(where event_date is null and inflow_clp is null and outflow_clp is null)::int summary_rows,coalesce(sum(inflow_clp) filter(where ${LEDGER_MOVEMENT_RULE}),0)::numeric inflow_clp,coalesce(sum(outflow_clp) filter(where ${LEDGER_MOVEMENT_RULE}),0)::numeric outflow_clp from canonical_account_entries where source_file_hash=${accountHash}`,[]):Promise.resolve([])
  ])
  const production=(rows(productionRaw)[0]??{}) as Record<string,unknown>
+ const lotReconciliation=(rows(lotReconciliationRaw)[0]??{}) as Record<string,unknown>
  const packing=(rows(packingRaw)[0]??{}) as Record<string,unknown>
  const stock=(rows(stockRaw)[0]??{}) as Record<string,unknown>
  const ledger=financial?((rows(ledgerRaw)[0]??{}) as Record<string,unknown>):null
  const rel=new Map(rows(relationshipRaw).map(row=>[String(row.relationship_status??''),n(row.rows)]))
  const productionRows=n(production.rows),guideKg=n(production.guide_kg),receivedKg=n(production.received_kg),chronologyReview=n(production.chronology_review),missingGuidePrice=n(production.missing_guide_price),missingReceivedKg=n(production.missing_received_kg),missingProcessDate=n(production.missing_process_date),missingProductionDate=n(production.missing_production_date)
+ const lotCount=n(lotReconciliation.lots),resolvedLots=n(lotReconciliation.resolved),reviewLots=n(lotReconciliation.review),multiGuide=n(lotReconciliation.multi_guide),missingGuide=n(lotReconciliation.missing_guide),placeholderGuide=n(lotReconciliation.placeholder_guide),missingSupplier=n(lotReconciliation.missing_supplier),supplierConflicts=n(lotReconciliation.supplier_conflicts),clientConflicts=n(lotReconciliation.client_conflicts)
  const boxes=n(packing.boxes),packingKg=n(packing.kg),missingLotBoxes=n(packing.missing_lot),observedEnd=s(packing.observed_end),registeredEnd=s(packing.registered_end)
  const stockKg=n(stock.kg)
  const transactionalRows=n(ledger?.transactional_rows),referenceRows=n(ledger?.reference_rows),summaryRows=n(ledger?.summary_rows),importedRows=n(ledger?.imported_rows),inflowClp=n(ledger?.inflow_clp),outflowClp=n(ledger?.outflow_clp)
  const priorities=[] as CanonicalBusinessIntelligence['data']['priorities']
+ if(reviewLots)priorities.push({priority:1,kind:'historical-lot-reconciliation',title:`Revisar ${reviewLots} lotes históricos`,detail:`${resolvedLots} de ${lotCount} lotes están reconciliados por guía real + proveedor sin conflicto. En revisión: ${multiGuide} con múltiples guías, ${missingGuide} sin guía válida, ${placeholderGuide} con placeholder y ${missingSupplier} sin proveedor. No promover a operación live.`})
  if(missingLotBoxes)priorities.push({priority:1,kind:'packing-lineage',title:`Vincular ${missingLotBoxes} cajas IQF a lote`,detail:'El packing físico existe, pero esas cajas no tienen referencia de lote en la fuente. No deben asignarse por fecha ni por inferencia.'})
  if(chronologyReview)priorities.push({priority:1,kind:'production-chronology',title:`Revisar ${chronologyReview} secuencias de fecha`,detail:'Recepción, proceso y producción presentan secuencias incompatibles en registros canónicos concretos; mantenerlos históricos hasta resolver evidencia.'})
  if(missingProcessDate||missingProductionDate||missingReceivedKg||missingGuidePrice)priorities.push({priority:1,kind:'production-completeness',title:'Completar evidencia faltante de producción',detail:`Faltan fecha de proceso en ${missingProcessDate}, fecha de producción en ${missingProductionDate}, kg recibidos en ${missingReceivedKg} y precio guía en ${missingGuidePrice} registros. No inferir estos valores.`})
@@ -59,6 +65,7 @@ export async function buildCanonicalBusinessIntelligence(operator:SessionOperato
    evidenceBoundary:{historicalOnly:true,writesLiveInventory:false,rule:'La evidencia canónica explica el negocio y sus excepciones; no crea recepciones, inventario ni movimientos live.'},
    reception:{rows:productionRows,guideKg,receivedKg,varianceKg:Number((guideKg-receivedKg).toFixed(1)),explainedPct:pct(receivedKg,guideKg),missingGuidePrice,missingReceivedKg,missingProcessDate,missingProductionDate},
    lineage:{direct,consolidated,review,chronologyReview},
+   lotReconciliation:{lots:lotCount,resolved:resolvedLots,review:reviewLots,multiGuide,missingGuide,placeholderGuide,missingSupplier,supplierConflicts,clientConflicts,promotionAllowed:false},
    packing:{boxes,kg:packingKg,missingLotBoxes,traceabilityPct:pct(boxes-missingLotBoxes,boxes),observedEnd,registeredEnd,metadataCoverageMismatch:Boolean(observedEnd&&registeredEnd&&observedEnd>registeredEnd)},
    stockEvidence:{kg:stockKg,historicalOnly:true},
    finance:financial?{importedRows,transactionalRows,referenceRows,summaryRows,inflowClp,outflowClp,balanceDeltaClp:Number((inflowClp-outflowClp).toFixed(0)),movementRule:'dated_monetary_row_only'}:null,
