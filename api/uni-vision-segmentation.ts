@@ -18,7 +18,7 @@ export default async function handler(request:Request,response:Response){
   if(!rgbaBase64||rgbaBase64.length>Math.ceil(expectedBytes/3)*4+16)return response.status(400).json({ok:false,error:'Frame visual inválido'})
   const decoded=Buffer.from(rgbaBase64,'base64')
   if(decoded.length!==expectedBytes)return response.status(400).json({ok:false,error:'Frame visual incompleto'})
-  const result=segmentUniVisionFrame({width,height,rgba:new Uint8Array(decoded.buffer,decoded.byteOffset,decoded.byteLength)})
+  const result=segmentUniVisionFrame({width,height,rgba:decoded as unknown as Uint8Array})
   return response.status(200).json({ok:true,segmentation:{metrics:result.metrics,usableRatio:result.usableRatio,borderCandidateRatio:result.borderCandidateRatio,confidence:result.confidence,maskMode:result.maskMode,retainedComponents:result.retainedComponents,suppressedFramePixels:result.suppressedFramePixels,filledHolePixels:result.filledHolePixels,recoveredEdgePixels:result.recoveredEdgePixels,roi:result.roi,segmentationVersion:result.segmentationVersion,mask:{cols:result.mask.cols,rows:result.mask.rows,stride:result.mask.stride,originX:result.mask.originX,originY:result.mask.originY,dataBase64:Buffer.from(result.mask.data).toString('base64')}}})
  }catch(error){
   const message=error instanceof Error?error.message:''
