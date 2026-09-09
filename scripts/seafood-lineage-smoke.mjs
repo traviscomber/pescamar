@@ -85,8 +85,8 @@ assert(pageSource.includes('lineage-provenance ${source.kind}'),'each live event
 assert(pageSource.includes('Qué sabemos de este lote')&&pageSource.includes('Eventos atribuibles'),'trazabilidad UI must surface evidence coverage and attributed event order in operator language')
 assert(appSource.includes('path="/lineage"'),'lineage page must be wired into application routes')
 assert(accessSource.includes('"/lineage":"all"'),'lineage route must have an explicit access contract')
-assert(osSource.includes("{path:'/lineage',label:'Trazabilidad'"),'OS map must expose operator-facing Trazabilidad')
-assert(osSource.includes('Seafood Event Graph · recorrido actual e histórico de la evidencia'),'OS map must retain the canonical Event Graph technical identity')
+assert(osSource.includes("{path:'/lineage',label:'Trazabilidad del lote'"),'OS map must expose human-first operator-facing traceability')
+assert(osSource.includes("technicalIdentity:'Seafood Event Graph'"),'OS map must retain the canonical Event Graph technical identity separately from operator copy')
 
 if(failures.length){
   console.error('Seafood lineage smoke FAILED')

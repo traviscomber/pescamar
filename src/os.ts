@@ -1,4 +1,4 @@
-export type OsModule={path:string;label:string;description:string}
+export type OsModule={path:string;label:string;description:string;technicalIdentity?:string}
 export type OsStage={id:string;order:number;label:string;owner:string;description:string;entry:string;modules:readonly OsModule[]}
 
 export const osStages:readonly OsStage[]=[
@@ -38,7 +38,7 @@ export const osStages:readonly OsStage[]=[
   {path:'/',label:'Hoy',description:'Prioridades y cierre diario'},
   {path:'/lotes',label:'Ficha 360 del lote',description:'Estado, balance, evidencia y siguiente acción'},
   {path:'/pescamar-ia',label:'Asistente Pescamar',description:'Preguntas sobre la operación con evidencia disponible'},
-  {path:'/lineage',label:'Trazabilidad del lote',description:'Recorrido actual e histórico de la evidencia'},
+  {path:'/lineage',label:'Trazabilidad del lote',description:'Recorrido actual e histórico de la evidencia',technicalIdentity:'Seafood Event Graph'},
   {path:'/organization',label:'Organización',description:'Contexto de la instancia y alcance del producto'},
   {path:'/integrations',label:'Conexiones con otros sistemas',description:'Fuentes, sensores y sistemas externos conectados'},
   {path:'/aprobaciones',label:'Decisiones',description:'Excepciones que requieren una persona'},
