@@ -2,7 +2,7 @@ import {readFile} from 'node:fs/promises'
 
 const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
-const [registry,organization,page,app,access,os,shell,modules,lineage,segmentation,qaBench,station,colorApi,qualityMigration]=await Promise.all([
+const [registry,organization,page,app,access,os,shell,modules,lineage,segmentation,remote,segmentApi,qaBench,station,colorApi,qualityMigration]=await Promise.all([
   readFile(new URL('../src/edgevision.ts',import.meta.url),'utf8'),
   readFile(new URL('../src/organization.ts',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/EdgeVision.tsx',import.meta.url),'utf8'),
@@ -12,7 +12,9 @@ const [registry,organization,page,app,access,os,shell,modules,lineage,segmentati
   readFile(new URL('../src/components/AppShell.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/Modules.tsx',import.meta.url),'utf8'),
   readFile(new URL('../api/lot-lineage.ts',import.meta.url),'utf8'),
-  readFile(new URL('../src/lib/uniVisionSegmentationV41.ts',import.meta.url),'utf8'),
+  readFile(new URL('../api/_uni-vision-segmentation.ts',import.meta.url),'utf8'),
+  readFile(new URL('../src/lib/uniVisionRemote.ts',import.meta.url),'utf8'),
+  readFile(new URL('../api/uni-vision-segmentation.ts',import.meta.url),'utf8'),
   readFile(new URL('../src/components/UniVisionQaBench.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/components/UniVisionStation.tsx',import.meta.url),'utf8'),
   readFile(new URL('../api/sea-urchin-color.ts',import.meta.url),'utf8'),
@@ -32,7 +34,7 @@ assert(page.includes("canAccessPath(operator.role,'/estaciones')"),'station conf
 assert(page.includes('organizationContext.implementationName'),'Uni labels must render from active organization context')
 assert(page.includes('Autoridad: revisión humana obligatoria'),'Uni page must preserve human review for the current adapter')
 assert(page.includes('Uni no libera calidad, regula ni toma decisiones financieras por sí solo'),'Uni product guardrail must keep visual evidence non-authoritative')
-assert(page.includes('<UniVisionQaBench/>'),'Uni must expose the local non-persistent QA bench')
+assert(page.includes('<UniVisionQaBench/>'),'Uni must expose the non-persistent QA bench')
 assert(app.includes('<Route path="/uni" element={gate("/uni",<EdgeVision/>)}/>'),'Uni page must be mounted behind its access gate')
 assert(app.includes('<Route path="/edgevision" element={<Navigate to="/uni" replace/>}/>'),'legacy EdgeVision route must redirect to Uni')
 assert(access.includes('"/uni":"all"'),'Uni route must have an explicit access contract')
@@ -41,12 +43,18 @@ assert(os.includes("technicalIdentity:'EdgeVision · Uni Vision'"),'OS map must 
 assert(!shell.includes('{to:"/uni",labelKey:')&&!shell.includes('{to:"/edgevision",labelKey:'),'specialized Vision must not compete in daily workspace navigation')
 assert(modules.includes("{to:'/uni',label:'Revisión visual (Uni)',description:'Captura visual y revisión humana del producto.'"),'Uni must remain reachable from Administration with human-first copy')
 assert(lineage.includes("type:'vision'")&&lineage.includes("entityType:'sea_urchin_color_capture'"),'Vision foundation must connect existing visual evidence to the Seafood Event Graph')
-assert(segmentation.includes("segmentationVersion:'v4.1'"),'Uni Vision QA must use an explicitly versioned segmentation engine')
-assert(segmentation.includes('strongSeed')&&segmentation.includes('plausibleRoe')&&segmentation.includes('buildSeedGrownMask'),'Uni Vision v4.1 must grow product masks from stronger observed color seeds rather than classify the whole frame')
-assert(segmentation.includes('seedCount===0')&&segmentation.includes('minimumArea'),'seed-grown segmentation must reject weak components that lack enough observed product support')
-assert(segmentation.includes('fillSmallInteriorHoles')&&segmentation.includes('recoverEdgeGaps'),'v4.1 segmentation must preserve spatial cleanup for real tray images')
+assert(segmentation.includes("segmentationVersion:'v4.1'"),'Uni Vision must use an explicitly versioned server segmentation engine')
+assert(segmentation.includes('strongSeed')&&segmentation.includes('plausibleRoe')&&segmentation.includes('buildSeedGrownMask'),'Uni Vision v4.1 must retain the validated seed-grown segmentation methodology server-side')
+assert(segmentation.includes('fillSmallInteriorHoles')&&segmentation.includes('recoverEdgeGaps'),'v4.1 server segmentation must preserve spatial cleanup for real tray images')
+assert(segmentApi.includes("requireOperator(request,['admin','operations','quality'])"),'segmentation API must require an authenticated operational role')
+assert(segmentApi.includes("request.method!=='POST'")&&segmentApi.includes("Cache-Control','no-store"),'segmentation API must be POST-only and non-cacheable')
+assert(segmentApi.includes('MAX_WIDTH=720')&&segmentApi.includes('MAX_HEIGHT=540'),'segmentation API must bound transient frame size')
+assert(remote.includes("fetch('/api/uni-vision-segmentation'")&&remote.includes('maskPreview'),'browser adapter may transmit bounded pixels and render returned masks but must not contain segmentation thresholds')
+for(const protectedToken of ['strongSeed','plausibleRoe','trayLike','recoverEdgeGaps','deltaE76(lab,centre)'])assert(!remote.includes(protectedToken),`client adapter must not expose protected segmentation token ${protectedToken}`)
+assert(station.includes("from '../lib/uniVisionRemote'")&&!station.includes('uniVisionSegmentation'),'operational station must use the protected segmentation boundary')
+assert(qaBench.includes("from '../lib/uniVisionRemote'")&&!qaBench.includes('uniVisionSegmentationV41'),'QA bench must use the protected segmentation boundary')
 assert(qaBench.includes('Vision mide. Calidad decide.')&&qaBench.includes('No crea evidencia operacional, Grade ni conformidad del producto.'),'QA bench must be simple, human-centered and explicitly non-authoritative')
-assert(!qaBench.includes("fetch('/api/")&&!qaBench.includes('saveMeasurement'),'QA bench must remain browser-local and must not persist test data')
+assert(!qaBench.includes('saveMeasurement'),'QA bench must remain non-persistent')
 assert(qaBench.includes('Scan listo para revisión de Calidad')&&qaBench.includes('Scan requiere revisión visual'),'QA result must translate measurements into an operator-facing review state')
 assert(qaBench.includes('Calidad conserva la decisión final.')&&qaBench.includes('esta prueba no persiste decisiones ni datos operacionales'),'human quality authority and non-persistence must remain explicit')
 assert(station.includes('La IA propone. Calidad decide y enseña.')&&station.includes('¿Por qué se rechaza?'),'Quality station must make the human teaching loop explicit and require rejection context')
@@ -60,4 +68,4 @@ if(failures.length){
  for(const failure of failures)console.error(`- ${failure}`)
  process.exit(1)
 }
-console.log('EdgeVision foundation smoke PASS: Uni v4.1, explicit human authority, browser-local QA, Quality feedback learning labels and Vision→Event Graph provenance verified')
+console.log('EdgeVision foundation smoke PASS: Uni v4.1 protected server boundary, explicit human authority, non-persistent QA, Quality feedback learning labels and Vision→Event Graph provenance verified')
