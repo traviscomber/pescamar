@@ -1,6 +1,7 @@
 import {expect,test} from '@playwright/test'
+import {readFile} from 'node:fs/promises'
 
-test('canonical supplier gap prepares a master record but never writes before explicit save',async({page})=>{
+test('canonical supplier gap prepares a master record but never writes before explicit verified save',async({page})=>{
  let partnerPosts=0
  let savedBody:Record<string,unknown>|null=null
  await page.route('**/api/**',async route=>{
@@ -31,9 +32,18 @@ test('canonical supplier gap prepares a master record but never writes before ex
  await expect(page.getByLabel('Razón social')).toHaveValue('Patricio Diaz')
  await expect(page.getByText('Alta preparada desde historial')).toBeVisible()
  await expect(page.getByText(/Se precargó sólo el nombre normalizado/)).toBeVisible()
+ const taxId=page.getByLabel('RUT / Tax ID')
+ await expect(taxId).toBeRequired()
  expect(partnerPosts).toBe(0)
 
  await page.getByRole('button',{name:'Guardar ficha'}).click()
+ expect(partnerPosts).toBe(0)
+ await taxId.fill('12.345.678-9')
+ await page.getByRole('button',{name:'Guardar ficha'}).click()
  await expect.poll(()=>partnerPosts).toBe(1)
- expect(savedBody).toMatchObject({kind:'supplier',legalName:'Patricio Diaz'})
+ expect(savedBody).toMatchObject({kind:'supplier',legalName:'Patricio Diaz',taxId:'12.345.678-9'})
+
+ const apiSource=await readFile('api/partners.ts','utf8')
+ expect(apiSource).toContain('if(!partyId&&taxId.length<2)')
+ expect(apiSource).toContain('RUT / Tax ID requerido para crear una identidad maestra')
 })
