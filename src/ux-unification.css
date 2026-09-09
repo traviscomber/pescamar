@@ -43,4 +43,17 @@
  .page-header .inline-field>input,.page-header .inline-field>select{width:100%;min-width:0;min-height:44px}
  .button,.icon-btn,.row-action,.row-actions button{min-height:44px}
  .admin-hub-links>a{padding-block:14px}
+
+ .mobile-card-scroll{width:100%;margin-inline:0;padding-inline:0;overflow:visible}
+ .mobile-card-table{display:block;min-width:0;width:100%;border:0;background:transparent}
+ .mobile-card-table thead{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+ .mobile-card-table tbody{display:grid;gap:10px;width:100%}
+ .mobile-card-table tr{display:grid;width:100%;padding:6px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel);box-shadow:none}
+ .mobile-card-table td,.mobile-card-table td.numeric{display:grid;grid-template-columns:minmax(94px,.42fr) minmax(0,1fr);gap:12px;align-items:start;width:100%;padding:9px 0!important;border:0!important;border-bottom:1px solid color-mix(in srgb,var(--line) 72%,transparent)!important;text-align:left!important;white-space:normal}
+ .mobile-card-table td:last-child{border-bottom:0!important}
+ .mobile-card-table td::before{content:attr(data-label);font:700 9px/1.35 Montserrat,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+ .mobile-card-table td[data-label="Acción"]{grid-template-columns:1fr;justify-items:end}
+ .mobile-card-table td[data-label="Acción"]::before{display:none}
+ .mobile-card-table .supplier,.mobile-card-table .lot-origin,.mobile-card-table .lot-evidence-links{min-width:0;justify-content:flex-start}
+ .mobile-card-table .lot-code-button,.mobile-card-table .lot-link{text-align:left;justify-self:start}
 }

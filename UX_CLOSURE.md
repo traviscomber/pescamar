@@ -30,14 +30,15 @@ Criterio de salida:
 - sin doble frame ni CTA primarios repetidos en Recepciones, Ficha 360, Packing, Pallets, Frío, Inventario y Órdenes;
 - contrato CI que impida volver a títulos genéricos o acciones duplicadas.
 
-## UX-3 · Mobile y accesibilidad — EN CURSO
+## UX-3 · Mobile y accesibilidad — IMPLEMENTADO · VERIFICACIÓN EN UX-4
 
 Criterio de salida:
 - navegación utilizable con una mano;
 - targets mínimos de 44 px;
-- sin overflow horizontal;
+- sin overflow horizontal del documento;
 - foco visible, orden lógico, Escape/cancelación y labels accesibles;
-- tablas y acciones críticas recompuestas, no sólo comprimidas.
+- recepciones activas e históricas recompuestas en tarjetas semánticas en móvil en vez de comprimir columnas;
+- valores canónicos conservados sin transformación de datos.
 
 ## UX-4 · Verificación y cierre — PENDIENTE
 
