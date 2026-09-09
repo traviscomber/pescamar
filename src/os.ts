@@ -17,7 +17,7 @@ export const osStages:readonly OsStage[]=[
   {path:'/pallets',label:'Pallets',description:'Consolidación física de producto terminado'},
  ]},
  {id:'quality',order:3,label:'Calidad y cumplimiento',owner:'Encargado de calidad',description:'Liberación, inocuidad, temperatura y evidencia.',entry:'/control-regulatorio',modules:[
-  {path:'/uni',label:'Revisión visual (Uni)',description:'Captura visual y revisión humana del producto'},
+  {path:'/uni',label:'Revisión visual (Uni)',description:'Captura visual y revisión humana del producto',technicalIdentity:'EdgeVision · Uni Vision'},
   {path:'/control-regulatorio',label:'Control regulatorio',description:'Bloqueos, liberaciones y evidencia'},
   {path:'/frio',label:'Cadena de frío',description:'Temperatura y continuidad'},
   {path:'/observabilidad',label:'Estado técnico',description:'Salud del sistema y alertas técnicas'},
