@@ -25,6 +25,7 @@ export type SeafoodQueryRoute={
  optionalCapabilities:SeafoodCapability[]
  writesAllowed:false
  humanGate:'none'|'material_action_review'
+ focusHistoricalLotCode?:string|null
 }
 
 export type SeafoodEvidenceSource={id:string;rows:number}
@@ -57,6 +58,10 @@ export const seafoodCapabilityCatalog={
 function normalize(value:string){return value.toLocaleLowerCase('es-CL').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim()}
 function unique<T>(items:T[]){return [...new Set(items)]}
 function hasAny(value:string,patterns:RegExp[]){return patterns.some(pattern=>pattern.test(value))}
+function explicitLotCode(value:string){
+ const tail=value.match(/\b(?:lote|lot)\s+(.{1,80})/i)?.[1]??''
+ return tail.split(/\s+/).slice(0,4).find(token=>/^[a-z0-9][a-z0-9-]{5,31}$/i.test(token)&&/\d/.test(token))??null
+}
 
 // Pescamar is bilingual. Router semantics must remain equivalent in Spanish and English.
 const investigationPatterns=[
@@ -102,8 +107,9 @@ function fastCapabilities(question:string,hasLot:boolean):SeafoodCapability[]{
 
 export function routeSeafoodQuery(input:{question:string;hasLot:boolean;hasPhotos:boolean;seniorUrchin:boolean}):SeafoodQueryRoute{
  const question=normalize(input.question)
- const investigative=hasAny(question,investigationPatterns)
- const historicalComparison=hasAny(question,historicalComparisonPatterns)
+ const historicalLotCode=input.hasLot?null:explicitLotCode(question)
+ const investigative=hasAny(question,investigationPatterns)||Boolean(historicalLotCode)
+ const historicalComparison=hasAny(question,historicalComparisonPatterns)||Boolean(historicalLotCode)
  const urchinSpecific=input.seniorUrchin||/\berizo|\burchin|\buni\b|\broe\b|\bjapon\b|\bjapan\b|\bgrade\b|\bxray\b|\bx-ray\b|\brayos? x|\bcolor\b/.test(question)
  if(input.hasLot&&!input.hasPhotos&&!investigative&&hasAny(question,deterministicLotPatterns)){
   const required:SeafoodCapability[]=['lot_control','operational_intelligence']
@@ -131,7 +137,7 @@ export function routeSeafoodQuery(input:{question:string;hasLot:boolean;hasPhoto
  if(urchinSpecific)required.push('urchin_graph')
  if(input.hasLot)optional.push('receptions','production','quality','inventory','orders')
  else optional.push('receptions','production','quality','inventory')
- return {version:SEAFOOD_QUERY_ROUTER_VERSION,route:'investigative',intent:historicalComparison?'investigate_historical_comparison':fast.length?`investigate_${fast.join('_')}`:'investigate_cross_domain',requiredCapabilities:unique(required),optionalCapabilities:unique(optional.filter(capability=>!required.includes(capability))),writesAllowed:false,humanGate:'material_action_review'}
+ return {version:SEAFOOD_QUERY_ROUTER_VERSION,route:'investigative',intent:historicalLotCode?'investigate_historical_lot':historicalComparison?'investigate_historical_comparison':fast.length?`investigate_${fast.join('_')}`:'investigate_cross_domain',requiredCapabilities:unique(required),optionalCapabilities:unique(optional.filter(capability=>!required.includes(capability))),writesAllowed:false,humanGate:'material_action_review',focusHistoricalLotCode:historicalLotCode}
 }
 
 export function evaluateEvidenceSufficiency(route:SeafoodQueryRoute,sources:SeafoodEvidenceSource[]):SeafoodEvidenceGate{
