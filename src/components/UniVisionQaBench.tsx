@@ -23,12 +23,12 @@ export function UniVisionQaBench(){
   const file=event.target.files?.[0]
   if(!file)return
   if(!['image/jpeg','image/png','image/webp'].includes(file.type)){setError('Usa JPG, PNG o WebP');return}
-  setCameraCycleOk(false);setAnalysisNotice('')
+  setCameraBusy(true);setCameraCycleOk(false);setAnalysisNotice('')
   try{
    const image=await readImage(file),canvas=drawToCanvas(image,image.naturalWidth,image.naturalHeight)
    await analyzeCanvas(canvas,file.name)
   }catch(cause){clearResult();setFileName(file.name);setError(cause instanceof Error?cause.message:'No fue posible analizar la imagen')}
-  finally{if(inputRef.current)inputRef.current.value=''}
+  finally{setCameraBusy(false);if(inputRef.current)inputRef.current.value=''}
  }
 
  async function analyzeCanvas(canvas:HTMLCanvasElement,sourceName:string){
