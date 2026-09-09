@@ -2,16 +2,17 @@ import {readFile} from 'node:fs/promises'
 
 const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
-const [commercial,orders,settlements,costs,profitability,dailyClose]=await Promise.all([
+const [commercial,orders,settlements,costs,profitability,dailyClose,plantPerformance]=await Promise.all([
  readFile(new URL('../api/commercial.ts',import.meta.url),'utf8'),
  readFile(new URL('../api/sales-orders.ts',import.meta.url),'utf8'),
  readFile(new URL('../api/settlements.ts',import.meta.url),'utf8'),
  readFile(new URL('../api/transformation-costs.ts',import.meta.url),'utf8'),
  readFile(new URL('../api/profitability.ts',import.meta.url),'utf8'),
  readFile(new URL('../api/daily-close.ts',import.meta.url),'utf8'),
+ readFile(new URL('../api/plant-performance.ts',import.meta.url),'utf8'),
 ])
 
-for(const [name,source] of Object.entries({commercial,orders,settlements,costs,profitability})){
+for(const [name,source] of Object.entries({commercial,orders,settlements,costs,profitability,plantPerformance})){
  assert(source.includes("'admin','operations','finance','viewer'")||source.includes('"admin","operations","finance","viewer"'),`${name} must allow financial read only to admin/operations/finance/viewer`)
  assert(source.includes("Tu rol no tiene acceso a información"),`${name} must fail closed for unauthorized financial readers`)
  assert(!source.includes("'quality'"),`${name} financial read allowlist must not include Quality`)
@@ -27,6 +28,9 @@ assert(profitability.includes('corporate=admin||plantIds.length>=6'),'global his
 assert(profitability.includes('corporate?sql`select * from historical_supplier_intelligence'),'global historical supplier metrics must be corporate-only')
 assert(profitability.includes("plant_id=any(${plantIds}::text[])"),'limited-scope profitability must filter historical production by authorized plant')
 assert(profitability.includes('boundary:{financialRead:true,plantScoped:!admin,corporateHistory:corporate}'),'profitability API must expose its financial and scope boundary')
+
+assert(plantPerformance.includes("where ${admin} or r.plant_id=any(${plantIds}::text[])"),'plant performance live financial metrics must be scoped to authorized plants')
+assert(plantPerformance.includes('admin?sql`'),'plant performance global historical intelligence must remain admin-only')
 
 assert(dailyClose.includes("financialReadRoles=new Set(['admin','operations','finance','viewer'])"),'daily close must use the same financial read boundary')
 assert(dailyClose.includes('financial?sql`select r.plant_id,count(*) count,coalesce(sum(s.sold_kg*s.price_per_kg_clp),0) revenue'),'daily close must not query sales amounts for Quality')
@@ -45,4 +49,4 @@ if(failures.length){
  for(const failure of failures)console.error(`- ${failure}`)
  process.exit(1)
 }
-console.log('Financial read boundary smoke PASS: Quality cannot read financial/commercial APIs or daily-close amounts, settlement credit identity is exact-party only, profitability is plant-scoped, and regulatory dispatch gates remain intact')
+console.log('Financial read boundary smoke PASS: Quality cannot read financial/commercial APIs, daily-close amounts, or plant financial performance; settlement credit identity is exact-party only; profitability is plant-scoped; regulatory dispatch gates remain intact')
