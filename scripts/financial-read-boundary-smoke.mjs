@@ -2,12 +2,13 @@ import {readFile} from 'node:fs/promises'
 
 const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
-const [commercial,orders,settlements,costs,profitability]=await Promise.all([
+const [commercial,orders,settlements,costs,profitability,dailyClose]=await Promise.all([
  readFile(new URL('../api/commercial.ts',import.meta.url),'utf8'),
  readFile(new URL('../api/sales-orders.ts',import.meta.url),'utf8'),
  readFile(new URL('../api/settlements.ts',import.meta.url),'utf8'),
  readFile(new URL('../api/transformation-costs.ts',import.meta.url),'utf8'),
  readFile(new URL('../api/profitability.ts',import.meta.url),'utf8'),
+ readFile(new URL('../api/daily-close.ts',import.meta.url),'utf8'),
 ])
 
 for(const [name,source] of Object.entries({commercial,orders,settlements,costs,profitability})){
@@ -27,6 +28,14 @@ assert(profitability.includes('corporate?sql`select * from historical_supplier_i
 assert(profitability.includes("plant_id=any(${plantIds}::text[])"),'limited-scope profitability must filter historical production by authorized plant')
 assert(profitability.includes('boundary:{financialRead:true,plantScoped:!admin,corporateHistory:corporate}'),'profitability API must expose its financial and scope boundary')
 
+assert(dailyClose.includes("financialReadRoles=new Set(['admin','operations','finance','viewer'])"),'daily close must use the same financial read boundary')
+assert(dailyClose.includes('financial?sql`select r.plant_id,count(*) count,coalesce(sum(s.sold_kg*s.price_per_kg_clp),0) revenue'),'daily close must not query sales amounts for Quality')
+assert(dailyClose.includes('financial?sql`select r.plant_id,coalesce(sum(tc.amount_clp),0) cost'),'daily close must not query transformation costs for Quality')
+assert(dailyClose.includes('redactFinancialSnapshot'),'saved daily-close history must be redacted for non-financial roles')
+assert(dailyClose.includes('sales:{count:0,revenueClp:0,knownContributionClp:0,knownContributionSales:0,redacted:true}'),'historical financial sales values must be redacted')
+assert(dailyClose.includes('actionItems:actions?{...actions,settlements:[]}:actions'),'Quality history must not expose settlement follow-up items')
+assert(dailyClose.includes('permissions:{canClose:canClose(operator),canViewFinancial:financial}'),'daily close must expose its financial visibility boundary')
+
 assert(commercial.includes('getRegulatoryReleaseState(receptionId)'),'commercial dispatch must preserve regulatory release gate')
 assert(commercial.includes('getJapanReleaseState(receptionId)'),'Japan dispatch must preserve Japan Release gate')
 assert(orders.includes('getRegulatoryReleaseState(receptionId)'),'sales-order allocation must preserve regulatory release gate')
@@ -36,4 +45,4 @@ if(failures.length){
  for(const failure of failures)console.error(`- ${failure}`)
  process.exit(1)
 }
-console.log('Financial read boundary smoke PASS: Quality cannot read financial/commercial APIs, settlement credit identity is exact-party only, profitability is plant-scoped, and regulatory dispatch gates remain intact')
+console.log('Financial read boundary smoke PASS: Quality cannot read financial/commercial APIs or daily-close amounts, settlement credit identity is exact-party only, profitability is plant-scoped, and regulatory dispatch gates remain intact')
