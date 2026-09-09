@@ -58,7 +58,10 @@ export const seafoodCapabilityCatalog={
 function normalize(value:string){return value.toLocaleLowerCase('es-CL').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim()}
 function unique<T>(items:T[]){return [...new Set(items)]}
 function hasAny(value:string,patterns:RegExp[]){return patterns.some(pattern=>pattern.test(value))}
-function explicitLotCode(value:string){const match=value.match(/\b(?:lote|lot)\s+([a-z0-9][a-z0-9-]{5,31})\b/i),code=match?.[1]??null;return code&&/\d/.test(code)?code:null}
+function explicitLotCode(value:string){
+ const tail=value.match(/\b(?:lote|lot)\s+(.{1,80})/i)?.[1]??''
+ return tail.split(/\s+/).slice(0,4).find(token=>/^[a-z0-9][a-z0-9-]{5,31}$/i.test(token)&&/\d/.test(token))??null
+}
 
 // Pescamar is bilingual. Router semantics must remain equivalent in Spanish and English.
 const investigationPatterns=[
