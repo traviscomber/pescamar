@@ -2,6 +2,10 @@ type RuntimeBuffer = import("exceljs").Buffer & {
   readonly length: number;
 };
 
+type RuntimeEncodedBuffer = RuntimeBuffer & {
+  toString(encoding: "hex" | "base64" | "base64url"): string;
+};
+
 declare module "node:crypto" {
   type EncodedBytes = Uint8Array & {
     toString(encoding: "hex" | "base64url"): string;
@@ -19,7 +23,8 @@ declare module "node:crypto" {
 }
 
 declare const Buffer: {
-  from(value: string, encoding: "hex" | "base64" | "utf8"): RuntimeBuffer;
+  from(value: string, encoding: "hex" | "base64" | "utf8"): RuntimeEncodedBuffer;
+  from(value: Uint8Array): RuntimeEncodedBuffer;
 };
 
 declare const console: {
