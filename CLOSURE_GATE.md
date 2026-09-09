@@ -3,7 +3,7 @@
 **Producto:** Seafood Intelligence OS  
 **Implementación:** Pescamar — Implementation 01  
 **Modo:** CIERRE FINITO / NO FEATURE CREEP  
-**Baseline técnico:** `efa8e38a01be2dec87a26af8eee0de79210ebec8`  
+**Baseline técnico:** `520adf52a8bf61aa29ffdf17ceeb8bdd0bf698b1`  
 **Fuente superior de alcance:** `ROADMAP.md`  
 **Aceptación de piloto:** `PILOT_ACCEPTANCE.md`  
 **Diseño:** `DESIGN.md`
@@ -188,21 +188,33 @@ Pendiente sólo de piloto:
 
 # Gate 6 — Comercial y finanzas
 
-**Estado:** `EN CURSO`
+**Estado:** `REQUIERE PILOTO REAL`
 
 Owners: Seafood Chile Core + Databasin + Marmush + Qalito.
 
 Objetivo: conectar producto físico con compromiso comercial y economía sin romper separación de roles.
 
-Criterios:
-- clientes/proveedores usan master identities explícitas;
-- órdenes no crean terceros implícitamente;
-- lote/pallet asignado conserva lineage;
-- hold regulatorio impide despacho cuando corresponde;
-- costos, anticipos, liquidaciones y margen conservan fuentes y grain;
-- Calidad no recibe importes financieros reservados;
-- Gerencia puede explicar resultado por lote/proveedor/cliente cuando exista evidencia;
-- no se inventa margen o disponibilidad por datos faltantes.
+Cierre técnico alcanzado:
+- clientes y proveedores usan master identities explícitas; nuevas altas manuales requieren identificador tributario/externo verificable y la evidencia histórica no crea terceros por sí sola;
+- órdenes de venta y ventas exigen un customer master único y no crean terceros implícitamente;
+- asignaciones comerciales conservan `reception_id` y la identidad física del lote;
+- etiquetas y holds regulatorios se verifican antes de reservar o despachar producto;
+- liquidaciones se crean contra una recepción aprobada, preservan proveedor, precio, cálculo y actor; costos de transformación se registran contra `reception_id`, categoría, monto, fecha y actor;
+- Calidad conserva acceso a métricas de calidad de datos pero no recibe saldos ni diferencias monetarias reservadas;
+- profitability, supplier economics y la vista comercial aplican `unknown != zero`: ingreso conocido puede existir sin que se invente contribución o margen cuando falta settlement, costo de transformación o evidencia física suficiente;
+- Quality, contratos financieros, Chromium desktop/mobile y Vercel pasaron sobre el baseline técnico.
+
+Pendiente sólo de piloto:
+- crear el primer `reception_id` con proveedor, pesos y evidencia reales;
+- completar sobre ese mismo lote producción/packing/inventario y un compromiso comercial real;
+- registrar liquidación y costos reales con los actores autorizados;
+- demostrar hold/liberación y despacho cuando corresponda al caso físico;
+- explicar resultado real por lote/proveedor/cliente y validar el cálculo con Finanzas/Gerencia;
+- aceptación humana explícita conforme a `PILOT_ACCEPTANCE.md`.
+
+**Evidencia de frontera:** al mover este gate a piloto, `receptions`, `inventory_movements`, `sales_orders`, `sales_order_allocations`, `lot_dispatches`, `lot_sales`, `settlements`, `transformation_costs`, `regulatory_holds`, `packing_units` y `pallets` permanecen sin filas operacionales. No se usan seeds ni históricos ambiguos para fabricar un PASS.
+
+**Freeze:** no agregar nuevas funciones comerciales/financieras antes del piloto salvo P0/P1 o requisito comprobado del piloto.
 
 ---
 
