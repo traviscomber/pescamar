@@ -1,4 +1,4 @@
-import {invalidSourceTags} from '../api/_seafood-ai-policy.ts'
+import {invalidSourceTags,seafoodAiSystemPrompt} from '../api/_seafood-ai-policy.ts'
 
 const allowed=new Set(['inventory','orders','operational_intelligence'])
 const cases=[
@@ -22,9 +22,16 @@ for(const test of cases){
 const noEvidence=invalidSourceTags('Dato faltante: no se cargó evidencia.',new Set())
 if(noEvidence.length)failures.push(`empty evidence set must not manufacture a citation requirement: ${noEvidence.join(',')}`)
 
+const seniorPrompt=seafoodAiSystemPrompt('Pescamar — Implementation 01')
+for(const required of ['Estado:','Qué significa:','Atención:','Siguiente acción:','Falta:','Confianza:','observed','derived','needs-human-validation']){
+ if(!seniorPrompt.includes(required))failures.push(`senior brief contract missing ${required}`)
+}
+if(!seniorPrompt.includes('La ausencia de registros no prueba que un evento no ocurrió'))failures.push('senior brief must preserve missing-evidence boundary')
+if(!seniorPrompt.includes('Nunca inventes impacto económico, urgencia ni responsable'))failures.push('senior brief must fail closed on unsupported management claims')
+
 if(failures.length){
  console.error('Seafood AI answer contract eval FAILED')
  failures.forEach(failure=>console.error(`- ${failure}`))
  process.exit(1)
 }
-console.log(`Seafood AI answer contract eval PASS · ${cases.length} grounded/adversarial cases · missing citations, unknown sources and uncited calculations/inferences fail closed`)
+console.log(`Seafood AI answer contract eval PASS · ${cases.length} grounded/adversarial cases · senior operator brief enforced · missing citations, unknown sources and uncited calculations/inferences fail closed`)
