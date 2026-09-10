@@ -11,7 +11,8 @@ const [shell,os,modules,i18n,appCss,uxCss]=await Promise.all([
  readFile(new URL('../src/ux-unification.css',import.meta.url),'utf8'),
 ])
 
-assert(shell.includes('<small className="brand-product">{implementation.name} · {implementationLabel}</small>'),'brand must identify Pescamar as the current implementation without replacing the OS name')
+assert(shell.includes('<strong className="brand-name">PESCAMAR</strong>')&&shell.includes('<small className="brand-product">Seafood Intelligence OS</small>'),'brand must identify Pescamar first while retaining the OS platform context')
+assert(!shell.includes('Implementación 01')&&!shell.includes('implementationLabel'),'implementation numbering must not leak into the daily shell')
 assert(i18n.includes("'nav.pallets':'Pallets'"),'plant flow must expose Pallets as a separate human-readable stage')
 assert(shell.includes("labelKey:'nav.packing',step:4")&&shell.includes("labelKey:'nav.pallets',step:5"),'Packing and Pallets must be distinct steps')
 assert(os.includes("label:'Asistente Pescamar'")&&os.includes("label:'Trazabilidad del lote'")&&os.includes("label:'Conexiones con otros sistemas'"),'technical modules must use human-first labels')
@@ -26,4 +27,4 @@ if(failures.length){
  failures.forEach(failure=>console.error(`- ${failure}`))
  process.exit(1)
 }
-console.log('UX language smoke PASS: Pescamar context, human-first labels, physical workflow separation and responsive shared interaction rules are protected')
+console.log('UX language smoke PASS: Pescamar-first branding, human-first labels, physical workflow separation and responsive shared interaction rules are protected')
