@@ -1,6 +1,6 @@
 import {AlertTriangle,Camera,CheckCircle2,ImagePlus,ScanLine,ShieldCheck,Target,VideoOff} from 'lucide-react'
 import {useEffect,useRef,useState,type ChangeEvent} from 'react'
-import {analyzeSegmentedCanvas,type UniVisionSegmentation} from '../lib/uniVisionSegmentationV41'
+import {requestUniVisionSegmentation,type UniVisionSegmentation} from '../lib/uniVisionRemote'
 
 const fmt=(value:number,digits=1)=>value.toLocaleString('es-CL',{maximumFractionDigits:digits})
 
@@ -23,16 +23,16 @@ export function UniVisionQaBench(){
   const file=event.target.files?.[0]
   if(!file)return
   if(!['image/jpeg','image/png','image/webp'].includes(file.type)){setError('Usa JPG, PNG o WebP');return}
-  setCameraCycleOk(false);setAnalysisNotice('')
+  setCameraBusy(true);setCameraCycleOk(false);setAnalysisNotice('')
   try{
    const image=await readImage(file),canvas=drawToCanvas(image,image.naturalWidth,image.naturalHeight)
-   analyzeCanvas(canvas,file.name)
+   await analyzeCanvas(canvas,file.name)
   }catch(cause){clearResult();setFileName(file.name);setError(cause instanceof Error?cause.message:'No fue posible analizar la imagen')}
-  finally{if(inputRef.current)inputRef.current.value=''}
+  finally{setCameraBusy(false);if(inputRef.current)inputRef.current.value=''}
  }
 
- function analyzeCanvas(canvas:HTMLCanvasElement,sourceName:string){
-  const segmentation=analyzeSegmentedCanvas(canvas)
+ async function analyzeCanvas(canvas:HTMLCanvasElement,sourceName:string){
+  const segmentation=await requestUniVisionSegmentation(canvas)
   setPreview(segmentation.previewDataUrl)
   setResult(segmentation)
   setFileName(sourceName)
@@ -62,17 +62,19 @@ export function UniVisionQaBench(){
   setCameraOn(false)
  }
 
- function captureCamera(){
+ async function captureCamera(){
   const video=videoRef.current
   if(!video||video.readyState<2||!video.videoWidth||!video.videoHeight){setError('La cámara todavía no está lista para capturar.');return}
+  setCameraBusy(true)
   try{
    const canvas=drawToCanvas(video,video.videoWidth,video.videoHeight)
    setCameraCycleOk(true)
    setFileName(`captura-camara-${new Date().toISOString()}`)
    setError('')
-   try{analyzeCanvas(canvas,`captura-camara-${new Date().toISOString()}`)}
+   try{await analyzeCanvas(canvas,`captura-camara-${new Date().toISOString()}`)}
    catch(cause){clearResult();setAnalysisNotice(cause instanceof Error?cause.message:'Uni no pudo aislar producto en esta captura')}
   }catch(cause){clearResult();setCameraCycleOk(false);setError(cause instanceof Error?cause.message:'No fue posible capturar el frame de cámara')}
+  finally{setCameraBusy(false)}
  }
 
  function clearResult(){setPreview('');setResult(null)}
@@ -86,15 +88,15 @@ export function UniVisionQaBench(){
   {analysisNotice?<div className="notice warning"><AlertTriangle size={16}/><div><b>Captura OK · no se detectó suficiente uni</b><small>{analysisNotice}</small></div></div>:null}
   {error?<div className="notice error"><AlertTriangle size={16}/><div><b>No fue posible completar la captura</b><small>{error}</small></div></div>:null}
   <div className="row-actions">
-   <button type="button" className="button primary" disabled={cameraBusy} onClick={()=>void startCamera()}><Camera size={15}/>{cameraBusy?'Abriendo cámara…':cameraOn?'Reiniciar cámara':'Abrir cámara'}</button>
-   {cameraOn?<><button type="button" className="button primary" onClick={captureCamera}><ScanLine size={15}/>Capturar y analizar</button><button type="button" className="button" onClick={stopCamera}><VideoOff size={15}/>Cerrar cámara</button></>:null}
+   <button type="button" className="button primary" disabled={cameraBusy} onClick={()=>void startCamera()}><Camera size={15}/>{cameraBusy?'Procesando…':cameraOn?'Reiniciar cámara':'Abrir cámara'}</button>
+   {cameraOn?<><button type="button" className="button primary" disabled={cameraBusy} onClick={()=>void captureCamera()}><ScanLine size={15}/>Capturar y analizar</button><button type="button" className="button" disabled={cameraBusy} onClick={stopCamera}><VideoOff size={15}/>Cerrar cámara</button></>:null}
    <input ref={inputRef} hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={event=>void chooseFile(event)}/>
-   <button type="button" className="button" onClick={()=>inputRef.current?.click()}><ImagePlus size={15}/>Usar foto</button>
+   <button type="button" className="button" disabled={cameraBusy} onClick={()=>inputRef.current?.click()}><ImagePlus size={15}/>Usar foto</button>
    {fileName?<span className="source-note">{fileName}</span>:null}
   </div>
   {cameraOn?<div style={{marginTop:16,background:'#111',display:'flex',justifyContent:'center'}}><video ref={videoRef} autoPlay playsInline muted style={{width:'100%',maxHeight:520,objectFit:'contain'}}/></div>:null}
   {preview?<img src={preview} alt="Producto aislado por Uni Vision" style={{width:'100%',maxHeight:520,objectFit:'contain',background:'#111',marginTop:16}}/>:null}
-  {result?<><div className={`notice ${scanReady?'':'warning'}`}>{scanReady?<CheckCircle2 size={16}/>:<AlertTriangle size={16}/>}<div><b>{scanReady?'Scan listo para revisión de Calidad':'Scan requiere revisión visual'}</b><small>{scanReady?'La captura completó el ciclo cámara → frame → segmentación → métricas. Calidad conserva la decisión final.':reviewReasons.length?reviewReasons.join(' · '):'La segmentación necesita revisión humana antes de usar estas mediciones como apoyo.'}</small></div></div><div className="signal-grid" style={{marginTop:16}}><article className="signal-card"><span><Target size={16}/>Área útil</span><b>{result.roi.source==='tray'?'Bandeja detectada':'Encuadre general'}</b><small>{Math.round(result.roi.width)} × {Math.round(result.roi.height)} px</small></article><article className="signal-card"><span><Target size={16}/>Producto visible</span><b>{Math.round(result.usableRatio*100)}%</b><small>del área útil analizada</small></article><article className="signal-card"><span><Target size={16}/>Componentes</span><b>{result.retainedComponents}</b><small>masas de producto retenidas</small></article><article className="signal-card"><span><Target size={16}/>Huecos internos</span><b>{result.filledHolePixels}</b><small>celdas pequeñas reincorporadas</small></article><article className="signal-card"><span><Target size={16}/>Borde recuperado</span><b>{result.recoveredEdgePixels}</b><small>celdas compatibles recuperadas cerca del borde inferior</small></article><article className="signal-card"><span><Target size={16}/>Luminosidad L*</span><b>{fmt(result.metrics.lMean,1)}</b><small>medición visual derivada</small></article><article className="signal-card"><span><Target size={16}/>a*</span><b>{fmt(result.metrics.aMean,1)}</b><small>verde ↔ rojo</small></article><article className="signal-card"><span><Target size={16}/>b*</span><b>{fmt(result.metrics.labBMean,1)}</b><small>azul ↔ amarillo</small></article><article className="signal-card"><span><Target size={16}/>Borde residual</span><b>{Math.round(result.borderCandidateRatio*100)}%</b><small>producto tocando perímetro</small></article></div><p className="source-note">Scan v4.1. La cámara se procesa localmente en el navegador; esta prueba no persiste decisiones ni datos operacionales.</p></>:null}
+  {result?<><div className={`notice ${scanReady?'':'warning'}`}>{scanReady?<CheckCircle2 size={16}/>:<AlertTriangle size={16}/>}<div><b>{scanReady?'Scan listo para revisión de Calidad':'Scan requiere revisión visual'}</b><small>{scanReady?'La captura completó el ciclo cámara → frame → segmentación → métricas. Calidad conserva la decisión final.':reviewReasons.length?reviewReasons.join(' · '):'La segmentación necesita revisión humana antes de usar estas mediciones como apoyo.'}</small></div></div><div className="signal-grid" style={{marginTop:16}}><article className="signal-card"><span><Target size={16}/>Área útil</span><b>{result.roi.source==='tray'?'Bandeja detectada':'Encuadre general'}</b><small>{Math.round(result.roi.width)} × {Math.round(result.roi.height)} px</small></article><article className="signal-card"><span><Target size={16}/>Producto visible</span><b>{Math.round(result.usableRatio*100)}%</b><small>del área útil analizada</small></article><article className="signal-card"><span><Target size={16}/>Componentes</span><b>{result.retainedComponents}</b><small>masas de producto retenidas</small></article><article className="signal-card"><span><Target size={16}/>Huecos internos</span><b>{result.filledHolePixels}</b><small>celdas pequeñas reincorporadas</small></article><article className="signal-card"><span><Target size={16}/>Borde recuperado</span><b>{result.recoveredEdgePixels}</b><small>celdas compatibles recuperadas cerca del borde inferior</small></article><article className="signal-card"><span><Target size={16}/>Luminosidad L*</span><b>{fmt(result.metrics.lMean,1)}</b><small>medición visual derivada</small></article><article className="signal-card"><span><Target size={16}/>a*</span><b>{fmt(result.metrics.aMean,1)}</b><small>verde ↔ rojo</small></article><article className="signal-card"><span><Target size={16}/>b*</span><b>{fmt(result.metrics.labBMean,1)}</b><small>azul ↔ amarillo</small></article><article className="signal-card"><span><Target size={16}/>Borde residual</span><b>{Math.round(result.borderCandidateRatio*100)}%</b><small>producto tocando perímetro</small></article></div><p className="source-note">Scan v4.1. El navegador captura el frame; el análisis se ejecuta de forma transitoria en el servicio protegido y esta prueba no persiste decisiones ni datos operacionales.</p></>:null}
  </section>
 }
 
