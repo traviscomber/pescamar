@@ -14,7 +14,7 @@ const [handler,context,contextWithLot,operationalContext,policy,intelligence,pag
   readFile(new URL('../src/auth.tsx',import.meta.url),'utf8'),
 ])
 
-assert(policy.includes("SEAFOOD_AI_POLICY_VERSION='seafood.ai.evidence.v9'"),'Seafood AI policy must be explicitly versioned at v9')
+assert(policy.includes("SEAFOOD_AI_POLICY_VERSION='seafood.ai.evidence.v10'"),'Seafood AI policy must be explicitly versioned at v10')
 for(const [source,evidenceClass] of Object.entries({receptions:'live_observation',production:'derived_live',quality:'live_observation',inventory:'derived_live',orders:'live_observation',canonical_sources:'canonical_reference',canonical_inventory:'canonical_history',finance:'partial_financial',operational_intelligence:'derived_live'}))assert(policy.includes(`${source}:'${evidenceClass}'`),`${source} must have evidence class ${evidenceClass}`)
 assert(policy.includes('Cálculo:')&&policy.includes('Inferencia:')&&policy.includes('Dato faltante:'),'Seafood AI must distinguish calculation, inference and missing evidence')
 assert(policy.includes("invalid.add('missing_source_tag')"),'model answers with available evidence but no valid source tag must fail closed')
