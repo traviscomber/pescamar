@@ -1,6 +1,7 @@
 import {AlertTriangle,ArrowRight,CheckCircle2,MapPin,PackageCheck} from 'lucide-react'
 import {useEffect,useMemo,useState} from 'react'
 import {Link,useSearchParams} from 'react-router-dom'
+import {ContextualGuidance} from '../components/ContextualGuidance'
 import {HistoricalContinuity} from '../components/HistoricalContinuity'
 import {PageHeader} from '../components/PageHeader'
 
@@ -24,14 +25,15 @@ export function InventoryFocus(){
   const orderParams=new URLSearchParams();if(plantId)orderParams.set('plantId',plantId);if(receptionId)orderParams.set('receptionId',receptionId)
   const ordersPath=orderParams.size?`/ordenes-venta?${orderParams.toString()}`:'/ordenes-venta'
   const primary=totals.unlocated>0
-    ?{tone:'warning',icon:<MapPin size={20}/>,eyebrow:'REQUIERE ACCIÓN',title:`Ubicar ${kg(totals.unlocated)}`,text:'Hay producto sin ubicación registrada.',label:'Ubicar producto',to:detailPath}
+    ?{tone:'warning',icon:<MapPin size={20}/>,eyebrow:'REQUIERE ACCIÓN',title:`Ubicar ${kg(totals.unlocated)}`,text:'Hay producto sin ubicación registrada.',label:'Ubicar producto',to:detailPath,why:'La disponibilidad comercial debe permanecer ligada a una ubicación física registrada; producto sin ubicar requiere confirmación antes de seguir.'}
     :firstBlocked
-      ?{tone:'warning',icon:<AlertTriangle size={20}/>,eyebrow:'REQUIERE ACCIÓN',title:`${totals.blocked} lote${totals.blocked===1?'':'s'} retenido${totals.blocked===1?'':'s'}`,text:firstBlocked.releaseBlockReasons.slice(0,2).join(' · ')||'El lote todavía no está listo para despacho o venta.',label:'Revisar lote',to:firstBlocked.species.toLowerCase().includes('eriz')?`/proceso-erizo?receptionId=${encodeURIComponent(firstBlocked.reception_id)}`:`/etiquetas?receptionId=${encodeURIComponent(firstBlocked.reception_id)}`}
+      ?{tone:'warning',icon:<AlertTriangle size={20}/>,eyebrow:'REQUIERE ACCIÓN',title:`${totals.blocked} lote${totals.blocked===1?'':'s'} retenido${totals.blocked===1?'':'s'}`,text:firstBlocked.releaseBlockReasons.slice(0,2).join(' · ')||'El lote todavía no está listo para despacho o venta.',label:'Revisar lote',to:firstBlocked.species.toLowerCase().includes('eriz')?`/proceso-erizo?receptionId=${encodeURIComponent(firstBlocked.reception_id)}`:`/etiquetas?receptionId=${encodeURIComponent(firstBlocked.reception_id)}`,why:'Un lote retenido no debe presentarse como libre para decisión comercial hasta revisar la evidencia que origina el bloqueo.'}
       :totals.planning>0
-        ?{tone:'success',icon:<CheckCircle2 size={20}/>,eyebrow:'DISPONIBLE',title:`${kg(totals.planning)} disponibles`,text:receptionId?'Este lote ya puede participar en una orden comercial.':'Producto disponible para pedidos comerciales.',label:'Abrir órdenes de venta',to:ordersPath}
-        :{tone:'neutral',icon:<PackageCheck size={20}/>,eyebrow:'SIN STOCK ACTUAL',title:receptionId?'Este lote aún no tiene stock disponible':'Sin movimientos nuevos todavía',text:receptionId?'La Ficha 360 mantendrá este mismo lote cuando exista disponibilidad física.':'El stock histórico sigue disponible para consulta. El stock actual comienza con los movimientos nuevos.',label:'Ir a Operación',to:'/recepciones'}
+        ?{tone:'success',icon:<CheckCircle2 size={20}/>,eyebrow:'DISPONIBLE',title:`${kg(totals.planning)} disponibles`,text:receptionId?'Este lote ya puede participar en una orden comercial.':'Producto disponible para pedidos comerciales.',label:'Abrir órdenes de venta',to:ordersPath,why:'Esta disponibilidad proviene del inventario actual elegible para planificación; el histórico permanece sólo como referencia.'}
+        :{tone:'neutral',icon:<PackageCheck size={20}/>,eyebrow:'SIN STOCK ACTUAL',title:receptionId?'Este lote aún no tiene stock disponible':'Sin movimientos nuevos todavía',text:receptionId?'La Ficha 360 mantendrá este mismo lote cuando exista disponibilidad física.':'El stock histórico sigue disponible para consulta. El stock actual comienza con los movimientos nuevos.',label:'Ir a Operación',to:'/recepciones',why:'No se convierte ausencia de stock live en una conclusión sobre el historial. La operación actual empieza sólo con movimientos registrados.'}
   return <>
     <PageHeader eyebrow="Operación de planta" title="Inventario" description={receptionId?'Disponibilidad y próxima acción del lote activo, sin mezclarlo con otros lotes de la planta.':'Producto disponible hoy y stock histórico, claramente separados.'}/>
+    <ContextualGuidance state={loading?'Calculando disponibilidad actual':primary.title} action={loading?'Espera el cálculo antes de decidir':primary.label} reason={loading?'Pescamar separa evidencia actual de referencias históricas antes de mostrar disponibilidad.':primary.why} assistantLabel="Consultar inventario"/>
     {error?<div className="system-banner error" role="alert">{error}</div>:null}
     {loading?<div className="system-banner">Calculando disponibilidad…</div>:null}
     {!loading&&!error?<>
