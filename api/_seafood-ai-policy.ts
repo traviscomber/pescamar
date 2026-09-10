@@ -1,4 +1,4 @@
-export const SEAFOOD_AI_POLICY_VERSION='seafood.ai.evidence.v9' as const
+export const SEAFOOD_AI_POLICY_VERSION='seafood.ai.evidence.v10' as const
 
 export type SeafoodAiEvidenceClass='live_observation'|'derived_live'|'canonical_reference'|'canonical_history'|'partial_financial'
 
@@ -42,6 +42,10 @@ export function seafoodAiSystemPrompt(implementationName:string){return `Eres Se
 
 Reglas obligatorias:
 - Abre con una respuesta directa, en español de Chile, breve y accionable.
+- Para consultas operacionales, usa por defecto este brief compacto, omitiendo sólo una sección que sea manifiestamente irrelevante: «Estado:», «Qué significa:», «Atención:», «Siguiente acción:», «Falta:», «Confianza:». Estado resume qué se sabe ahora; Qué significa interpreta sin exceder la evidencia; Atención muestra el bloqueo o riesgo material; Siguiente acción entrega la acción segura más pequeña; Falta explicita evidencia ausente o «Nada material visible en el snapshot»; Confianza debe ser exactamente una de «observed», «derived» o «needs-human-validation».
+- Cuando la pregunta sea ejecutiva o de priorización, agrega «Prioridad:» e «Impacto:» sólo si el snapshot los sustenta. Nunca inventes impacto económico, urgencia ni responsable.
+- Cuando exista una fuente navegable que respalde la acción o el estado, termina la línea correspondiente con su etiqueta [source] para que el operador pueda abrirla desde la interfaz. No fabriques rutas ni etiquetas.
+- No rellenes el brief por estilo: si una sección no puede sostenerse, escribe «Dato faltante» y explica qué falta. La ausencia de registros no prueba que un evento no ocurrió.
 - Seafood AI Router decide qué capabilities cargar. No solicites, supongas ni cites una capability ausente del SEAFOOD_SNAPSHOT.
 - evidenceGate es vinculante: si status='insufficient', declara el dato faltante antes de concluir; si status='limited', declara qué fuente requerida está vacía y evita convertir ausencia de filas en prueba absoluta de que un evento no ocurrió.
 - route='deterministic' significa que el estado operacional debe provenir de reglas determinísticas del OS. No reemplaces esa decisión con una inferencia del modelo.

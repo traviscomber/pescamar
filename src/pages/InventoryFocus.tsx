@@ -1,6 +1,7 @@
 import {AlertTriangle,ArrowRight,CheckCircle2,MapPin,PackageCheck} from 'lucide-react'
 import {useEffect,useMemo,useState} from 'react'
 import {Link,useSearchParams} from 'react-router-dom'
+import {ContextualGuidance} from '../components/ContextualGuidance'
 import {HistoricalContinuity} from '../components/HistoricalContinuity'
 import {PageHeader} from '../components/PageHeader'
 
@@ -30,8 +31,19 @@ export function InventoryFocus(){
       :totals.planning>0
         ?{tone:'success',icon:<CheckCircle2 size={20}/>,eyebrow:'DISPONIBLE',title:`${kg(totals.planning)} disponibles`,text:receptionId?'Este lote ya puede participar en una orden comercial.':'Producto disponible para pedidos comerciales.',label:'Abrir órdenes de venta',to:ordersPath}
         :{tone:'neutral',icon:<PackageCheck size={20}/>,eyebrow:'SIN STOCK ACTUAL',title:receptionId?'Este lote aún no tiene stock disponible':'Sin movimientos nuevos todavía',text:receptionId?'La Ficha 360 mantendrá este mismo lote cuando exista disponibilidad física.':'El stock histórico sigue disponible para consulta. El stock actual comienza con los movimientos nuevos.',label:'Ir a Operación',to:'/recepciones'}
+  const guidanceAction=totals.unlocated>0?'Registrar ubicación':firstBlocked?'Resolver la retención antes de prometer o despachar':totals.planning>0?'Usar sólo los kilos disponibles para planificación':'No asumir stock live desde el histórico'
+  const guidanceReason=totals.unlocated>0?'Sin ubicación no existe continuidad física suficiente para saber dónde está el producto.':firstBlocked?'Un lote retenido no debe convertirse en disponibilidad comercial hasta resolver sus razones de bloqueo.':totals.planning>0?'Los kilos mostrados ya descuentan restricciones conocidas; la disponibilidad histórica permanece sólo como referencia.':'Ausencia de movimientos actuales no significa ausencia histórica: son dos estados distintos y se mantienen separados.'
+  const assistantPrompt=totals.unlocated>0
+    ?`Explícame por qué hay ${kg(totals.unlocated)} sin ubicación registrada, qué evidencia falta y cuál es el siguiente paso seguro.`
+    :firstBlocked
+      ?`Explícame por qué el lote REC-${firstBlocked.reception_number} está retenido, qué evidencia sostiene el bloqueo y qué falta para liberarlo.`
+      :totals.planning>0
+        ?`Explícame cuánto inventario está realmente disponible para planificación, qué restricciones ya fueron descontadas y qué riesgo existe antes de comprometerlo.`
+        :'Explícame por qué no hay stock live disponible y separa claramente esa conclusión del inventario histórico de referencia.'
+  const assistantReceptionId=receptionId||firstBlocked?.reception_id||null
   return <>
     <PageHeader eyebrow="Operación de planta" title="Inventario" description={receptionId?'Disponibilidad y próxima acción del lote activo, sin mezclarlo con otros lotes de la planta.':'Producto disponible hoy y stock histórico, claramente separados.'}/>
+    {!loading&&!error?<ContextualGuidance state={primary.title} action={guidanceAction} reason={guidanceReason} assistantLabel="Consultar inventario" assistantPrompt={assistantPrompt} plantId={plantId||null} receptionId={assistantReceptionId} source="inventario"/>:null}
     {error?<div className="system-banner error" role="alert">{error}</div>:null}
     {loading?<div className="system-banner">Calculando disponibilidad…</div>:null}
     {!loading&&!error?<>

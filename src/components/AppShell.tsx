@@ -4,7 +4,7 @@ import {useEffect,useRef,useState,type ReactNode} from "react";
 import {canAccessPath,canCreateReception} from "../access";
 import {useAuth} from "../auth";
 import {usePlatformStatus} from "../hooks/usePlatformStatus";
-import {useLocale} from '../i18n';
+import {localeTag,useLocale} from '../i18n';
 import {getOsModule} from "../os";
 import {seafoodProduct} from "../product";
 import "../navigation-groups.css";
@@ -37,7 +37,7 @@ export function AppShell({children,onNewReception}:{children:ReactNode;onNewRece
  const plantContextId=(routePlant&&!routePlant.startsWith('historico-')?decodeURIComponent(routePlant):requestedPlant)||'';
  const workspace=plantContextId?"operation":workspaceForPath(pathname);
  useEffect(()=>{document.documentElement.dataset.theme=theme;document.documentElement.style.colorScheme=theme;localStorage.setItem("pescamar-theme",theme)},[theme]);
- useEffect(()=>{document.documentElement.lang=locale},[locale]);
+ useEffect(()=>{document.documentElement.lang=localeTag(locale)},[locale]);
  useEffect(()=>{setMobileOpen(false);window.scrollTo({top:0,left:0,behavior:"auto"});document.querySelector<HTMLElement>("#main-content")?.focus({preventScroll:true})},[pathname]);
  useEffect(()=>{if(!mobileOpen)return;const previous=document.body.style.overflow,drawer=drawerRef.current,menuButton=menuButtonRef.current;document.body.style.overflow="hidden";const focusable=()=>drawer?[...drawer.querySelectorAll<HTMLElement>('a[href],button:not([disabled]),[tabindex]:not([tabindex="-1"])')].filter(node=>!node.hasAttribute("aria-hidden")):[];requestAnimationFrame(()=>focusable()[0]?.focus());const onKeyDown=(event:KeyboardEvent)=>{if(event.key==="Escape"){event.preventDefault();setMobileOpen(false);return}if(event.key!=="Tab")return;const items=focusable();if(!items.length)return;const first=items[0],last=items[items.length-1];if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}};window.addEventListener("keydown",onKeyDown);return()=>{document.body.style.overflow=previous;window.removeEventListener("keydown",onKeyDown);menuButton?.focus()}},[mobileOpen]);
  const implementation=seafoodProduct.implementation;
