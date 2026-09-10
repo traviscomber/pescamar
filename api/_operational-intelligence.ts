@@ -18,6 +18,24 @@ export type OperationalIntelligenceCapabilities={
   canAssessSalesDispatch:boolean
 }
 
+export type GradeAIntelligence={
+  metrics:{
+    productionInputKg:number|null
+    productionOutputKg:number|null
+    yieldPct:number|null
+    committedKg:number|null
+    dispatchedKg:number|null
+    fulfilmentPct:number|null
+    soldKg:number|null
+    salesToDispatchPct:number|null
+  }
+  evidence:{
+    yield:'observed'|'partial'|'not_available'
+    commercialContinuity:'observed'|'partial'|'not_available'
+  }
+  boundary:{predictiveBaselineAvailable:false;rule:string}
+}
+
 export type OperationalIntelligence={
   schemaVersion:typeof OPERATIONAL_INTELLIGENCE_SCHEMA
   mode:'live'
@@ -27,6 +45,7 @@ export type OperationalIntelligence={
   highestPriority:1|2|3|null
   counts:{p1:number;p2:number;p3:number}
   signals:OperationalSignal[]
+  gradeA:GradeAIntelligence
   boundary:{writesOperationalState:false;rule:string}
 }
 
@@ -34,6 +53,13 @@ const fullAssessment:OperationalIntelligenceCapabilities={canAssessCommercialCom
 const numberOrNull=(value:unknown)=>{const parsed=Number(value);return Number.isFinite(parsed)?parsed:null}
 const textOrNull=(value:unknown)=>value==null?null:String(value).trim()||null
 const byType=(events:SeafoodEvent[],type:SeafoodEvent['type'])=>events.filter(event=>event.type===type)
+const sumKnown=(events:SeafoodEvent[],key:string)=>{
+  if(!events.length)return null
+  const values=events.map(event=>numberOrNull(event.metrics[key]))
+  if(values.some(value=>value==null))return null
+  return values.reduce<number>((sum,value)=>sum+(value??0),0)
+}
+const pct=(numerator:number|null,denominator:number|null)=>numerator!=null&&denominator!=null&&denominator>0?Number((numerator/denominator*100).toFixed(1)):null
 
 export function buildOperationalIntelligence(events:SeafoodEvent[],capabilities:OperationalIntelligenceCapabilities=fullAssessment):OperationalIntelligence{
   const signals:OperationalSignal[]=[]
@@ -60,11 +86,15 @@ export function buildOperationalIntelligence(events:SeafoodEvent[],capabilities:
     }
   }
 
-  for(const event of byType(events,'production')){
+  const production=byType(events,'production')
+  for(const event of production){
     const input=numberOrNull(event.metrics.inputKg),output=numberOrNull(event.metrics.outputKg)
     if(input!=null&&output!=null&&input>=0&&output>input){
       push({priority:1,kind:'production-mass-balance',title:'Salida de producción supera entrada',detail:`El evento registra ${output} kg de salida sobre ${input} kg de entrada.`,confidence:'derived',action:'Revisar medición, unidad y consolidación del evento.',evidenceEventIds:[event.id],blockers:['mass_balance_inconsistent']})
     }
+  }
+  if(production.length&&production.some(event=>numberOrNull(event.metrics.inputKg)==null||numberOrNull(event.metrics.outputKg)==null)){
+    push({priority:3,kind:'yield-evidence',title:'Rendimiento no evaluable en todo el proceso',detail:'Existe producción registrada, pero al menos un evento no contiene simultáneamente kilos de entrada y salida. No se puede calcular rendimiento completo sin completar esa evidencia.',confidence:'observed',action:'Completar input/output sólo desde el registro fuente antes de comparar rendimiento.',evidenceEventIds:production.filter(event=>numberOrNull(event.metrics.inputKg)==null||numberOrNull(event.metrics.outputKg)==null).map(event=>event.id),blockers:['yield_evidence_partial']})
   }
 
   for(const event of byType(events,'inventory')){
@@ -92,6 +122,16 @@ export function buildOperationalIntelligence(events:SeafoodEvent[],capabilities:
     push({priority:2,kind:'availability-evidence',title:'Compromiso sin inventario observado',detail:'Hay asignación comercial, pero el Event Graph no contiene movimientos de inventario para demostrar disponibilidad.',confidence:'observed',action:'Confirmar disponibilidad con evidencia de inventario antes de prometer despacho.',evidenceEventIds:commitments.map(event=>event.id),blockers:['inventory_evidence_missing']})
   }
 
+  const committedKg=capabilities.canAssessCommercialCommitment?sumKnown(commitments,'allocatedKg'):null
+  const dispatchedKg=sumKnown(dispatches,'dispatchedKg')
+  const soldKg=capabilities.canAssessSalesDispatch?sumKnown(sales,'soldKg'):null
+  if(capabilities.canAssessCommercialCommitment&&committedKg!=null&&dispatchedKg!=null&&dispatchedKg>committedKg+0.01){
+    push({priority:1,kind:'order-fulfilment',title:'Despacho supera kilos comprometidos',detail:`La evidencia visible suma ${dispatchedKg} kg despachados sobre ${committedKg} kg asignados al lote.`,confidence:'derived',action:'Reconciliar orden, asignación y despacho antes de continuar compromisos comerciales.',evidenceEventIds:[...commitments,...dispatches].map(event=>event.id),blockers:['dispatch_exceeds_commitment']})
+  }
+  if(capabilities.canAssessSalesDispatch&&soldKg!=null&&dispatchedKg!=null&&soldKg>dispatchedKg+0.01){
+    push({priority:1,kind:'sales-continuity',title:'Venta supera despacho observado',detail:`La evidencia visible suma ${soldKg} kg vendidos sobre ${dispatchedKg} kg despachados.`,confidence:'derived',action:'Reconciliar venta, despacho e invoice antes del cierre comercial.',evidenceEventIds:[...dispatches,...sales].map(event=>event.id),blockers:['sale_exceeds_dispatch']})
+  }
+
   const missingDates=events.filter(event=>!event.occurredAt)
   if(missingDates.length){
     push({priority:3,kind:'event-time',title:'Eventos sin fecha atribuible',detail:`${missingDates.length} evento(s) no tienen occurredAt; el orden temporal no puede considerarse completo.`,confidence:'observed',action:'Completar fecha sólo desde evidencia fuente.',evidenceEventIds:missingDates.map(event=>event.id),blockers:['event_time_missing']})
@@ -101,7 +141,27 @@ export function buildOperationalIntelligence(events:SeafoodEvent[],capabilities:
     push({priority:3,kind:'evidence-coverage',title:'Recepción sin evidencia documental visible',detail:'La recepción existe en el Event Graph, pero no hay eventos documentales asociados en el alcance actual.',confidence:'observed',action:'Adjuntar o vincular evidencia primaria disponible.',evidenceEventIds:[reception.id],blockers:[]})
   }
 
+  const productionInputKg=sumKnown(production,'inputKg'),productionOutputKg=sumKnown(production,'outputKg')
+  const yieldPct=pct(productionOutputKg,productionInputKg)
+  const gradeA:GradeAIntelligence={
+    metrics:{
+      productionInputKg,
+      productionOutputKg,
+      yieldPct,
+      committedKg,
+      dispatchedKg,
+      fulfilmentPct:pct(dispatchedKg,committedKg),
+      soldKg,
+      salesToDispatchPct:pct(soldKg,dispatchedKg),
+    },
+    evidence:{
+      yield:!production.length?'not_available':yieldPct==null?'partial':'observed',
+      commercialContinuity:!commitments.length&&!dispatches.length&&!sales.length?'not_available':(capabilities.canAssessCommercialCommitment&&capabilities.canAssessSalesDispatch&&(!commitments.length||!dispatches.length||!sales.length))?'partial':'observed',
+    },
+    boundary:{predictiveBaselineAvailable:false,rule:'Estas métricas son descriptivas y derivadas sólo de eventos live observados. No se declara rendimiento anormal, riesgo futuro, margen esperado ni recomendación predictiva hasta contar con baseline validado por especie, proveedor, origen, proceso y periodo.'},
+  }
+
   signals.sort((a,b)=>a.priority-b.priority||a.kind.localeCompare(b.kind)||a.title.localeCompare(b.title))
   const counts={p1:signals.filter(signal=>signal.priority===1).length,p2:signals.filter(signal=>signal.priority===2).length,p3:signals.filter(signal=>signal.priority===3).length}
-  return {schemaVersion:OPERATIONAL_INTELLIGENCE_SCHEMA,mode:'live',lotId:lotIds.length===1?lotIds[0]:null,organizationId:organizationIds.length===1?organizationIds[0]:null,generatedFromEvents:events.length,highestPriority:counts.p1?1:counts.p2?2:counts.p3?3:null,counts,signals,boundary:{writesOperationalState:false,rule:'Las señales derivan sólo de Seafood Event Graph y de evidencia que el contexto puede evaluar; ausencia por permisos nunca se convierte en ausencia factual. Orientan revisión y acción humana, no escriben ni completan estado operacional.'}}
+  return {schemaVersion:OPERATIONAL_INTELLIGENCE_SCHEMA,mode:'live',lotId:lotIds.length===1?lotIds[0]:null,organizationId:organizationIds.length===1?organizationIds[0]:null,generatedFromEvents:events.length,highestPriority:counts.p1?1:counts.p2?2:counts.p3?3:null,counts,signals,gradeA,boundary:{writesOperationalState:false,rule:'Las señales derivan sólo de Seafood Event Graph y de evidencia que el contexto puede evaluar; ausencia por permisos nunca se convierte en ausencia factual. Orientan revisión y acción humana, no escriben ni completan estado operacional.'}}
 }
