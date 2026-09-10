@@ -15,6 +15,11 @@ test('erizo mobile station segments roe and preserves uploaded source hash',asyn
     if(path==='/api/history')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({records:[],summary:null})})
     if(path==='/api/status')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,platform:'vercel-functions',environment:'test',persistence:{database:true,files:true},metrics:{pendingDecisions:0,pendingCredits:0,activeOperators:1,receptions:0},commit:'qa',checkedAt:new Date().toISOString()})})
     if(path==='/api/sea-urchin-mobile')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,run:{runId,receptionId,receptionNumber:321,plantId:'ancud',species:'Erizo',supplier:'Proveedor QA',grade:null,colorStatus:'pending',status:'in_process'},permissions:{canCapture:true}})})
+    if(path==='/api/uni-vision-segmentation'&&route.request().method()==='POST'){
+      const body=route.request().postDataJSON() as {width?:number;height?:number}
+      const width=Number(body.width??64),height=Number(body.height??64),mask=Buffer.alloc(width*height,1).toString('base64')
+      return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,segmentation:{metrics:{pixelCount:width*height,rMean:210,gMean:120,bMean:55,lMean:55,aMean:16,labBMean:52,lStd:4,aStd:3,bStd:5,chroma:54,hueDeg:73},usableRatio:.62,borderCandidateRatio:.02,confidence:'good',maskMode:'focused',retainedComponents:1,suppressedFramePixels:0,filledHolePixels:0,recoveredEdgePixels:0,roi:{x:0,y:0,width,height,source:'default'},segmentationVersion:'v4.1',mask:{cols:width,rows:height,stride:1,originX:0,originY:0,dataBase64:mask}}})})
+    }
     if(path==='/api/sea-urchin-color'&&route.request().method()==='GET')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,run:{id:runId,plantId:'ancud',grade:null},captures:[],references:[],permissions:{canWrite:true,canManageReferences:true}})})
     if(path==='/api/sea-urchin-color'&&route.request().method()==='POST'){
       const body=route.request().postDataJSON() as {action?:string;sourceImageSha256?:string}
