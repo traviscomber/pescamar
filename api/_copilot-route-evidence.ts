@@ -11,6 +11,8 @@ import type {SeafoodCapability,SeafoodQueryRoute} from './_seafood-query-router.
 
 const baseCapabilities=new Set<SeafoodCapability>(['receptions','production','quality','inventory','orders','canonical_sources','canonical_inventory','finance'])
 
+type BaseCapability='receptions'|'production'|'quality'|'inventory'|'orders'|'canonical_sources'|'canonical_inventory'|'finance'
+
 function scopeFor(operator:SessionOperator,plantId:string|null):CopilotContext['scope']{
  const allowed=allowedPlantIds(operator)
  return {
@@ -22,11 +24,8 @@ function scopeFor(operator:SessionOperator,plantId:string|null):CopilotContext['
  }
 }
 
-function filterBaseContext(context:CopilotContext,capabilities:SeafoodCapability[]):CopilotContext{
- const allowed=new Set(capabilities.filter(capability=>baseCapabilities.has(capability)))
- const sources=context.sources.filter(source=>allowed.has(source.id as SeafoodCapability))
- const data=Object.fromEntries(Object.entries(context.data).filter(([key])=>allowed.has(key as SeafoodCapability)))
- return {...context,sources,data}
+function selectBaseCapabilities(capabilities:SeafoodCapability[]):BaseCapability[]{
+ return capabilities.filter((capability):capability is BaseCapability=>baseCapabilities.has(capability))
 }
 
 function mergeSources(...groups:Array<Array<CopilotSource|undefined|null>>){
@@ -37,12 +36,12 @@ function mergeSources(...groups:Array<Array<CopilotSource|undefined|null>>){
 
 export async function buildRoutedCopilotEvidence(operator:SessionOperator,plantId:string|null,receptionId:unknown,route:SeafoodQueryRoute){
  const selected=[...route.requiredCapabilities]
+ const selectedBase=selectBaseCapabilities(selected)
  const routedScope=scopeFor(operator,plantId)
- const needBase=selected.some(capability=>baseCapabilities.has(capability))
  const needLot=selected.includes('lot_control')||selected.includes('operational_intelligence')||selected.includes('urchin_graph')
  const sourceHealthAllowed=selected.includes('canonical_intelligence')&&routedScope.corporateHistory&&['admin','operations'].includes(operator.role)
- const [baseRaw,cardRaw,operationalRaw,historicalRaw,canonicalRaw,urchinRaw,sourceHealthRaw]=await Promise.all([
-  needBase?buildCopilotContext(operator,plantId):Promise.resolve(null),
+ const [base,cardRaw,operationalRaw,historicalRaw,canonicalRaw,urchinRaw,sourceHealthRaw]=await Promise.all([
+  selectedBase.length?buildCopilotContext(operator,plantId,selectedBase):Promise.resolve(null),
   needLot?buildLotControlCard(operator,receptionId):Promise.resolve(null),
   selected.includes('operational_intelligence')?buildCopilotOperationalIntelligence(operator,receptionId):Promise.resolve(null),
   selected.includes('historical_lineage')?buildHistoricalLineageEvidence(operator,route.focusHistoricalLotCode??null):Promise.resolve(null),
@@ -50,7 +49,6 @@ export async function buildRoutedCopilotEvidence(operator:SessionOperator,plantI
   selected.includes('urchin_graph')?buildSeaUrchinCopilotEvidence(operator,receptionId):Promise.resolve(null),
   sourceHealthAllowed?buildCanonicalSourceHealth():Promise.resolve(null),
  ])
- const base=baseRaw?filterBaseContext(baseRaw,selected):null
  const lotMatchesScope=Boolean(cardRaw&&(!plantId||cardRaw.reception.plantId===plantId))
  const card=lotMatchesScope?cardRaw:null
  const operational=lotMatchesScope?operationalRaw:null
