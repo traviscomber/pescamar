@@ -17,7 +17,8 @@ check(shell.includes('{to:`/plantas/${encodeURIComponent(plantContextId)}`,label
 check(shell.includes('{to:"/ordenes-venta",labelKey:"nav.orders",step:1}')&&shell.includes('{to:"/despachos-ventas",labelKey:"nav.dispatch",step:2}')&&shell.includes('{to:"/liquidaciones",labelKey:"nav.settlement",step:3}'),'sales must preserve the ordered three-stage execution flow')
 check(!shell.includes('{to:"/proveedores-clientes",labelKey:'),'partner master data must not compete in the daily sales execution flow')
 check(shell.includes('<NavLink to="/lineage"')&&app.includes('<Route path="/pescamar-ia"')&&app.includes('<Route path="/rentabilidad"'),'advanced intelligence capabilities must remain reachable without competing in primary daily navigation')
-check(shell.includes('<NavLink to="/uni"')&&app.includes('<Route path="/uni"')&&app.includes('<Route path="/edgevision" element={<Navigate to="/uni" replace/>}/>'),'quality visual review must be directly reachable while preserving the legacy redirect')
+check(shell.includes("allowed('/control-regulatorio')")&&shell.includes('<NavLink to="/control-regulatorio"')&&app.includes('<Route path="/control-regulatorio"'),'primary Quality must open the broad quality and compliance workspace')
+check(modules.includes("{to:'/uni',label:'Revisión visual (Uni)'")&&app.includes('<Route path="/uni"')&&app.includes('<Route path="/edgevision" element={<Navigate to="/uni" replace/>}/>'),'specialized visual review must remain reachable from administration with the legacy redirect')
 check(shell.includes("t('shell.plantFlow')")&&shell.includes("t('shell.commercialFlow')")&&shell.includes('aria-label={tabsLabel}'),'detailed workspace flows must expose localized process semantics for assistive technology')
 check(shell.includes('aria-label="Trabajo diario"')&&shell.includes('aria-label="Consulta y configuración"'),'primary and secondary navigation groups must expose explicit assistive labels')
 check(shell.includes('workspace-step-index'),'detailed workspace flows must render stage numbers')
@@ -25,11 +26,10 @@ check(css.includes('.operation-flow')&&css.includes('.commercial-flow')&&css.inc
 check(css.includes('a:not(:last-child):before'),'workspace stages must preserve visible directional continuity')
 check(css.includes('.sidebar-section-label')&&css.includes('.sidebar-secondary'),'daily and secondary navigation hierarchy must be styled explicitly')
 check(modules.includes('admin-hub-grid')&&modules.includes("locale==='en'?'Administration':'Administración'"),'administration must remain a localized categorized hub')
-check(modules.includes("{to:'/uni',label:'Revisión visual (Uni)'")&&app.includes('<Route path="/uni"'),'specialized visual review must remain reachable from administration')
 check(modules.includes("modelo-operativo")&&modules.includes('<OperatingModel/>'),'coded operating model must remain reachable from administration')
 check(operatingModel.includes("title:'Sistema / automatización'")&&operatingModel.includes("title:'Operador generalista'")&&operatingModel.includes("title:'Responsable comercial / administrativo'")&&operatingModel.includes("title:'Gerente / supervisor'")&&operatingModel.includes("title:'Administración técnica'"),'operating model must preserve the five responsibility lanes')
 check(operatingModel.includes("title:'Recepción'")&&operatingModel.includes("title:'Decisión y mejora'"),'operating model must cover the end-to-end operating flow')
 check(operatingModel.includes('2–3 usuarios activos')&&operatingModel.includes('escalar sólo excepciones'),'operating model must preserve minimum staffing and exception-only escalation principles')
 
 if(failures.length){console.error('Navigation flow smoke FAILED');failures.forEach(f=>console.error(`- ${f}`));process.exit(1)}
-console.log('Navigation flow smoke PASS: six localized daily tasks, secondary history/report/settings, detailed plant and sales flows, specialist visual review access and operating responsibility model verified')
+console.log('Navigation flow smoke PASS: six localized daily tasks, broad quality entry, secondary history/report-close/settings, detailed plant and sales flows, specialist visual review access and operating responsibility model verified')
