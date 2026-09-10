@@ -4,7 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { AuthProvider } from './auth'
 import { RouteScrollReset } from './components/RouteScrollReset'
-import {LocaleProvider,localeFromPath,type Locale} from './i18n'
+import {LocaleProvider,localeFromPath,localeTag,type Locale} from './i18n'
 import './app.css'
 
 const PlantAssistant=lazy(()=>import('./components/PlantAssistant').then(module=>({default:module.PlantAssistant})))
@@ -15,7 +15,7 @@ if(!locale){
  window.history.replaceState(null,'',next)
  locale='es'
 }
-document.documentElement.lang=locale
+document.documentElement.lang=localeTag(locale)
 
 createRoot(document.getElementById('root')!).render(
  <StrictMode>
