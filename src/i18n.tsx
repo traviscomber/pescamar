@@ -16,7 +16,7 @@ type CopyKey=
 const copy:Record<Locale,Record<CopyKey,string>>={
  es:{
   'loading.module':'Cargando módulo…','loading.session':'Validando sesión…','loading.receptions':'Sincronizando recepciones…',
-  'nav.today':'Inicio','nav.home':'Inicio','nav.plants':'Plantas','nav.operation':'Operación','nav.commercial':'Ventas','nav.intelligence':'Asistente','nav.admin':'Configuración','nav.quality':'Calidad','nav.sales':'Ventas','nav.reports':'Reportes','nav.settings':'Configuración',
+  'nav.today':'Inicio','nav.home':'Inicio','nav.plants':'Plantas','nav.operation':'Operación','nav.commercial':'Ventas','nav.intelligence':'Asistente','nav.admin':'Configuración','nav.quality':'Calidad','nav.sales':'Ventas','nav.reports':'Reportes y cierre','nav.settings':'Configuración',
   'nav.overview':'Planta','nav.reception':'Recepción','nav.production':'Producción','nav.process':'Proceso','nav.packing':'Packing','nav.pallets':'Pallets','nav.inventory':'Inventario','nav.cold':'Frío',
   'nav.orders':'Órdenes','nav.dispatch':'Despacho','nav.settlement':'Liquidación','nav.ask':'Preguntar','nav.investigate':'Investigar','nav.decide':'Decidir','nav.history':'Historial',
   'role.admin':'Administrador','role.operations':'Gerente de Operaciones','role.finance':'Finanzas','role.quality':'Calidad','role.viewer':'Lectura',
@@ -27,7 +27,7 @@ const copy:Record<Locale,Record<CopyKey,string>>={
  },
  en:{
   'loading.module':'Loading module…','loading.session':'Validating session…','loading.receptions':'Syncing receptions…',
-  'nav.today':'Home','nav.home':'Home','nav.plants':'Plants','nav.operation':'Operations','nav.commercial':'Sales','nav.intelligence':'Assistant','nav.admin':'Settings','nav.quality':'Quality','nav.sales':'Sales','nav.reports':'Reports','nav.settings':'Settings',
+  'nav.today':'Home','nav.home':'Home','nav.plants':'Plants','nav.operation':'Operations','nav.commercial':'Sales','nav.intelligence':'Assistant','nav.admin':'Settings','nav.quality':'Quality','nav.sales':'Sales','nav.reports':'Reports & close','nav.settings':'Settings',
   'nav.overview':'Plant','nav.reception':'Reception','nav.production':'Production','nav.process':'Process','nav.packing':'Packing','nav.pallets':'Pallets','nav.inventory':'Inventory','nav.cold':'Cold chain',
   'nav.orders':'Orders','nav.dispatch':'Dispatch','nav.settlement':'Settlement','nav.ask':'Ask','nav.investigate':'Investigate','nav.decide':'Decide','nav.history':'History',
   'role.admin':'Administrator','role.operations':'Operations Manager','role.finance':'Finance','role.quality':'Quality','role.viewer':'Read only',
