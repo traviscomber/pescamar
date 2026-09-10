@@ -2,6 +2,8 @@ import {createContext,useContext,type ReactNode} from 'react'
 
 export type Locale='es'|'en'
 
+export const localeTag=(locale:Locale)=>locale==='es'?'es-CL':'en'
+
 type CopyKey=
  |'loading.module'|'loading.session'|'loading.receptions'
  |'nav.today'|'nav.home'|'nav.plants'|'nav.operation'|'nav.commercial'|'nav.intelligence'|'nav.admin'|'nav.quality'|'nav.sales'|'nav.reports'|'nav.settings'
@@ -19,11 +21,11 @@ const copy:Record<Locale,Record<CopyKey,string>>={
   'nav.today':'Inicio','nav.home':'Inicio','nav.plants':'Plantas','nav.operation':'Operación','nav.commercial':'Ventas','nav.intelligence':'Asistente','nav.admin':'Configuración','nav.quality':'Calidad','nav.sales':'Ventas','nav.reports':'Reportes y cierre','nav.settings':'Configuración',
   'nav.overview':'Planta','nav.reception':'Recepción','nav.production':'Producción','nav.process':'Proceso','nav.packing':'Packing','nav.pallets':'Pallets','nav.inventory':'Inventario','nav.cold':'Frío',
   'nav.orders':'Órdenes','nav.dispatch':'Despacho','nav.settlement':'Liquidación','nav.ask':'Preguntar','nav.investigate':'Investigar','nav.decide':'Decidir','nav.history':'Historial',
-  'role.admin':'Administrador','role.operations':'Gerente de Operaciones','role.finance':'Finanzas','role.quality':'Calidad','role.viewer':'Lectura',
-  'shell.todayContext':'Inicio','shell.checking':'Verificando','shell.active':'Plataforma activa','shell.review':'Revisar plataforma','shell.syncing':'Sincronizando estado','shell.databaseConnected':'Base de Datos conectada','shell.databasePending':'Base de Datos pendiente','shell.session':'Sesión operativa',
+  'role.admin':'Administrador','role.operations':'Gerente de Operaciones','role.finance':'Finanzas','role.quality':'Calidad','role.viewer':'Solo lectura',
+  'shell.todayContext':'Inicio','shell.checking':'Verificando','shell.active':'Plataforma activa','shell.review':'Revisar plataforma','shell.syncing':'Sincronizando estado','shell.databaseConnected':'Base de datos conectada','shell.databasePending':'Base de datos pendiente','shell.session':'Sesión operativa',
   'shell.plantFlow':'Trabajo de planta','shell.operationalFlow':'Trabajo operativo','shell.commercialFlow':'Ventas y despacho','shell.intelligenceFlow':'Análisis','shell.navigation':'Navegación',
   'shell.skip':'Ir al contenido principal','shell.closeMenu':'Cerrar menú','shell.closeNavigation':'Cerrar navegación','shell.openMenu':'Abrir menú','shell.lightTheme':'Cambiar a tema claro','shell.darkTheme':'Cambiar a tema oscuro','shell.logout':'Cerrar sesión','shell.newReception':'+ Nueva recepción',
-  'auth.eyebrow':'PESCAMAR · CONTROL OPERACIONAL','auth.title':'Acceso','auth.description':'Ingresa con tu identidad operacional. El sistema limita automáticamente la información y las acciones según tu rol y plantas autorizadas.','auth.email':'Correo','auth.password':'Contraseña','auth.enter':'Entrar','auth.validating':'Validando…','auth.failed':'No fue posible iniciar sesión','auth.tooMany':'Demasiados intentos. Intenta nuevamente más tarde.','auth.retryMinutes':'Demasiados intentos. Intenta nuevamente en {minutes} min.'
+  'auth.eyebrow':'PESCAMAR · CONTROL OPERACIONAL','auth.title':'Acceso','auth.description':'Ingresa con tu identidad operacional. El sistema limita automáticamente la información y las acciones según tu rol y las plantas autorizadas.','auth.email':'Correo','auth.password':'Contraseña','auth.enter':'Entrar','auth.validating':'Validando…','auth.failed':'No fue posible iniciar sesión','auth.tooMany':'Demasiados intentos. Intenta nuevamente más tarde.','auth.retryMinutes':'Demasiados intentos. Intenta nuevamente en {minutes} min.'
  },
  en:{
   'loading.module':'Loading module…','loading.session':'Validating session…','loading.receptions':'Syncing receptions…',
