@@ -6,8 +6,8 @@
   "rewrites": [
     { "source": "/es", "destination": "/index.html" },
     { "source": "/es/:path*", "destination": "/index.html" },
-    { "source": "/en", "destination": "/index.html" },
-    { "source": "/en/:path*", "destination": "/index.html" },
+    { "source": "/en", "destination": "/en.html" },
+    { "source": "/en/:path*", "destination": "/en.html" },
     { "source": "/inicio/detalle", "destination": "/index.html" },
     { "source": "/timeline", "destination": "/index.html" },
     { "source": "/lineage", "destination": "/index.html" },
