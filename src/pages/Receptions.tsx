@@ -3,6 +3,7 @@ import {useDeferredValue,useEffect,useMemo,useState} from 'react'
 import {Link,useNavigate,useSearchParams} from 'react-router-dom'
 import {canCreateReception} from '../access'
 import {useAuth} from '../auth'
+import {ContextualGuidance} from '../components/ContextualGuidance'
 import {DataContinuityBanner} from '../components/DataContinuityBanner'
 import {useLot360} from '../components/Lot360Context'
 import {LotTable} from '../components/LotTable'
@@ -27,10 +28,13 @@ export function Receptions({lots,onNew}:{lots:Lot[];onNew:()=>void}){
   const historicalFiltered=useMemo(()=>history.filter(item=>`${item.lot_code} ${item.supplier_name??item.supplier_original??''} ${item.guide_number??''} ${item.extraction_zone??''} ${item.process_site_original??''} ${item.source_file}`.toLowerCase().includes(deferred)),[history,deferred])
   const mayCreate=operator?canCreateReception(operator.role):false
   const historyCount=Number(summary?.total??history.length)
+  const activeLabel=scopedLots.length?`${scopedLots.length} recepción${scopedLots.length===1?'':'es'} activa${scopedLots.length===1?'':'s'}`:'Sin recepciones activas'
+  const guidanceAction=scopedLots.length?'Abre el lote que vas a revisar':mayCreate?'Registra la próxima entrada':'No hay una acción pendiente ahora'
   useEffect(()=>{if(!requestedReceptionId||!lots.some(l=>l.receptionId===requestedReceptionId))return;if(requestedAction){openLive(requestedReceptionId);return}navigate(`/lotes/${encodeURIComponent(requestedReceptionId)}`,{replace:true})},[requestedReceptionId,requestedAction,lots,navigate,openLive])
 
   return <>
     <PageHeader eyebrow="Operación" title="Recepciones" description="Materia prima recibida hoy y registros históricos cuando los necesites." actions={<>{requestedPlantId?<Link className="button secondary" to={`/plantas/${encodeURIComponent(requestedPlantId)}`}>Volver a planta</Link>:null}{mayCreate?<button className="button primary" onClick={onNew}>+ Nueva recepción</button>:null}</>}/>
+    <ContextualGuidance state={activeLabel} action={guidanceAction} reason="La recepción crea el punto de partida del lote. Desde aquí se conserva su identidad, peso y evidencia hacia producción, calidad e inventario." assistantLabel="Consultar recepciones"/>
 
     <section className="panel list-panel receptions-workspace" aria-label="Recepciones activas">
       {scopedLots.length?<>
