@@ -24,8 +24,14 @@ async function openNavigation(page:Page,projectName:string){
 async function expectAuthenticatedNavigation(page:Page,projectName:string){
   await expect(page.getByRole('heading',{name:'Acceso'})).toHaveCount(0)
   await openNavigation(page,projectName)
-  await expect(page.getByRole('link',{name:'Plantas',exact:true})).toBeVisible()
-  await expect(page.getByRole('link',{name:'Inteligencia',exact:true})).toBeVisible()
+  const daily=page.getByRole('navigation',{name:'Trabajo diario'})
+  await expect(daily.getByRole('link',{name:'Inicio',exact:true})).toBeVisible()
+  await expect(daily.getByRole('link',{name:'Recepción',exact:true})).toBeVisible()
+  await expect(daily.getByRole('link',{name:'Producción',exact:true})).toBeVisible()
+  await expect(daily.getByRole('link',{name:'Inventario',exact:true})).toBeVisible()
+  const secondary=page.getByRole('navigation',{name:'Consulta y configuración'})
+  await expect(secondary.getByRole('link',{name:'Historial',exact:true})).toBeVisible()
+  await expect(secondary.getByRole('link',{name:'Reportes y cierre',exact:true})).toBeVisible()
 }
 
 async function visibleCount(locator:ReturnType<Page['getByRole']>){
@@ -71,11 +77,14 @@ test('canonical home starts with operational hierarchy and stable theme switchin
   await page.addInitScript(()=>localStorage.setItem('pescamar-theme','light'))
   await mockAuthenticatedApp(page,'operations',['ancud'])
   await page.goto('/')
-  const h1=page.getByRole('heading',{name:'Hoy',exact:true})
+  const h1=page.getByRole('heading',{name:'Inicio',exact:true})
   await expect(h1).toBeVisible()
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
   const h1Size=await h1.evaluate(element=>Number.parseFloat(getComputedStyle(element).fontSize))
   expect(h1Size).toBeGreaterThanOrEqual(20)
+  await expect(page.getByRole('region',{name:'Qué está pasando hoy'})).toBeVisible()
+  await expect(page.getByRole('region',{name:'Qué tengo que hacer'})).toBeVisible()
+  await expect(page.getByRole('region',{name:'Qué tengo disponible'})).toBeVisible()
   const brief=page.getByRole('region',{name:'Qué requiere atención'})
   await expect(brief).toBeVisible()
   await expect(brief.getByRole('heading',{name:'Qué requiere atención',exact:true})).toBeVisible()
@@ -91,20 +100,23 @@ test('canonical home starts with operational hierarchy and stable theme switchin
 })
 
 for(const scenario of [
-  {role:'admin' as const,newReception:true,administration:true,commercial:true},
-  {role:'operations' as const,newReception:true,administration:true,commercial:true},
-  {role:'finance' as const,newReception:false,administration:false,commercial:true},
-  {role:'quality' as const,newReception:true,administration:false,commercial:false},
-  {role:'viewer' as const,newReception:false,administration:false,commercial:true},
+  {role:'admin' as const,newReception:true,quality:true,sales:true,settings:true},
+  {role:'operations' as const,newReception:true,quality:true,sales:true,settings:true},
+  {role:'finance' as const,newReception:false,quality:false,sales:true,settings:false},
+  {role:'quality' as const,newReception:true,quality:true,sales:false,settings:false},
+  {role:'viewer' as const,newReception:false,quality:true,sales:true,settings:false},
 ]){
   test(`${scenario.role} navigation honors role contract`,async({page},testInfo)=>{
     await mockAuthenticatedApp(page,scenario.role)
     await page.goto('/')
     await expectAuthenticatedNavigation(page,testInfo.project.name)
-    const administration=page.getByRole('link',{name:'Administración',exact:true})
-    if(scenario.administration)await expect(administration).toBeVisible();else await expect(administration).toHaveCount(0)
-    const commercial=page.getByRole('link',{name:'Comercial',exact:true})
-    if(scenario.commercial)await expect(commercial).toBeVisible();else await expect(commercial).toHaveCount(0)
+    const daily=page.getByRole('navigation',{name:'Trabajo diario'})
+    const quality=daily.getByRole('link',{name:'Calidad',exact:true})
+    if(scenario.quality)await expect(quality).toBeVisible();else await expect(quality).toHaveCount(0)
+    const sales=daily.getByRole('link',{name:'Ventas',exact:true})
+    if(scenario.sales)await expect(sales).toBeVisible();else await expect(sales).toHaveCount(0)
+    const settings=page.getByRole('navigation',{name:'Consulta y configuración'}).getByRole('link',{name:'Configuración',exact:true})
+    if(scenario.settings)await expect(settings).toBeVisible();else await expect(settings).toHaveCount(0)
     await page.goto('/recepciones')
     await expect(page.getByRole('heading',{name:'Recepciones',exact:true})).toBeVisible()
     const receptionCta=page.getByRole('button',{name:/Nueva recepción/})
