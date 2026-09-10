@@ -4,6 +4,7 @@ import { allowedPlantIds, hasPlantAccess, PLANT_IDS } from './_plants.js'
 
 export type CopilotSource={id:string;label:string;path:string;rows:number;freshness:string|null}
 export type CopilotContext={generatedAt:string;scope:{plantId:string|null;plantIds:string[];role:SessionOperator['role'];financial:boolean;corporateHistory:boolean};sources:CopilotSource[];data:Record<string,unknown>}
+type BaseCapability='receptions'|'production'|'quality'|'inventory'|'orders'|'canonical_sources'|'canonical_inventory'|'finance'
 
 const rows=(value:unknown)=>Array.isArray(value)?value as Record<string,unknown>[]:[]
 const count=(value:unknown)=>Number(value??0)
@@ -17,19 +18,21 @@ export function resolveCopilotPlant(operator:SessionOperator,value:unknown){
  return PLANT_IDS.includes(plantId as typeof PLANT_IDS[number])&&hasPlantAccess(operator,plantId)?plantId:undefined
 }
 
-export async function buildCopilotContext(operator:SessionOperator,plantId:string|null):Promise<CopilotContext>{
+export async function buildCopilotContext(operator:SessionOperator,plantId:string|null,requestedCapabilities?:readonly BaseCapability[]):Promise<CopilotContext>{
  const sql=getSql(),allowed=allowedPlantIds(operator),admin=operator.role==='admin',plantIds=plantId?[plantId]:allowed
+ const requested=requestedCapabilities?.length?new Set<BaseCapability>(requestedCapabilities):null
+ const wants=(capability:BaseCapability)=>!requested||requested.has(capability)
  const financial=['admin','finance','operations'].includes(operator.role)
  const commercial=['admin','finance','operations','viewer'].includes(operator.role)
  const corporateHistory=admin||allowed.length>=6
  const [receptionRaw,productionRaw,qualityRaw,inventoryRaw,ordersRaw,canonicalRaw,canonicalInventoryRaw,financeRaw]=await Promise.all([
-  sql`select r.id,r.reception_number,r.plant_id,r.species,r.status,r.quality_status,r.received_at,r.guide_kg,r.gross_kg,r.accepted_kg,p.legal_name supplier from receptions r join parties p on p.id=r.supplier_id where (${admin} or r.plant_id=any(${plantIds}::text[])) and (${plantId===null} or r.plant_id=${plantId}) order by r.received_at desc limit 80`,
-  sql`select r.plant_id,count(*)::int events,coalesce(sum((le.metrics->>'inputKg')::numeric),0)::numeric input_kg,coalesce(sum((le.metrics->>'outputKg')::numeric),0)::numeric output_kg,max(le.occurred_at) latest_at from lot_events le join receptions r on r.id=le.reception_id where le.event_type='production' and (${admin} or r.plant_id=any(${plantIds}::text[])) and (${plantId===null} or r.plant_id=${plantId}) group by r.plant_id order by r.plant_id`,
-  sql`select r.id,r.reception_number,r.plant_id,r.quality_status,r.species,p.legal_name supplier,r.received_at,coalesce((select count(*) from regulatory_holds h where h.reception_id=r.id and h.status in ('open','rejected')),0)::int active_holds from receptions r join parties p on p.id=r.supplier_id where (${admin} or r.plant_id=any(${plantIds}::text[])) and (${plantId===null} or r.plant_id=${plantId}) and (r.quality_status in ('Alerta calibre','Revisión') or exists(select 1 from regulatory_holds h where h.reception_id=r.id and h.status in ('open','rejected'))) order by r.received_at desc limit 50`,
-  sql`select r.plant_id,count(*) filter(where coalesce(pos.kg,0)>0)::int lots,coalesce(sum(greatest(coalesce(pos.kg,0),0)),0)::numeric observed_kg,max(pos.latest_at) latest_at from receptions r left join lateral(select sum(case when im.to_location_id is not null then im.moved_kg else 0 end-case when im.from_location_id is not null then im.moved_kg else 0 end) kg,max(im.occurred_at) latest_at from inventory_movements im where im.reception_id=r.id)pos on true where (${admin} or r.plant_id=any(${plantIds}::text[])) and (${plantId===null} or r.plant_id=${plantId}) group by r.plant_id order by r.plant_id`,
-  commercial?sql`select o.id,o.order_number,o.plant_id,o.species,o.product,o.committed_kg,o.delivery_date,o.status,c.legal_name customer,coalesce((select sum(a.allocated_kg) from sales_order_allocations a where a.order_id=o.id),0)::numeric allocated_kg from sales_orders o join parties c on c.id=o.customer_id where (${admin} or o.plant_id=any(${plantIds}::text[])) and (${plantId===null} or o.plant_id=${plantId}) and o.status in ('pending','prepared') order by o.delivery_date limit 60`:Promise.resolve([]),
-  corporateHistory?sql`select file_name,source_kind,record_count,period_start,period_end,imported_at from canonical_source_files where canonical order by imported_at desc limit 40`:Promise.resolve([]),
-  corporateHistory?sql`with packed as (
+  wants('receptions')?sql`select r.id,r.reception_number,r.plant_id,r.species,r.status,r.quality_status,r.received_at,r.guide_kg,r.gross_kg,r.accepted_kg,p.legal_name supplier from receptions r join parties p on p.id=r.supplier_id where (${admin} or r.plant_id=any(${plantIds}::text[])) and (${plantId===null} or r.plant_id=${plantId}) order by r.received_at desc limit 80`:Promise.resolve([]),
+  wants('production')?sql`select r.plant_id,count(*)::int events,coalesce(sum((le.metrics->>'inputKg')::numeric),0)::numeric input_kg,coalesce(sum((le.metrics->>'outputKg')::numeric),0)::numeric output_kg,max(le.occurred_at) latest_at from lot_events le join receptions r on r.id=le.reception_id where le.event_type='production' and (${admin} or r.plant_id=any(${plantIds}::text[])) and (${plantId===null} or r.plant_id=${plantId}) group by r.plant_id order by r.plant_id`:Promise.resolve([]),
+  wants('quality')?sql`select r.id,r.reception_number,r.plant_id,r.quality_status,r.species,p.legal_name supplier,r.received_at,coalesce((select count(*) from regulatory_holds h where h.reception_id=r.id and h.status in ('open','rejected')),0)::int active_holds from receptions r join parties p on p.id=r.supplier_id where (${admin} or r.plant_id=any(${plantIds}::text[])) and (${plantId===null} or r.plant_id=${plantId}) and (r.quality_status in ('Alerta calibre','Revisión') or exists(select 1 from regulatory_holds h where h.reception_id=r.id and h.status in ('open','rejected'))) order by r.received_at desc limit 50`:Promise.resolve([]),
+  wants('inventory')?sql`select r.plant_id,count(*) filter(where coalesce(pos.kg,0)>0)::int lots,coalesce(sum(greatest(coalesce(pos.kg,0),0)),0)::numeric observed_kg,max(pos.latest_at) latest_at from receptions r left join lateral(select sum(case when im.to_location_id is not null then im.moved_kg else 0 end-case when im.from_location_id is not null then im.moved_kg else 0 end) kg,max(im.occurred_at) latest_at from inventory_movements im where im.reception_id=r.id)pos on true where (${admin} or r.plant_id=any(${plantIds}::text[])) and (${plantId===null} or r.plant_id=${plantId}) group by r.plant_id order by r.plant_id`:Promise.resolve([]),
+  wants('orders')&&commercial?sql`select o.id,o.order_number,o.plant_id,o.species,o.product,o.committed_kg,o.delivery_date,o.status,c.legal_name customer,coalesce((select sum(a.allocated_kg) from sales_order_allocations a where a.order_id=o.id),0)::numeric allocated_kg from sales_orders o join parties c on c.id=o.customer_id where (${admin} or o.plant_id=any(${plantIds}::text[])) and (${plantId===null} or o.plant_id=${plantId}) and o.status in ('pending','prepared') order by o.delivery_date limit 60`:Promise.resolve([]),
+  wants('canonical_sources')&&corporateHistory?sql`select file_name,source_kind,record_count,period_start,period_end,imported_at from canonical_source_files where canonical order by imported_at desc limit 40`:Promise.resolve([]),
+  wants('canonical_inventory')&&corporateHistory?sql`with packed as (
      select lot_code,min(production_date) first_date,max(production_date) last_date from canonical_packing_boxes where lot_code is not null group by lot_code
     ),produced as (
      select distinct lot_code from historical_production_records where record_status='operational' and lot_code is not null
@@ -44,7 +47,7 @@ export async function buildCopilotContext(operator:SessionOperator,plantId:strin
       (select count(*)::int from canonical_packing_boxes) packing_boxes,(select coalesce(sum(total_kg),0)::numeric from canonical_packing_boxes) packing_kg,(select min(production_date) from canonical_packing_boxes) packing_first_date,(select max(production_date) from canonical_packing_boxes) packing_last_date,
       c.first_date historical_first_date,c.last_date historical_last_date,c.rows historical_rows,c.rows_with_lot historical_rows_with_lot,l.packing_lots,l.matched_lots,l.outside_coverage_lots,l.unresolved_within_coverage_lots
     from coverage c cross join linkage l`:Promise.resolve([]),
-  financial?sql`select count(*) filter(where s.status='pending')::int pending_settlements,coalesce(sum(s.gross_amount_clp) filter(where s.status in ('pending','approved')),0)::numeric known_gross_clp,max(s.updated_at) latest_at from settlements s join receptions r on r.id=s.reception_id where (${admin} or r.plant_id=any(${plantIds}::text[])) and (${plantId===null} or r.plant_id=${plantId})`:Promise.resolve([]),
+  wants('finance')&&financial?sql`select count(*) filter(where s.status='pending')::int pending_settlements,coalesce(sum(s.gross_amount_clp) filter(where s.status in ('pending','approved')),0)::numeric known_gross_clp,max(s.updated_at) latest_at from settlements s join receptions r on r.id=s.reception_id where (${admin} or r.plant_id=any(${plantIds}::text[])) and (${plantId===null} or r.plant_id=${plantId})`:Promise.resolve([]),
  ])
  const receptions=rows(receptionRaw).map(row=>({receptionId:row.id,receptionNumber:count(row.reception_number),plantId:row.plant_id,species:row.species,status:row.status,qualityStatus:row.quality_status,receivedAt:row.received_at,guideKg:count(row.guide_kg),grossKg:count(row.gross_kg),acceptedKg:count(row.accepted_kg),supplier:row.supplier}))
  const production=rows(productionRaw).map(row=>{const input=count(row.input_kg),output=count(row.output_kg);return {plantId:row.plant_id,events:count(row.events),inputKg:input,outputKg:output,yieldPct:input>0?Number((output/input*100).toFixed(1)):null,latestAt:row.latest_at}})
@@ -52,17 +55,26 @@ export async function buildCopilotContext(operator:SessionOperator,plantId:strin
  const inventory=rows(inventoryRaw).map(row=>({plantId:row.plant_id,lots:count(row.lots),observedKg:count(row.observed_kg),latestAt:row.latest_at}))
  const orders=rows(ordersRaw).map(row=>{const committedKg=count(row.committed_kg),allocatedKg=count(row.allocated_kg),remainingKg=Math.max(0,committedKg-allocatedKg),coveragePct=committedKg>0?Number((Math.min(committedKg,allocatedKg)/committedKg*100).toFixed(1)):null;return {orderId:row.id,orderNumber:count(row.order_number),plantId:row.plant_id,customer:row.customer,species:row.species,product:row.product,committedKg,allocatedKg,remainingKg,coveragePct,coverageState:committedKg<=0?'needs-human-validation':remainingKg<=0.01?'covered':allocatedKg>0?'partial':'uncovered',coverageConfidence:committedKg>0?'observed':'needs-human-validation',deliveryDate:row.delivery_date,status:row.status}})
  const canonicalSources=rows(canonicalRaw).map(row=>({fileName:row.file_name,kind:row.source_kind,recordCount:count(row.record_count),periodStart:row.period_start,periodEnd:row.period_end,importedAt:row.imported_at}))
- const canonicalInventoryRow=corporateHistory?(rows(canonicalInventoryRaw)[0]??null):null
+ const canonicalInventoryRow=wants('canonical_inventory')&&corporateHistory?(rows(canonicalInventoryRaw)[0]??null):null
  const canonicalInventory=canonicalInventoryRow?{sourceFiles:canonicalInventoryRow.source_files,sourceKinds:canonicalInventoryRow.source_kinds,productFamily:productFamily(canonicalInventoryRow.source_kinds),packingBoxes:count(canonicalInventoryRow.packing_boxes),packingKg:count(canonicalInventoryRow.packing_kg),packingFirstDate:canonicalInventoryRow.packing_first_date,packingLastDate:canonicalInventoryRow.packing_last_date,historicalFirstDate:canonicalInventoryRow.historical_first_date,historicalLastDate:canonicalInventoryRow.historical_last_date,historicalRows:count(canonicalInventoryRow.historical_rows),historicalRowsWithLot:count(canonicalInventoryRow.historical_rows_with_lot),packingLots:count(canonicalInventoryRow.packing_lots),matchedLots:count(canonicalInventoryRow.matched_lots),outsideCoverageLots:count(canonicalInventoryRow.outside_coverage_lots),unresolvedWithinCoverageLots:count(canonicalInventoryRow.unresolved_within_coverage_lots),writesLiveInventory:false,linkageRule:'exact_lot_only; outside upstream coverage is not a failed match'}:null
- const finance=financial?(rows(financeRaw)[0]??null):null
- const sources:CopilotSource[]=[
-  {id:'receptions',label:'Recepciones vivas',path:'/recepciones',rows:receptions.length,freshness:latest(receptions as Record<string,unknown>[],'receivedAt')},
-  {id:'production',label:'Producción observada',path:'/lineas',rows:production.length,freshness:latest(production as Record<string,unknown>[],'latestAt')},
-  {id:'quality',label:'Calidad y holds',path:'/control-regulatorio',rows:quality.length,freshness:latest(quality as Record<string,unknown>[],'receivedAt')},
-  {id:'inventory',label:'Inventario observado',path:'/inventario',rows:inventory.length,freshness:latest(inventory as Record<string,unknown>[],'latestAt')},
- ]
- if(commercial)sources.push({id:'orders',label:'Compromisos comerciales',path:'/ordenes-venta',rows:orders.length,freshness:latest(orders as Record<string,unknown>[],'deliveryDate')})
- if(corporateHistory){sources.push({id:'canonical_sources',label:'Fuentes canónicas',path:'/importaciones',rows:canonicalSources.length,freshness:latest(canonicalSources as Record<string,unknown>[],'importedAt')});sources.push({id:'canonical_inventory',label:'Evidencia canónica de inventario',path:'/inventario',rows:canonicalInventory?.packingBoxes??0,freshness:canonicalInventory?date(canonicalInventory.packingLastDate):null})}
- if(financial)sources.push({id:'finance',label:'Cierre económico conocido',path:'/liquidaciones',rows:finance?1:0,freshness:finance?date(finance.latest_at):null})
- return {generatedAt:new Date().toISOString(),scope:{plantId,plantIds,role:operator.role,financial,corporateHistory},sources,data:{receptions,production,quality,inventory,...(commercial?{orders}:{}),...(corporateHistory?{canonical_sources:canonicalSources,canonical_inventory:canonicalInventory}:{}),...(financial?{finance:finance?{pendingSettlements:count(finance.pending_settlements),knownGrossClp:count(finance.known_gross_clp),latestAt:finance.latest_at}:null}:{})}}
+ const finance=wants('finance')&&financial?(rows(financeRaw)[0]??null):null
+ const sources:CopilotSource[]=[]
+ if(wants('receptions'))sources.push({id:'receptions',label:'Recepciones vivas',path:'/recepciones',rows:receptions.length,freshness:latest(receptions as Record<string,unknown>[],'receivedAt')})
+ if(wants('production'))sources.push({id:'production',label:'Producción observada',path:'/lineas',rows:production.length,freshness:latest(production as Record<string,unknown>[],'latestAt')})
+ if(wants('quality'))sources.push({id:'quality',label:'Calidad y holds',path:'/control-regulatorio',rows:quality.length,freshness:latest(quality as Record<string,unknown>[],'receivedAt')})
+ if(wants('inventory'))sources.push({id:'inventory',label:'Inventario observado',path:'/inventario',rows:inventory.length,freshness:latest(inventory as Record<string,unknown>[],'latestAt')})
+ if(wants('orders')&&commercial)sources.push({id:'orders',label:'Compromisos comerciales',path:'/ordenes-venta',rows:orders.length,freshness:latest(orders as Record<string,unknown>[],'deliveryDate')})
+ if(wants('canonical_sources')&&corporateHistory)sources.push({id:'canonical_sources',label:'Fuentes canónicas',path:'/importaciones',rows:canonicalSources.length,freshness:latest(canonicalSources as Record<string,unknown>[],'importedAt')})
+ if(wants('canonical_inventory')&&corporateHistory)sources.push({id:'canonical_inventory',label:'Evidencia canónica de inventario',path:'/inventario',rows:canonicalInventory?.packingBoxes??0,freshness:canonicalInventory?date(canonicalInventory.packingLastDate):null})
+ if(wants('finance')&&financial)sources.push({id:'finance',label:'Cierre económico conocido',path:'/liquidaciones',rows:finance?1:0,freshness:finance?date(finance.latest_at):null})
+ const data:Record<string,unknown>={}
+ if(wants('receptions'))data.receptions=receptions
+ if(wants('production'))data.production=production
+ if(wants('quality'))data.quality=quality
+ if(wants('inventory'))data.inventory=inventory
+ if(wants('orders')&&commercial)data.orders=orders
+ if(wants('canonical_sources')&&corporateHistory)data.canonical_sources=canonicalSources
+ if(wants('canonical_inventory')&&corporateHistory)data.canonical_inventory=canonicalInventory
+ if(wants('finance')&&financial)data.finance=finance?{pendingSettlements:count(finance.pending_settlements),knownGrossClp:count(finance.known_gross_clp),latestAt:finance.latest_at}:null
+ return {generatedAt:new Date().toISOString(),scope:{plantId,plantIds,role:operator.role,financial,corporateHistory},sources,data}
 }
