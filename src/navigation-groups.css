@@ -4,6 +4,11 @@
 .workspace-nav a.active{position:relative;background:rgba(118,166,199,.10);color:#F3F8FA}
 .workspace-nav a.active:before,.settings-link.active:before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:2px;border-radius:2px;background:#76A6C7}
 .settings-link.active{position:relative;background:rgba(118,166,199,.08);color:#F3F8FA}
+.sidebar-section-label{margin:18px 10px 7px;font:700 9px/1 Montserrat,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#607783}
+.sidebar-section-label.secondary{margin-top:10px}
+.sidebar-secondary{display:grid;gap:3px}
+.sidebar-secondary a{min-height:38px;padding:9px 10px;border-radius:7px;font-size:11px;color:#78909b}
+.sidebar-secondary a:hover,.sidebar-secondary a.active{background:rgba(118,166,199,.07);color:#DCE9ED}
 .powered-by-link{display:block;margin:10px 10px 2px;padding-top:10px;border-top:1px solid color-mix(in srgb,var(--line) 72%,transparent);font-size:9px;line-height:1.2;letter-spacing:.04em;color:color-mix(in srgb,var(--muted) 72%,transparent);text-decoration:none}
 .powered-by-link:hover{color:var(--text)}
 .workspace-tabs{display:flex;align-items:center;gap:4px;min-height:48px;padding:0 clamp(20px,2.8vw,40px);border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--surface) 96%,transparent);overflow-x:auto;scrollbar-width:none}
@@ -35,6 +40,9 @@
 .admin-hub-links>a{display:grid;grid-template-columns:20px minmax(0,1fr);gap:10px;align-items:start;padding:12px 2px;border-bottom:1px solid color-mix(in srgb,var(--line) 82%,transparent);color:var(--text);text-decoration:none}
 .admin-hub-links>a:last-child{border-bottom:0}.admin-hub-links>a:hover{background:color-mix(in srgb,var(--surface-2) 72%,transparent)}
 .admin-hub-links svg{margin-top:1px;color:var(--ocean)}.admin-hub-links span{display:grid;gap:2px}.admin-hub-links b{font-size:12px}.admin-hub-links small{font-size:10px;line-height:1.4;color:var(--muted)}
+.daily-home-attention{margin-top:18px}
+.daily-home-attention .section-heading{margin-bottom:10px}
+@media(min-width:721px){.workspace-nav a span,.sidebar-secondary a span{display:inline!important}.sidebar{width:auto!important}}
 @media(max-width:900px){.admin-hub-grid{grid-template-columns:1fr}}
 @media(max-width:760px){
  .workspace-tabs{min-height:44px;padding:0 14px}
@@ -48,4 +56,5 @@
  .topbar .compact-operator>svg{display:none}
  .admin-hub-group{padding:16px}
  .powered-by-link{margin-bottom:8px}
+ .sidebar-section-label{display:block}
 }

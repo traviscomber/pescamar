@@ -41,7 +41,7 @@ assert(commercial.includes('Contexto heredado del despacho confirmado')&&commerc
 assert(commercial.includes('sales.filter(s=>s.dispatch_id===dispatch.id)'),'sale proposal must subtract sales already linked to the dispatch')
 assert(commercial.includes("mode==='dispatch'?'Confirmar salida':'Confirmar venta'"),'dispatch and sale mutations must remain explicit human confirmations')
 assert(today.includes("const suggestedOwner=(path:string)=>")&&today.includes("?'Comercial / administrativo':'Operación'"),'Today must route each priority to a minimum-team responsibility without inventing an individual assignment')
-assert(today.includes('<b>Responsable:</b> {priorities[0].owner}')&&today.includes('Responsable: {item.owner}'),'Today must display the functional owner on the primary priority and remaining queue')
+assert(today.includes('<b>Responsable:</b> {firstPriority.owner}')&&today.includes('Responsable: {item.owner}'),'Today must display the functional owner on the primary priority and remaining queue')
 assert(operatingModel.includes('Un dato heredable o calculable no debe convertirse en una nueva tarea humana'),'operating model must state the minimum-team rule')
 assert(plantReadiness.includes('findIndex(check=>!check.complete)'),'rollout must select one next incomplete UAT step instead of presenting every blocker as equal priority')
 assert(plantReadiness.includes('Primer lote real · paso')&&plantReadiness.includes('mismo reception_id'),'rollout must guide the first real lot through one attributable end-to-end reception identity')
