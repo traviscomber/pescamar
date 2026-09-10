@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { resolve } from 'node:path'
 
 export default defineConfig({
   plugins: [react()],
@@ -8,8 +7,8 @@ export default defineConfig({
     // Keep separate ES/EN HTML entry points so route-level language metadata is correct before React loads.
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'index.html'),
-        en: resolve(__dirname, 'en.html'),
+        main: 'index.html',
+        en: 'en.html',
       },
     },
     // ExcelJS is intentionally isolated behind the lazy-loaded Importaciones route.
