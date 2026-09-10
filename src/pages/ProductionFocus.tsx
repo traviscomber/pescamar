@@ -1,6 +1,7 @@
 import {Factory} from 'lucide-react'
 import {useEffect,useState} from 'react'
 import {Link} from 'react-router-dom'
+import {ContextualGuidance} from '../components/ContextualGuidance'
 import {HistoricalContinuity} from '../components/HistoricalContinuity'
 import {useLot360} from '../components/Lot360Context'
 import {PageHeader} from '../components/PageHeader'
@@ -44,8 +45,14 @@ export function ProductionFocus({lots}:{lots:Lot[]}){
 
   const hasLots=lots.length>0
   const blocked=priority?.action==='blocked'
+  const guidanceState=loading?'Revisando órdenes, lotes y disponibilidad':priority?`${priority.receptionNumber!=null?`REC-${priority.receptionNumber}`:'Plan actual'} · ${actionLabel(priority.action)}`:hasLots?'Sin producción pendiente':'Sin lotes nuevos todavía'
+  const guidanceAction=loading?'Espera la prioridad calculada':priority?actionLabel(priority.action):hasLots?'Mantén la operación al día':'Registra primero una recepción'
+  const guidanceReason=priority
+    ?blocked?'Existe una condición que impide continuar de forma segura. Revisa la evidencia del lote antes de producir o asignar kilos.':'La recomendación cruza demanda registrada, disponibilidad y lote. Abrir el lote mantiene la decisión ligada a su evidencia.'
+    :hasLots?'No hay una orden que requiera transformar producto ahora; no se fuerza trabajo cuando la evidencia no muestra una necesidad.':'La recepción inicia la identidad del lote y permite que los movimientos posteriores mantengan continuidad física.'
   return <>
     <PageHeader eyebrow="Operación" title="Producción" description="La producción anterior ya está cargada. Los lotes nuevos se registran desde hoy y se mantienen separados del historial."/>
+    <ContextualGuidance state={guidanceState} action={guidanceAction} reason={guidanceReason} assistantLabel="Consultar producción"/>
     {error?<div className="system-banner error" role="alert">{error}</div>:null}
     <section className="panel" aria-label="Siguiente acción de producción">
       <div className="section-heading"><div><span className="overline">Siguiente acción</span><h2>{loading?'Calculando…':priority?actionLabel(priority.action):'Sin producción pendiente'}</h2></div></div>
