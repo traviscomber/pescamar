@@ -1,4 +1,4 @@
-/* Visual closure pass — align Home + Lot 360 with DESIGN.md: calm hierarchy, fewer dashboard tropes, stronger object focus. */
+/* Visual closure pass — align core operational surfaces with DESIGN.md: calm hierarchy, fewer dashboard tropes, stronger object focus. */
 
 /* HOME / CONTROL TOWER */
 .main-content:has(>.daily-cockpit)>.page-header{
@@ -30,60 +30,28 @@
   background:var(--surface)!important;
 }
 .daily-status-mark span{font-family:Rajdhani,sans-serif;font-size:1.75rem!important;font-weight:600!important}
-.daily-priority{
-  padding:26px 0!important;
-}
+.daily-priority{padding:26px 0!important}
 .daily-priority-head{align-items:center!important}
 .daily-priority h2{font-size:clamp(1.45rem,2.8vw,2rem)!important}
-.daily-clear-context{
-  margin-top:0;
-  background:transparent!important;
-}
+.daily-clear-context{margin-top:0;background:transparent!important}
 .daily-clear-context>div{padding-top:18px!important;padding-bottom:18px!important}
 .daily-clear-context b{font-family:Rajdhani,sans-serif;font-size:1.28rem!important;font-weight:600!important;letter-spacing:-.01em}
-.daily-home-attention{
-  padding:26px 0!important;
-  border-bottom:1px solid var(--line);
-}
+.daily-home-attention{padding:26px 0!important;border-bottom:1px solid var(--line)}
 .daily-home-attention .section-heading{margin-bottom:12px!important}
-.daily-home-attention .queue-row{
-  padding:13px 0!important;
-  border-radius:0!important;
-  background:transparent!important;
-}
+.daily-home-attention .queue-row{padding:13px 0!important;border-radius:0!important;background:transparent!important}
 .daily-home-attention .queue-row:hover{background:var(--surface-2)!important}
 .daily-footer-actions{padding-top:18px!important}
 
 /* LOT 360 — object first, calmer data hierarchy */
 .lot360-page{gap:20px!important}
 .lot360-page>.page-header{margin-bottom:0!important}
-.lot360-page>.page-header h1{
-  font-size:clamp(2.15rem,4vw,2.65rem)!important;
-  line-height:1!important;
-}
-.lot360-hero{
-  grid-template-columns:minmax(0,1fr) minmax(240px,300px)!important;
-  gap:40px!important;
-  padding:30px 0 32px!important;
-}
-.lot360-hero h2{
-  font-size:clamp(2.2rem,5vw,3.8rem)!important;
-  line-height:.94!important;
-  letter-spacing:-.04em!important;
-  max-width:820px;
-}
+.lot360-page>.page-header h1{font-size:clamp(2.15rem,4vw,2.65rem)!important;line-height:1!important}
+.lot360-hero{grid-template-columns:minmax(0,1fr) minmax(240px,300px)!important;gap:40px!important;padding:30px 0 32px!important}
+.lot360-hero h2{font-size:clamp(2.2rem,5vw,3.8rem)!important;line-height:.94!important;letter-spacing:-.04em!important;max-width:820px}
 .lot360-hero p{max-width:640px!important;font-size:.9rem!important}
-.lot360-next{
-  margin-top:14px!important;
-  padding-top:16px!important;
-}
+.lot360-next{margin-top:14px!important;padding-top:16px!important}
 .lot360-next b{font-size:1rem!important;line-height:1.4}
-.lot360-identity{
-  border-top:0!important;
-  border-left:1px solid var(--line);
-  padding:4px 0 4px 20px!important;
-  gap:10px 16px!important;
-}
+.lot360-identity{border-top:0!important;border-left:1px solid var(--line);padding:4px 0 4px 20px!important;gap:10px 16px!important}
 .lot360-signals article{padding:20px 22px!important}
 .lot360-signals b{font-size:1.65rem!important}
 .lot360-balance{padding:24px 0!important}
@@ -94,15 +62,87 @@
 .lot360-fold>summary b{font-size:.86rem!important}
 .lot360-flow-group{grid-template-columns:132px minmax(0,1fr)!important;gap:24px!important}
 .lot360-flow-group article{padding:10px 0!important}
-.lot360-evidence>a{
-  border-radius:8px;
-  background:var(--surface);
-}
+.lot360-evidence>a{border-radius:8px;background:var(--surface)}
+
+/* SEAFOOD AI — conversation first, trust and provenance second */
+.main-content:has(>.copilot-trust)>.page-header{margin-bottom:12px!important;padding-bottom:14px!important}
+.main-content:has(>.copilot-trust)>.page-header h1{font-size:clamp(2.2rem,4vw,2.8rem)!important;letter-spacing:-.035em!important}
+.copilot-trust{margin-bottom:18px!important}
+.copilot-trust span{padding:9px 13px!important;font-size:.71rem!important;font-weight:600!important;letter-spacing:.01em}
+.canonical-brief{margin-bottom:18px!important}
+.canonical-brief-grid>div{padding-top:18px!important;padding-bottom:18px!important}
+.canonical-brief-grid p{font-size:.86rem!important;line-height:1.55!important}
+.copilot-workspace.panel{border-left:0!important;border-right:0!important;border-radius:0!important;box-shadow:none!important;background:transparent!important}
+.copilot-thread{padding:24px 0!important;max-height:68vh!important}
+.copilot-empty{margin:clamp(3.25rem,8vh,6.5rem) auto!important;max-width:680px!important}
+.copilot-mark{border-radius:9px!important;background:var(--surface-2)!important}
+.copilot-empty h2{font:600 clamp(1.7rem,3vw,2.25rem)/1.05 Rajdhani,sans-serif!important;letter-spacing:-.02em}
+.copilot-prompts{gap:0!important;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.copilot-prompts button{border:0!important;border-right:1px solid var(--line)!important;background:transparent!important;padding:14px 16px!important;font-size:.8rem!important}
+.copilot-prompts button:nth-child(2n){border-right:0!important}
+.copilot-prompts button:nth-child(n+3){border-top:1px solid var(--line)!important}
+.copilot-turn+.copilot-turn{margin-top:24px!important;padding-top:24px!important}
+.copilot-question{grid-template-columns:34px minmax(0,1fr)!important;gap:12px!important}
+.copilot-question>span,.copilot-avatar{width:34px!important;height:34px!important;border-radius:7px!important}
+.copilot-question p{font-size:.91rem!important;line-height:1.5!important;font-weight:600!important}
+.copilot-response{grid-template-columns:34px minmax(0,1fr)!important;gap:12px!important}
+.copilot-answer{max-width:78ch!important;line-height:1.68!important;font-size:.88rem!important}
+.copilot-sources a{border-radius:6px!important;background:transparent!important}
+.copilot-composer{padding:14px 108px 22px 0!important;background:transparent!important;border-top:1px solid var(--line)!important}
+.copilot-composer textarea{min-height:74px!important;border-radius:8px!important;background:var(--surface)!important;padding:13px 15px!important;line-height:1.5!important}
+.copilot-composer>.button{right:0!important;top:14px!important}
+.copilot-composer>small{left:0!important;bottom:2px!important}
+
+/* RECEPTIONS — live work first, history folds away */
+.main-content:has(>.contextual-guidance+.receptions-workspace)>.page-header{margin-bottom:12px!important}
+.receptions-workspace.panel{padding:24px 0!important;border-left:0!important;border-right:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
+.receptions-workspace>.panel-header{margin-bottom:14px!important}
+.receptions-workspace>.panel-header h2{font-size:clamp(1.45rem,2.8vw,1.9rem)!important;font-weight:600!important}
+.receptions-workspace>.toolbar{padding:0 0 12px!important;border-bottom:1px solid var(--line)}
+.receptions-workspace .search-box{max-width:520px}
+.receptions-history.panel{padding:0!important;border-left:0!important;border-right:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
+.receptions-history>summary{padding:18px 0!important;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.receptions-history>summary b{font-size:.88rem!important}
+.receptions-history>summary small{display:block;margin-top:3px;color:var(--muted);font-size:.68rem}
+.receptions-history-body{padding-top:18px!important}
+.reception-context.summary-strip{margin:14px 0 18px!important}
+
+/* PRODUCTION — next safe action dominates */
+.main-content:has(>.contextual-guidance+.panel)>.contextual-guidance{margin-bottom:18px}
+.main-content:has(>.contextual-guidance+.panel)>.panel:has(.balance-summary.compact){padding:26px 0!important;border-left:0!important;border-right:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
+.main-content:has(>.contextual-guidance+.panel)>.panel:has(.balance-summary.compact) .section-heading h2{font-size:clamp(1.6rem,3vw,2.15rem)!important;font-weight:600!important}
+.balance-summary.compact{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:transparent!important}
+.balance-summary.compact>div{padding-top:16px!important;padding-bottom:16px!important}
+.balance-summary.compact b{font-family:Rajdhani,sans-serif;font-size:1.35rem!important;font-weight:600!important}
+
+/* INVENTORY — one decision, three supporting numbers */
+.main-content:has(>.contextual-guidance+.decision-focus)>.page-header{margin-bottom:12px!important}
+.decision-focus.panel{grid-template-columns:auto minmax(0,1fr) auto!important;gap:18px!important;padding:24px 0!important;border-left:0!important;border-right:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
+.decision-focus-icon{width:40px!important;height:40px!important;border-radius:8px!important;background:var(--surface-2)!important}
+.decision-focus-copy h2{font-size:clamp(1.65rem,3.2vw,2.3rem)!important;font-weight:600!important;letter-spacing:-.025em!important}
+.decision-focus-copy p{max-width:680px!important;color:var(--muted)!important}
+.decision-focus+.summary-strip{margin-top:0!important;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:transparent!important}
+.decision-focus+.summary-strip>div{padding-top:16px!important;padding-bottom:16px!important}
+.decision-focus+.summary-strip b{font-family:Rajdhani,sans-serif;font-size:1.35rem!important;font-weight:600!important}
 
 @media(max-width:820px){
   .lot360-hero{grid-template-columns:1fr!important;gap:20px!important}
   .lot360-identity{border-left:0;border-top:1px solid var(--line)!important;padding:16px 0 0!important}
   .lot360-flow-group{grid-template-columns:1fr!important;gap:8px!important}
+  .decision-focus.panel{grid-template-columns:auto minmax(0,1fr)!important}
+  .decision-focus.panel>.button{grid-column:1/-1;justify-self:start}
+}
+
+@media(max-width:700px){
+  .copilot-thread{padding:18px 0!important;max-height:none!important}
+  .copilot-prompts{grid-template-columns:1fr!important}
+  .copilot-prompts button{border-right:0!important;border-top:1px solid var(--line)!important}
+  .copilot-prompts button:first-child{border-top:0!important}
+  .copilot-composer{padding:12px 0!important;display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:10px!important}
+  .copilot-composer textarea{grid-column:1/-1!important;grid-row:1!important;min-height:96px!important}
+  .copilot-composer>.button{position:static!important;grid-column:2!important;grid-row:2!important}
+  .copilot-composer>small{position:static!important;grid-column:1!important;grid-row:2!important;align-self:center!important}
+  .receptions-workspace.panel{padding-top:18px!important}
 }
 
 @media(max-width:620px){
@@ -115,4 +155,7 @@
   .daily-footer-actions a{flex:0 0 auto}
   .lot360-hero h2{font-size:2.55rem!important}
   .lot360-signals article{padding:16px 0!important}
+  .decision-focus.panel{grid-template-columns:1fr!important;gap:12px!important}
+  .decision-focus-icon{grid-row:auto!important}
+  .decision-focus.panel>.button{grid-column:1!important;width:100%;justify-content:center}
 }
