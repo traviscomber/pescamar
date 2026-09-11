@@ -1,4 +1,4 @@
-import {ArrowRight,ShieldCheck} from 'lucide-react'
+import {ArrowRight,ShieldCheck,Sparkles} from 'lucide-react'
 import {useCallback,useEffect,useMemo,useState} from 'react'
 import {Link,useSearchParams} from 'react-router-dom'
 import {useAuth} from '../auth'
@@ -56,6 +56,7 @@ export function DailyClose(){
  const operationalCounts=operational?.counts??{p1:0,p2:0,p3:0},eventGraphOpen=operationalCounts.p1+operationalCounts.p2+operationalCounts.p3,dedupedDaily=Math.max(0,(snapshot?.risk.total??0)-riskItems.filter(item=>item.receptionId&&eventGraphReceptionIds.has(item.receptionId)).length),attention=eventGraphOpen+dedupedDaily,firstPriority=priorities[0]
  const movementCount=snapshot?snapshot.receptions.count+snapshot.production.events+snapshot.dispatches.count:0
  const plantName=accessiblePlants.find(plant=>plant.id===plantId)?.name??(locale==='es'?'Todas las plantas':'All plants')
+ const aiQuery=new URLSearchParams({source:'inicio',prompt:locale==='es'?'Prioridades de hoy':'Today’s priorities'});if(plantId)aiQuery.set('plantId',plantId);const aiHref=`/pescamar-ia?${aiQuery.toString()}`
 
  return <>
  {error?<div className="system-banner error">{error}</div>:null}
@@ -82,7 +83,7 @@ export function DailyClose(){
     <div><span className="overline">{t('home.whatDo')}</span><h2>{firstPriority?firstPriority.reference:t('home.startOperation')}</h2><p>{firstPriority?firstPriority.reason:t('home.startCopy')}</p></div>
     {firstPriority?<Link className="button primary" to={firstPriority.to}>{firstPriority.action}<ArrowRight size={15}/></Link>:<Link className="button primary" to="/recepciones">{t('home.registerReception')}<ArrowRight size={15}/></Link>}
    </div>
-   {firstPriority?<small className="daily-priority-detail"><b>{t('home.next')}:</b> {firstPriority.next}</small>:null}
+   {firstPriority?<small className="daily-priority-detail"><b>{t('home.next')}:</b> {firstPriority.next} · <Link to={aiHref}><Sparkles size={13}/>{locale==='es'?' Ver 3 prioridades con Seafood AI':' See 3 priorities with Seafood AI'}</Link></small>:<small className="daily-priority-detail"><Link to={aiHref}><Sparkles size={13}/>{locale==='es'?' Revisar operación con Seafood AI':' Review operations with Seafood AI'}</Link></small>}
   </section>
 
   <section className="daily-home-attention" aria-label={t('home.attention')}>
