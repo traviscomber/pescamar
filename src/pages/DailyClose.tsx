@@ -5,6 +5,7 @@ import {useAuth} from '../auth'
 import {HomeHero} from '../components/HomeHero'
 import {useLocale,localeTag} from '../i18n'
 import {plants as configuredPlants} from '../plants'
+import {isCeoOperator} from '../roleExperience'
 
 type RiskItem={kind:'quality'|'order'|'settlement';level:'critical'|'today'|'follow_up';reason:string;impact:number;reference:string;receptionId?:string;orderId?:string;detail:string}
 type Snapshot={date:string;plantId:string|null;receptions:{count:number;kg:number};production:{events:number;inputKg:number;outputKg:number;yieldPct:number|null};dispatches:{count:number;kg:number};sales:{count:number;revenueClp:number;knownContributionClp:number;knownContributionSales:number};pending:{settlements:number;qualityAlerts:number};inventory:{locatedKg:number};risk:{critical:number;today:number;followUp:number;total:number;items:RiskItem[]}}
@@ -22,6 +23,7 @@ export function DailyClose(){
  const {operator}=useAuth()
  const {t,locale}=useLocale()
  const [params]=useSearchParams()
+ const ceoView=isCeoOperator(operator)
  const accessiblePlants=useMemo(()=>operator?.role==='admin'?configuredPlants:configuredPlants.filter(plant=>operator?.plantIds.includes(plant.id)),[operator])
  const requestedPlant=params.get('plantId')??''
  const requestedAllowed=accessiblePlants.some(plant=>plant.id===requestedPlant)?requestedPlant:''
@@ -29,7 +31,7 @@ export function DailyClose(){
  const [date,setDate]=useState(today),[plantId,setPlantId]=useState(defaultPlant),[data,setData]=useState<Payload|null>(null),[operational,setOperational]=useState<OperationalPayload|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState('')
  const kg=(value:number)=>`${value.toLocaleString(localeTag(locale),{maximumFractionDigits:1})} kg`
  const suggestedOwner=(path:string)=>commercialPaths.some(prefix=>path.startsWith(prefix))?t('home.ownerCommercial'):t('home.ownerOperations')
- const assistantFirst=operator?.role==='operations'
+ const assistantFirst=operator?.role==='operations'||ceoView
 
  const load=useCallback(async(nextDate:string,nextPlant:string)=>{
   setLoading(true)
@@ -57,7 +59,8 @@ export function DailyClose(){
  const operationalCounts=operational?.counts??{p1:0,p2:0,p3:0},eventGraphOpen=operationalCounts.p1+operationalCounts.p2+operationalCounts.p3,dedupedDaily=Math.max(0,(snapshot?.risk.total??0)-riskItems.filter(item=>item.receptionId&&eventGraphReceptionIds.has(item.receptionId)).length),attention=eventGraphOpen+dedupedDaily,firstPriority=priorities[0]
  const movementCount=snapshot?snapshot.receptions.count+snapshot.production.events+snapshot.dispatches.count:0
  const plantName=accessiblePlants.find(plant=>plant.id===plantId)?.name??(locale==='es'?'Todas las plantas':'All plants')
- const aiQuery=new URLSearchParams({source:'inicio',prompt:locale==='es'?'Prioridades de hoy':'Today’s priorities'});if(plantId)aiQuery.set('plantId',plantId);const aiHref=`/pescamar-ia?${aiQuery.toString()}`
+ const aiPrompt=ceoView?(locale==='es'?'Resumen ejecutivo de hoy':'Today’s executive summary'):(locale==='es'?'Prioridades de hoy':'Today’s priorities')
+ const aiQuery=new URLSearchParams({source:'inicio',prompt:aiPrompt});if(plantId)aiQuery.set('plantId',plantId);const aiHref=`/pescamar-ia?${aiQuery.toString()}`
 
  return <>
  {error?<div className="system-banner error">{error}</div>:null}
@@ -82,17 +85,17 @@ export function DailyClose(){
 
   <section className="daily-priority" aria-label={t('home.whatDo')}>
    <div className="daily-priority-head">
-    <div><span className="overline">{assistantFirst?(locale==='es'?'Decisión inmediata':'Immediate decision'):t('home.whatDo')}</span><h2>{firstPriority?firstPriority.reference:t('home.startOperation')}</h2><p>{firstPriority?firstPriority.reason:t('home.startCopy')}</p></div>
+    <div><span className="overline">{ceoView?(locale==='es'?'Decisión ejecutiva':'Executive decision'):assistantFirst?(locale==='es'?'Decisión inmediata':'Immediate decision'):t('home.whatDo')}</span><h2>{ceoView?(locale==='es'?'Qué requiere tu atención hoy':'What needs your attention today'):firstPriority?firstPriority.reference:t('home.startOperation')}</h2><p>{ceoView?(firstPriority?firstPriority.reason:(locale==='es'?'No hay una excepción material identificada en la evidencia disponible.':'No material exception is identified in the available evidence.')):firstPriority?firstPriority.reason:t('home.startCopy')}</p></div>
     <div className="daily-priority-actions">
-     {firstPriority?<Link className="button primary" to={firstPriority.to}>{firstPriority.action}<ArrowRight size={15}/></Link>:<Link className="button primary" to="/recepciones">{t('home.registerReception')}<ArrowRight size={15}/></Link>}
-     {assistantFirst?<Link className="button secondary" to={aiHref}><Sparkles size={15}/>{locale==='es'?'Preguntar a Seafood AI':'Ask Seafood AI'}</Link>:null}
+     {ceoView?<Link className="button primary" to={aiHref}><Sparkles size={15}/>{locale==='es'?'Ver resumen ejecutivo':'Open executive summary'}<ArrowRight size={15}/></Link>:firstPriority?<Link className="button primary" to={firstPriority.to}>{firstPriority.action}<ArrowRight size={15}/></Link>:<Link className="button primary" to="/recepciones">{t('home.registerReception')}<ArrowRight size={15}/></Link>}
+     {assistantFirst&&!ceoView?<Link className="button secondary" to={aiHref}><Sparkles size={15}/>{locale==='es'?'Preguntar a Seafood AI':'Ask Seafood AI'}</Link>:null}
     </div>
    </div>
-   {firstPriority?<small className="daily-priority-detail"><b>{t('home.next')}:</b> {firstPriority.next}{!assistantFirst?<> · <Link to={aiHref}><Sparkles size={13}/>{locale==='es'?' Ver 3 prioridades con Seafood AI':' See 3 priorities with Seafood AI'}</Link></>:null}</small>:!assistantFirst?<small className="daily-priority-detail"><Link to={aiHref}><Sparkles size={13}/>{locale==='es'?' Revisar operación con Seafood AI':' Review operations with Seafood AI'}</Link></small>:null}
+   {firstPriority&&!ceoView?<small className="daily-priority-detail"><b>{t('home.next')}:</b> {firstPriority.next}{!assistantFirst?<> · <Link to={aiHref}><Sparkles size={13}/>{locale==='es'?' Ver 3 prioridades con Seafood AI':' See 3 priorities with Seafood AI'}</Link></>:null}</small>:ceoView&&firstPriority?<small className="daily-priority-detail"><b>{locale==='es'?'Contexto':'Context'}:</b> {firstPriority.why}</small>:!assistantFirst?<small className="daily-priority-detail"><Link to={aiHref}><Sparkles size={13}/>{locale==='es'?' Revisar operación con Seafood AI':' Review operations with Seafood AI'}</Link></small>:null}
   </section>
 
   {assistantFirst?<section className="daily-home-attention" aria-label="Seafood AI">
-   <div className="daily-clear-note"><Sparkles size={19}/><div><b>{locale==='es'?'Seafood AI interpreta el resto de la operación':'Seafood AI interprets the rest of the operation'}</b><small>{locale==='es'?'Prioridades, comparación de plantas, bloqueos y faltantes se consultan desde una sola capa, con evidencia y sin modificar registros.':'Priorities, plant comparison, blockers and missing evidence are handled in one evidence-backed, read-only layer.'}</small></div><Link className="button secondary" to={aiHref}>{locale==='es'?'Abrir asistente':'Open assistant'}<ArrowRight size={15}/></Link></div>
+   <div className="daily-clear-note"><Sparkles size={19}/><div><b>{ceoView?(locale==='es'?'Seafood AI consolida la empresa para dirección':'Seafood AI consolidates the company for leadership'):(locale==='es'?'Seafood AI interpreta el resto de la operación':'Seafood AI interprets the rest of the operation')}</b><small>{ceoView?(locale==='es'?'Resultados conocidos, riesgos, compromisos, operación e histórico se reducen a lo que requiere decisión ejecutiva.':'Known outcomes, risks, commitments, operations and history are reduced to what requires executive decision.'):(locale==='es'?'Prioridades, comparación de plantas, bloqueos y faltantes se consultan desde una sola capa, con evidencia y sin modificar registros.':'Priorities, plant comparison, blockers and missing evidence are handled in one evidence-backed, read-only layer.')}</small></div><Link className="button secondary" to={aiHref}>{locale==='es'?'Abrir asistente':'Open assistant'}<ArrowRight size={15}/></Link></div>
   </section>:<section className="daily-home-attention" aria-label={t('home.attention')}>
    <div className="section-heading"><div><span className="overline">{t('home.attention')}</span><h2>{priorities.length?t('home.reviewThese'):t('home.nothingNeeds')}</h2></div></div>
    {priorities.length?<div className="queue-list daily-more-list">{priorities.map((item,index)=><Link className="queue-row" to={item.to} key={item.key}><span className="queue-priority">{index+1}</span><div><b>{item.reference}</b><small>{item.reason}</small><small>{item.next}</small></div><strong>{item.action}</strong><ArrowRight size={15}/></Link>)}</div>:<div className="daily-clear-note"><ShieldCheck size={19}/><div><b>{t('home.noAlerts')}</b><small>{t('home.historyIsolation')}</small></div></div>}
