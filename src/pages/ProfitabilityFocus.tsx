@@ -36,9 +36,9 @@ export function ProfitabilityFocus(){
    <section className="signal-grid">
     <article className="signal-card"><span><TrendingUp size={16}/>Ingresos</span><b>{hasRevenue?clp(revenue):'—'}</b><small>{hasRevenue?'Ventas confirmadas':'Pendientes'}</small></article>
     <article className="signal-card"><span><Landmark size={16}/>Contribución</span><b>{hasContribution?clp(contribution):'—'}</b><small>{hasContribution?'Cobertura completa':'Pendiente de costos completos'}</small></article>
-    <article className="signal-card"><span>Historial</span><b>{Number(data?.coverage?.historical_rows??0).toLocaleString('es-CL')}</b><small>{flagged} filas por revisar</small></article>
+    <article className="signal-card"><span>Reportes</span><b>{Number(data?.coverage?.historical_rows??0).toLocaleString('es-CL')}</b><small>{flagged} filas por revisar</small></article>
    </section>
-   {!hasContribution&&topHistory?<section className="panel"><div className="section-heading"><div><span className="overline">Historial</span><h2>{topHistory.supplier??topHistory.customer??topHistory.plant_id??'Mayor volumen observado'}</h2></div></div><p>{kg(Number(topHistory.received_kg??topHistory.source_kg??0))} en {Number(topHistory.lots??0).toLocaleString('es-CL')} lotes. Referencia de volumen, no margen.</p></section>:null}
+   {!hasContribution&&topHistory?<section className="panel"><div className="section-heading"><div><span className="overline">Referencia del período</span><h2>{topHistory.supplier??topHistory.customer??topHistory.plant_id??'Mayor volumen observado'}</h2></div></div><p>{kg(Number(topHistory.received_kg??topHistory.source_kg??0))} en {Number(topHistory.lots??0).toLocaleString('es-CL')} lotes. Referencia operacional del período, no margen.</p></section>:null}
    <div className="page-actions"><Link className="button secondary" to="/rentabilidad/detalle">Ver detalle</Link><Link className="button secondary" to="/pescamar-ia">Preguntar</Link></div>
   </>:null}
  </>
