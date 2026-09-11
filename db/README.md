@@ -80,6 +80,7 @@ Desde `041_schema_migration_baseline.sql`, Neon conserva un registro explícito 
 | `051_sea_urchin_external_references.sql` | catálogo de referencias visuales externas de Uni con provenance/licencia, siempre separado de evidencia operacional y sin labels humanos precargados |
 | `052_sea_urchin_external_reference_reviews.sql` | revisión humana explícita de referencias externas de erizo, separada de evidencia operacional y de decisiones automáticas |
 | `053_gs1_identity_registry.sql` | registry versionado de identidades GS1 GTIN/GLN/SSCC con checksum, evidencia obligatoria y revisión humana |
+| `054_ml_human_feedback.sql` | feedback humano `good/bad` para Seafood AI/ML con comentario, contexto, revisión posterior y prohibición explícita de auto-retraining |
 
 El inventario anterior describe el repositorio actual. Si se agrega una migración, debe agregarse también a esta tabla; CI verifica esa correspondencia y que los landmarks del preflight sigan alineados con el manifiesto runtime.
 
@@ -114,6 +115,7 @@ El inventario anterior describe el repositorio actual. Si se agrega una migraci�
 - La provenance Vision válida nace server-side en `reception_evidence_files` y se copia a `reception_evidence`; metadata equivalente enviada por el navegador no es fuente de verdad.
 - Confidence de Vision es evidencia de extracción, no certeza sobre calidad, origen, peso físico, cumplimiento regulatorio ni decisión comercial.
 - El feedback de Calidad para Uni Vision sólo es `learning_eligible` después de una decisión humana final. `review` no entra al dataset; `accepted` etiqueta `good` y `ng` etiqueta `bad` con motivo obligatorio. Esta evidencia puede usarse para evaluación o entrenamiento futuro, pero nunca reentrena ni modifica decisiones automáticamente.
+- El feedback de Seafood AI/ML se guarda primero como `candidate`; un 👍 o 👎 no cambia el modelo ni el estado operacional. La promoción a `learning_eligible` requiere revisión humana posterior, y 👎 exige comentario para conservar la corrección esperada.
 - `sea_urchin_external_references` guarda sólo referencias externas y su provenance. Siempre quedan `unlabeled`, `official_grade = null`, no son evidencia de lote/planta y no son elegibles automáticamente para entrenamiento supervisado.
 - `gs1_identity_links` sólo vincula identificadores GS1 externos respaldados por evidencia. Nunca deriva ni genera GTIN, GLN o SSCC desde UUID, nombres, lotes, códigos de pallet o secuencias internas.
 - La semántica GS1 queda explícita: GTIN → `packing_spec`; GLN físico → `plant` o `inventory_location`; GLN de parte → `party`; SSCC → `pallet`. El checksum valida estructura, no demuestra propiedad ni asignación.
