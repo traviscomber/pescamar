@@ -1,0 +1,33 @@
+/* Home hero — Pescamar client identity + Seafood Intelligence OS. No external image dependency. */
+.pescamar-home-hero{position:relative;isolation:isolate;overflow:hidden;min-height:430px;margin:0 0 24px;border:1px solid color-mix(in srgb,var(--ocean) 24%,var(--line));border-radius:12px;background:#08263d;color:#f4f9fb}
+.pescamar-home-hero::before{content:"";position:absolute;inset:0;z-index:-2;background:linear-gradient(90deg,rgba(4,20,34,.94) 0%,rgba(5,31,51,.78) 42%,rgba(6,40,64,.22) 72%,rgba(6,40,64,.08) 100%)}
+.pescamar-home-hero::after{content:"";position:absolute;inset:auto 0 0;height:34%;z-index:-1;background:linear-gradient(180deg,rgba(4,22,36,0),rgba(4,22,36,.78))}
+.pescamar-home-visual{position:absolute;inset:0 0 0 39%;width:61%;height:100%;opacity:.98}
+.pescamar-home-copy{position:relative;z-index:2;width:min(640px,58%);padding:38px 38px 124px}
+.pescamar-home-brand{display:flex;align-items:center;gap:12px;margin-bottom:42px;color:#fff}
+.pescamar-home-brand strong{font-family:Rajdhani,sans-serif;font-size:1rem;letter-spacing:.16em;text-transform:uppercase}
+.pescamar-home-brand span{display:block;width:42px;height:1px;background:rgba(255,255,255,.55)}
+.pescamar-home-kicker{font-family:Rajdhani,sans-serif;font-size:.72rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:#9fc4dc}
+.pescamar-home-copy h1{margin:9px 0 8px;font-family:Rajdhani,sans-serif;font-size:clamp(2.55rem,5vw,4.8rem);font-weight:600;line-height:.9;letter-spacing:-.045em;color:#fff}
+.pescamar-home-date{margin:0 0 20px;font-size:.9rem;color:#dceaf0}
+.pescamar-home-alert{margin:0 0 12px;font-family:Rajdhani,sans-serif;font-size:clamp(1.45rem,2.8vw,2.2rem);font-weight:600;line-height:1.05;color:#fff}
+.pescamar-home-alert b{color:#76a6c7;font-size:1.2em}
+.pescamar-home-sub{max-width:540px;margin:0 0 24px;color:#d6e5eb;font-size:.86rem;line-height:1.55}
+.pescamar-home-actions{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}
+.pescamar-home-actions .button.primary{background:#0e76a8;border-color:#0e76a8;color:#fff}
+.pescamar-home-actions .inline-field{color:#dceaf0}
+.pescamar-home-actions input,.pescamar-home-actions select{background:rgba(5,27,44,.72);border-color:rgba(255,255,255,.2);color:#fff}
+.pescamar-home-actions .button.secondary{background:rgba(5,27,44,.66);border-color:rgba(255,255,255,.2);color:#fff}
+.pescamar-home-stats{position:absolute;z-index:3;left:24px;right:24px;bottom:22px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));background:rgba(5,27,44,.78);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(8px);border-radius:9px}
+.pescamar-home-stats>div{padding:14px 18px;border-right:1px solid rgba(255,255,255,.14)}
+.pescamar-home-stats>div:last-child{border-right:0}
+.pescamar-home-stats small{display:block;font-size:.63rem;letter-spacing:.08em;text-transform:uppercase;color:#9fb6c2}
+.pescamar-home-stats b{display:block;margin-top:4px;font-family:Rajdhani,sans-serif;font-size:1.55rem;font-weight:600;color:#fff}
+.pescamar-home-stats span{font-size:.68rem;color:#c7d7de}
+.artisan-tech-line{stroke:#76a6c7;stroke-width:1;fill:none;opacity:.42;vector-effect:non-scaling-stroke}
+.artisan-boat-hull{fill:#d6e3e7;stroke:#8eb3c8;stroke-width:1.2}
+.artisan-boat-trim{fill:#0b5d82}.artisan-boat-dark{fill:#153b51}.artisan-boat-warm{fill:#8b5b36}.artisan-water{fill:#0a3a58}.artisan-water-2{fill:#0d4d70}.artisan-mountain{fill:#66849a;opacity:.32}.artisan-mountain-2{fill:#8ba1ad;opacity:.18}
+.main-content:has(>.pescamar-home-hero)>.page-header{display:none!important}
+@media(max-width:980px){.pescamar-home-hero{min-height:470px}.pescamar-home-visual{inset:0 0 0 30%;width:70%;opacity:.82}.pescamar-home-copy{width:72%;padding:30px 28px 126px}.pescamar-home-brand{margin-bottom:32px}}
+@media(max-width:700px){.pescamar-home-hero{min-height:590px;margin-inline:-16px;border-left:0;border-right:0;border-radius:0}.pescamar-home-visual{inset:0;width:100%;height:48%;opacity:.72}.pescamar-home-copy{width:100%;padding:28px 18px 210px;background:linear-gradient(180deg,rgba(4,20,34,.62),rgba(4,20,34,.94) 53%,rgba(4,20,34,.98))}.pescamar-home-brand{margin-bottom:155px}.pescamar-home-copy h1{font-size:2.7rem}.pescamar-home-alert{font-size:1.55rem}.pescamar-home-actions{align-items:stretch}.pescamar-home-actions .button,.pescamar-home-actions .inline-field{width:100%}.pescamar-home-stats{left:14px;right:14px;bottom:14px;grid-template-columns:1fr}.pescamar-home-stats>div{border-right:0;border-bottom:1px solid rgba(255,255,255,.14);padding:10px 12px}.pescamar-home-stats>div:last-child{border-bottom:0}.pescamar-home-stats b{font-size:1.28rem}.pescamar-home-stats span{display:none}}
+@media(prefers-reduced-motion:reduce){.pescamar-home-hero *{scroll-behavior:auto!important}}
