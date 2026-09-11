@@ -25,4 +25,5 @@
 @import './uni-qa-polish.css' layer(system);
 @import './ux-unification.css' layer(system);
 @import './guidance.css' layer(system);
+@import './visual-closure-pass.css' layer(system);
 @import './a11y.css' layer(accessibility);
