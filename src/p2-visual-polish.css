@@ -45,7 +45,7 @@
   position:absolute;
   inset:0;
   z-index:-2;
-  background-image:url('https://pescamarchile.cl/wp-content/uploads/2021/06/AAAAAA.jpg');
+  background-image:url('/api/brand-hero');
   background-size:cover;
   background-position:center 52%;
   background-repeat:no-repeat;
