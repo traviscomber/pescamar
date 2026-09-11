@@ -75,8 +75,6 @@ export function DailyClose(){
    onDate={setDate}
    onPlant={setPlantId}
    onRefresh={()=>void load(date,plantId)}
-   primaryTo={firstPriority?.to??'/recepciones'}
-   primaryLabel={firstPriority?.action??t('home.registerReception')}
   />
 
   <section className="daily-priority" aria-label={t('home.whatDo')}>
