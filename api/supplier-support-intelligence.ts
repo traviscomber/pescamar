@@ -5,6 +5,7 @@ type Request={method?:string;headers?:Record<string,string|string[]|undefined>}
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void}
 type MainRow={source_row:unknown;supplier:unknown;process_site:unknown;guide_number:unknown;lot_code:unknown}
 type SupportHeader={sheet_name:unknown;source_block:unknown;family_key:unknown;supplier_name:unknown;process_site:unknown;guide_number:unknown;lot_reference:unknown;observation_count:unknown;data_quality_flags:unknown}
+type SupportMetricRow={supplier_name:unknown;grade_code:unknown;observations:unknown;guide_kg:unknown;accepted_kg:unknown;destined_kg:unknown;accepted_obs:unknown;destined_obs:unknown;flagged_obs:unknown}
 type MatchStatus='exact_both'|'guide_only'|'lot_only'|'conflict'|'ambiguous'|'unmatched'
 
 const text=(value:unknown)=>String(value??'').trim()
@@ -31,12 +32,13 @@ export default async function handler(request:Request,response:Response){
    headers=(Array.isArray(raw)?raw:[]) as SupportHeader[]
   }catch(error){
    const message=error instanceof Error?error.message:''
-   if(message.includes('canonical_production_support_blocks')||message.includes('42P01'))return response.status(200).json({ok:true,status:'migration_required',validationCase:'PV-006',maturity:'implemented',historicalOnly:true,writesLive:false,method:{version:'supplier-support-v1-physical-blocks'},summary:{blocks:0,observations:0,autoLinkedBlocks:0,exceptions:0,suppliersWithSupport:0,coveragePct:null},reviewQueue:[],suppliers:[]})
+   if(message.includes('canonical_production_support_blocks')||message.includes('42P01'))return response.status(200).json({ok:true,status:'migration_required',validationCase:'PV-006',maturity:'implemented',historicalOnly:true,writesLive:false,method:{version:'supplier-support-v2-evidence'},summary:{blocks:0,observations:0,autoLinkedBlocks:0,exceptions:0,suppliersWithSupport:0,coveragePct:null},reviewQueue:[],suppliers:[]})
    throw error
   }
-  if(!headers.length)return response.status(200).json({ok:true,status:'not_imported',validationCase:'PV-006',maturity:'implemented',historicalOnly:true,writesLive:false,method:{version:'supplier-support-v1-physical-blocks'},summary:{blocks:0,observations:0,autoLinkedBlocks:0,exceptions:0,suppliersWithSupport:0,coveragePct:null},reviewQueue:[],suppliers:[]})
+  if(!headers.length)return response.status(200).json({ok:true,status:'not_imported',validationCase:'PV-006',maturity:'implemented',historicalOnly:true,writesLive:false,method:{version:'supplier-support-v2-evidence'},summary:{blocks:0,observations:0,autoLinkedBlocks:0,exceptions:0,suppliersWithSupport:0,coveragePct:null},reviewQueue:[],suppliers:[]})
 
-  const mainRaw=await sql`select h.source_row,
+  const [mainRaw,metricRaw]=await Promise.all([
+   sql`select h.source_row,
     coalesce(nullif(btrim(h.supplier_name),''),nullif(btrim(h.supplier_original),''),'Sin proveedor') supplier,
     coalesce(nullif(btrim(h.process_site_original),''),nullif(btrim(h.plant_id),''),'Sin planta') process_site,
     h.guide_number,h.lot_code
@@ -44,8 +46,22 @@ export default async function handler(request:Request,response:Response){
    where h.record_status='operational'
     and h.source_file_hash in(select file_hash from canonical_source_files where canonical and (source_kind='production' or file_name ilike '%produccion%'))
     and (lower(coalesce(h.process_site_original,h.plant_id,'')) in ('curanue','santa rosa','candelaria')
-      or lower(h.lot_code) like 'ig%' or lower(h.lot_code) like 'mdq%' or lower(h.lot_code) like 'mi%')`
+      or lower(h.lot_code) like 'ig%' or lower(h.lot_code) like 'mdq%' or lower(h.lot_code) like 'mi%')`,
+   sql`select supplier_name,grade_code,count(*)::int observations,
+      coalesce(sum(guide_kg),0)::numeric guide_kg,
+      coalesce(sum(accepted_kg),0)::numeric accepted_kg,
+      coalesce(sum(destined_kg),0)::numeric destined_kg,
+      count(*) filter(where accepted_kg is not null)::int accepted_obs,
+      count(*) filter(where destined_kg is not null)::int destined_obs,
+      count(*) filter(where cardinality(data_quality_flags)>0)::int flagged_obs
+    from canonical_production_support_rows
+    where parser_version='production-support-v2'
+      and source_file_hash in(select file_hash from canonical_source_files where canonical and (source_kind='production' or file_name ilike '%produccion%'))
+    group by supplier_name,grade_code
+    order by supplier_name,grade_code`
+  ])
   const main=(Array.isArray(mainRaw)?mainRaw:[]) as MainRow[]
+  const metricRows=(Array.isArray(metricRaw)?metricRaw:[]) as SupportMetricRow[]
   const candidates=main.map(row=>({sourceRow:n(row.source_row),supplier:text(row.supplier),familyKey:familyFor(text(row.process_site),text(row.lot_code)),guide:text(row.guide_number),lot:text(row.lot_code)}))
 
   const blocks=headers.map(header=>{
@@ -75,7 +91,18 @@ export default async function handler(request:Request,response:Response){
    const identitySlots=physicalBlocks*2,identityPresent=items.reduce((sum,item)=>sum+(item.guide?1:0)+(item.lotReference?1:0),0),identityCoverage=identitySlots?identityPresent/identitySlots:0,linkCoverage=physicalBlocks?autoLinkedBlocks/physicalBlocks:0
    const traceabilityScore=Number((100*(linkCoverage*.8+identityCoverage*.2)).toFixed(1)),noGradeObservationBlocks=items.filter(item=>item.observationCount===0||item.flags.includes('no_grade_observations')).length
    const unresolved=items.filter(item=>!autoLinkedStatuses.has(item.matchStatus)).map(item=>({sheetName:item.sheetName,sourceBlock:item.sourceBlock,guide:item.guide,lotReference:item.lotReference,status:item.matchStatus,confidence:'needs-human-validation' as const})).slice(0,5)
-   return {supplier,physicalBlocks,observations,autoLinkedBlocks,matchCoveragePct:pct(autoLinkedBlocks,physicalBlocks),exactBoth,guideOnly,lotOnly,conflicts,ambiguous,unmatched,exceptions,traceabilityScore,noGradeObservationBlocks,unresolved}
+   const evidenceRows=metricRows.filter(row=>normalized(row.supplier_name)===normalized(supplier))
+   const guideKg=evidenceRows.reduce((sum,row)=>sum+n(row.guide_kg),0),acceptedKg=evidenceRows.reduce((sum,row)=>sum+n(row.accepted_kg),0),destinedKg=evidenceRows.reduce((sum,row)=>sum+n(row.destined_kg),0)
+   const acceptedObservations=evidenceRows.reduce((sum,row)=>sum+n(row.accepted_obs),0),destinedObservations=evidenceRows.reduce((sum,row)=>sum+n(row.destined_obs),0),flaggedObservations=evidenceRows.reduce((sum,row)=>sum+n(row.flagged_obs),0)
+   const gradeEvidence=evidenceRows.map(row=>({grade:text(row.grade_code),observations:n(row.observations),guideKg:n(row.guide_kg),acceptedKg:n(row.accepted_kg),destinedKg:n(row.destined_kg),acceptedObservations:n(row.accepted_obs),destinedObservations:n(row.destined_obs)}))
+   const physicalEvidence={
+    guideKg:Number(guideKg.toFixed(1)),acceptedKg:Number(acceptedKg.toFixed(1)),destinedKg:Number(destinedKg.toFixed(1)),
+    acceptedVsGuidePct:pct(acceptedKg,guideKg),destinedVsGuidePct:pct(destinedKg,guideKg),
+    acceptedObservations,destinedObservations,flaggedObservations,
+    confidence:'derived' as const,
+    rule:'acceptedVsGuidePct y destinedVsGuidePct son razones históricas derivadas de las celdas pobladas de las hojas auxiliares. No son rendimiento productivo, calidad final ni score de proveedor; la cobertura de accepted/destined es parcial y debe mostrarse junto a los conteos de observaciones.'
+   }
+   return {supplier,physicalBlocks,observations,autoLinkedBlocks,matchCoveragePct:pct(autoLinkedBlocks,physicalBlocks),exactBoth,guideOnly,lotOnly,conflicts,ambiguous,unmatched,exceptions,traceabilityScore,noGradeObservationBlocks,unresolved,physicalEvidence,gradeEvidence}
   }).sort((a,b)=>b.traceabilityScore-a.traceabilityScore||b.physicalBlocks-a.physicalBlocks)
   const autoLinkedBlocks=suppliers.reduce((sum,item)=>sum+item.autoLinkedBlocks,0),exceptions=suppliers.reduce((sum,item)=>sum+item.exceptions,0),observations=suppliers.reduce((sum,item)=>sum+item.observations,0)
   const reviewQueue=blocks.filter(block=>!autoLinkedStatuses.has(block.matchStatus)).map(block=>({
@@ -97,7 +124,7 @@ export default async function handler(request:Request,response:Response){
    confidence:exceptions?'needs-human-validation':'observed',
    historicalOnly:true,
    writesLive:false,
-   method:{version:'supplier-support-v1-physical-blocks',rule:'Las cadenas físicas v2 mejoran trazabilidad y confianza, no castigan por sí solas el desempeño del proveedor. Un bloque sólo se considera conciliado cuando guía y/o lote identifican una única fila principal sin contradicción. Una cadena sin observaciones de grado sigue siendo evidencia válida.'},
+   method:{version:'supplier-support-v2-evidence',rule:'Las cadenas físicas v2 mejoran trazabilidad y exponen evidencia histórica de kilos por grado. No generan ranking de proveedor. Un bloque sólo se considera conciliado cuando guía y/o lote identifican una única fila principal sin contradicción. Razones de kilos aceptados o destinados son derivadas y sólo interpretables junto a su cobertura de observaciones.'},
    summary:{blocks:blocks.length,observations,autoLinkedBlocks,exceptions,suppliersWithSupport:suppliers.length,coveragePct:pct(autoLinkedBlocks,blocks.length)},
    reviewQueue,
    suppliers
