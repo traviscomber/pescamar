@@ -80,7 +80,8 @@ Desde `041_schema_migration_baseline.sql`, Neon conserva un registro explícito 
 | `051_sea_urchin_external_references.sql` | catálogo de referencias visuales externas de Uni con provenance/licencia, siempre separado de evidencia operacional y sin labels humanos precargados |
 | `052_sea_urchin_external_reference_reviews.sql` | revisión humana explícita de referencias externas de erizo, separada de evidencia operacional y de decisiones automáticas |
 | `053_gs1_identity_registry.sql` | registry versionado de identidades GS1 GTIN/GLN/SSCC con checksum, evidencia obligatoria y revisión humana |
-| `054_ml_human_feedback.sql` | feedback humano `good/bad` para Seafood AI/ML con comentario, contexto, revisión posterior y prohibición explícita de auto-retraining |
+| `054_design_assets.sql` | registry de assets de diseño con lifecycle, provenance y binarios en Neon Object Storage |
+| `055_ml_human_feedback.sql` | feedback humano `good/bad` para Seafood AI/ML con comentario, contexto, revisión posterior y prohibición explícita de auto-retraining |
 
 El inventario anterior describe el repositorio actual. Si se agrega una migración, debe agregarse también a esta tabla; CI verifica esa correspondencia y que los landmarks del preflight sigan alineados con el manifiesto runtime.
 

@@ -38,7 +38,7 @@ create index if not exists ml_feedback_scope_idx on ml_feedback(plant_id,recepti
 
 insert into schema_migrations(migration_name,evidence_kind,applied_at,details)
 values(
-  '054_ml_human_feedback.sql',
+  '055_ml_human_feedback.sql',
   'applied',
   now(),
   jsonb_build_object(
