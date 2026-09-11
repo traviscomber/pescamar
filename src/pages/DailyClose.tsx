@@ -1,4 +1,4 @@
-import {ArrowRight,PackageCheck,ShieldCheck} from 'lucide-react'
+import {ArrowRight,ShieldCheck} from 'lucide-react'
 import {useCallback,useEffect,useMemo,useState} from 'react'
 import {Link,useSearchParams} from 'react-router-dom'
 import {useAuth} from '../auth'
@@ -29,13 +29,6 @@ export function DailyClose(){
  const [date,setDate]=useState(today),[plantId,setPlantId]=useState(defaultPlant),[data,setData]=useState<Payload|null>(null),[operational,setOperational]=useState<OperationalPayload|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState('')
  const kg=(value:number)=>`${value.toLocaleString(localeTag(locale),{maximumFractionDigits:1})} kg`
  const suggestedOwner=(path:string)=>commercialPaths.some(prefix=>path.startsWith(prefix))?t('home.ownerCommercial'):t('home.ownerOperations')
- const starter=locale==='es'?{
-  eyebrow:'Primer día',title:'Empieza con una recepción real',copy:'No necesitas configurar un flujo aparte. Registra el producto cuando llega y Pescamar mantiene el contexto del lote hacia producción, calidad e inventario.',
-  step1:'1 · Registra la recepción',step1copy:'Proveedor, especie, kilos y evidencia de ingreso.',step2:'2 · Continúa el lote',step2copy:'Producción y calidad heredan la identidad del lote; evita volver a escribir lo mismo.',step3:'3 · Atiende excepciones',step3copy:'Inicio y Seafood AI te muestran bloqueos, evidencia faltante y la siguiente acción segura.',ask:'Preguntar a Seafood AI'
- }:{
-  eyebrow:'First day',title:'Start with one real reception',copy:'You do not need to configure a separate workflow. Record the product when it arrives and Pescamar carries the lot context into production, quality and inventory.',
-  step1:'1 · Register the reception',step1copy:'Supplier, species, kilograms and intake evidence.',step2:'2 · Continue the lot',step2copy:'Production and quality inherit the lot identity; avoid entering the same data twice.',step3:'3 · Handle exceptions',step3copy:'Home and Seafood AI surface blockers, missing evidence and the next safe action.',ask:'Ask Seafood AI'
- }
 
  const load=useCallback(async(nextDate:string,nextPlant:string)=>{
   setLoading(true)
@@ -62,7 +55,6 @@ export function DailyClose(){
  const priorities:Priority[]=[...operationalItems.map(item=>({key:`event-${item.receptionId}-${item.signal.kind}-${item.signal.evidenceEventIds.join('-')}`,score:eventScore(item.signal.priority),reference:`${item.receptionNumber?`REC-${item.receptionNumber}`:t('home.currentLot')}${item.supplier?` · ${item.supplier}`:''}`,reason:item.signal.title,why:item.signal.detail,next:item.signal.action,to:item.path,action:t('home.open'),owner:suggestedOwner(item.path),source:'event_graph' as const})),...dailyDistinct.map((item,index)=>{const to=target(item);return {key:`daily-${item.kind}-${item.reference}-${index}`,score:dailyScore(item.level),reference:item.reference,reason:item.reason,why:item.detail,next:action(item),to,action:action(item),owner:suggestedOwner(to),source:'daily' as const}})].sort((a,b)=>b.score-a.score).slice(0,3)
  const operationalCounts=operational?.counts??{p1:0,p2:0,p3:0},eventGraphOpen=operationalCounts.p1+operationalCounts.p2+operationalCounts.p3,dedupedDaily=Math.max(0,(snapshot?.risk.total??0)-riskItems.filter(item=>item.receptionId&&eventGraphReceptionIds.has(item.receptionId)).length),attention=eventGraphOpen+dedupedDaily,firstPriority=priorities[0]
  const movementCount=snapshot?snapshot.receptions.count+snapshot.production.events+snapshot.dispatches.count:0
- const emptyLive=Boolean(snapshot&&(operational?.lots??0)===0&&movementCount===0&&snapshot.inventory.locatedKg===0)
  const plantName=accessiblePlants.find(plant=>plant.id===plantId)?.name??(locale==='es'?'Todas las plantas':'All plants')
 
  return <>
@@ -88,14 +80,16 @@ export function DailyClose(){
   />
 
   <section className="daily-priority" aria-label={t('home.whatDo')}>
-   <div className="daily-priority-head"><div><span className="overline">{t('home.whatDo')}</span><h2>{firstPriority?firstPriority.reference:t('home.startOperation')}</h2><p>{firstPriority?firstPriority.reason:t('home.startCopy')}</p></div>{firstPriority?<Link className="button primary" to={firstPriority.to}>{firstPriority.action}<ArrowRight size={15}/></Link>:<Link className="button primary" to="/recepciones">{t('home.registerReception')}<ArrowRight size={15}/></Link>}</div>{firstPriority?<><small className="daily-priority-detail"><b>{t('home.next')}:</b> {firstPriority.next}</small><small className="daily-priority-detail"><b>{t('home.owner')}:</b> {firstPriority.owner}</small>{firstPriority.source==='event_graph'?<small className="daily-priority-detail"><b>{t('home.source')}:</b> {t('home.sourceCurrent')}</small>:null}</>:null}
+   <div className="daily-priority-head">
+    <div><span className="overline">{t('home.whatDo')}</span><h2>{firstPriority?firstPriority.reference:t('home.startOperation')}</h2><p>{firstPriority?firstPriority.reason:t('home.startCopy')}</p></div>
+    {firstPriority?<Link className="button primary" to={firstPriority.to}>{firstPriority.action}<ArrowRight size={15}/></Link>:<Link className="button primary" to="/recepciones">{t('home.registerReception')}<ArrowRight size={15}/></Link>}
+   </div>
+   {firstPriority?<small className="daily-priority-detail"><b>{t('home.next')}:</b> {firstPriority.next}</small>:null}
   </section>
 
-  {emptyLive?<section className="daily-home-attention" aria-label={starter.eyebrow}><div className="section-heading"><div><span className="overline">{starter.eyebrow}</span><h2>{starter.title}</h2><p>{starter.copy}</p></div><Link className="button primary" to="/recepciones">{t('home.registerReception')}<ArrowRight size={15}/></Link></div><div className="daily-clear-context"><div><small>{starter.step1}</small><span>{starter.step1copy}</span></div><div><small>{starter.step2}</small><span>{starter.step2copy}</span></div><div><small>{starter.step3}</small><span>{starter.step3copy}</span></div></div><Link className="text-action inline-link" to="/pescamar-ia">{starter.ask}<ArrowRight size={14}/></Link></section>:null}
-
-  <section className="daily-home-attention" aria-label={t('home.attention')}><div className="section-heading"><div><span className="overline">{t('home.attention')}</span><h2>{priorities.length?t('home.reviewThese'):t('home.nothingNeeds')}</h2></div></div>{priorities.length?<div className="queue-list daily-more-list">{priorities.map((item,index)=><Link className="queue-row" to={item.to} key={item.key}><span className="queue-priority">{index+1}</span><div><b>{item.reference}</b><small>{item.reason}</small><small>{item.next}</small><small>{t('home.owner')}: {item.owner}</small></div><strong>{item.action}</strong><ArrowRight size={15}/></Link>)}</div>:<div className="daily-clear-note"><ShieldCheck size={19}/><div><b>{t('home.noAlerts')}</b><small>{t('home.historyIsolation')}</small></div></div>}</section>
-
-  <nav className="daily-footer-actions" aria-label={t('home.consultation')}><Link className="text-action inline-link" to="/lineage?mode=historical&year=2026">{t('home.viewHistory')}<ArrowRight size={14}/></Link><Link className="text-action inline-link" to="/inicio/detalle">{t('home.viewReports')}<ArrowRight size={14}/></Link><Link className="text-action inline-link" to="/pescamar-ia">{t('home.askAssistant')}<ArrowRight size={14}/></Link></nav>
-  <p className="lot360-caveat"><PackageCheck size={13}/> {t('home.historyCaveat')}</p>
+  <section className="daily-home-attention" aria-label={t('home.attention')}>
+   <div className="section-heading"><div><span className="overline">{t('home.attention')}</span><h2>{priorities.length?t('home.reviewThese'):t('home.nothingNeeds')}</h2></div></div>
+   {priorities.length?<div className="queue-list daily-more-list">{priorities.map((item,index)=><Link className="queue-row" to={item.to} key={item.key}><span className="queue-priority">{index+1}</span><div><b>{item.reference}</b><small>{item.reason}</small><small>{item.next}</small></div><strong>{item.action}</strong><ArrowRight size={15}/></Link>)}</div>:<div className="daily-clear-note"><ShieldCheck size={19}/><div><b>{t('home.noAlerts')}</b><small>{t('home.historyIsolation')}</small></div></div>}
+  </section>
  </>:null}</>
 }
