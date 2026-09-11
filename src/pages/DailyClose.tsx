@@ -29,6 +29,7 @@ export function DailyClose(){
  const [date,setDate]=useState(today),[plantId,setPlantId]=useState(defaultPlant),[data,setData]=useState<Payload|null>(null),[operational,setOperational]=useState<OperationalPayload|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState('')
  const kg=(value:number)=>`${value.toLocaleString(localeTag(locale),{maximumFractionDigits:1})} kg`
  const suggestedOwner=(path:string)=>commercialPaths.some(prefix=>path.startsWith(prefix))?t('home.ownerCommercial'):t('home.ownerOperations')
+ const assistantFirst=operator?.role==='operations'
 
  const load=useCallback(async(nextDate:string,nextPlant:string)=>{
   setLoading(true)
@@ -73,6 +74,7 @@ export function DailyClose(){
    lots={operational?.lots??0}
    movements={movementCount}
    inventoryLabel={kg(snapshot.inventory.locatedKg)}
+   compact={assistantFirst}
    onDate={setDate}
    onPlant={setPlantId}
    onRefresh={()=>void load(date,plantId)}
@@ -80,15 +82,20 @@ export function DailyClose(){
 
   <section className="daily-priority" aria-label={t('home.whatDo')}>
    <div className="daily-priority-head">
-    <div><span className="overline">{t('home.whatDo')}</span><h2>{firstPriority?firstPriority.reference:t('home.startOperation')}</h2><p>{firstPriority?firstPriority.reason:t('home.startCopy')}</p></div>
-    {firstPriority?<Link className="button primary" to={firstPriority.to}>{firstPriority.action}<ArrowRight size={15}/></Link>:<Link className="button primary" to="/recepciones">{t('home.registerReception')}<ArrowRight size={15}/></Link>}
+    <div><span className="overline">{assistantFirst?(locale==='es'?'Decisión inmediata':'Immediate decision'):t('home.whatDo')}</span><h2>{firstPriority?firstPriority.reference:t('home.startOperation')}</h2><p>{firstPriority?firstPriority.reason:t('home.startCopy')}</p></div>
+    <div className="daily-priority-actions">
+     {firstPriority?<Link className="button primary" to={firstPriority.to}>{firstPriority.action}<ArrowRight size={15}/></Link>:<Link className="button primary" to="/recepciones">{t('home.registerReception')}<ArrowRight size={15}/></Link>}
+     {assistantFirst?<Link className="button secondary" to={aiHref}><Sparkles size={15}/>{locale==='es'?'Preguntar a Seafood AI':'Ask Seafood AI'}</Link>:null}
+    </div>
    </div>
-   {firstPriority?<small className="daily-priority-detail"><b>{t('home.next')}:</b> {firstPriority.next} · <Link to={aiHref}><Sparkles size={13}/>{locale==='es'?' Ver 3 prioridades con Seafood AI':' See 3 priorities with Seafood AI'}</Link></small>:<small className="daily-priority-detail"><Link to={aiHref}><Sparkles size={13}/>{locale==='es'?' Revisar operación con Seafood AI':' Review operations with Seafood AI'}</Link></small>}
+   {firstPriority?<small className="daily-priority-detail"><b>{t('home.next')}:</b> {firstPriority.next}{!assistantFirst?<> · <Link to={aiHref}><Sparkles size={13}/>{locale==='es'?' Ver 3 prioridades con Seafood AI':' See 3 priorities with Seafood AI'}</Link></>:null}</small>:!assistantFirst?<small className="daily-priority-detail"><Link to={aiHref}><Sparkles size={13}/>{locale==='es'?' Revisar operación con Seafood AI':' Review operations with Seafood AI'}</Link></small>:null}
   </section>
 
-  <section className="daily-home-attention" aria-label={t('home.attention')}>
+  {assistantFirst?<section className="daily-home-attention" aria-label="Seafood AI">
+   <div className="daily-clear-note"><Sparkles size={19}/><div><b>{locale==='es'?'Seafood AI interpreta el resto de la operación':'Seafood AI interprets the rest of the operation'}</b><small>{locale==='es'?'Prioridades, comparación de plantas, bloqueos y faltantes se consultan desde una sola capa, con evidencia y sin modificar registros.':'Priorities, plant comparison, blockers and missing evidence are handled in one evidence-backed, read-only layer.'}</small></div><Link className="button secondary" to={aiHref}>{locale==='es'?'Abrir asistente':'Open assistant'}<ArrowRight size={15}/></Link></div>
+  </section>:<section className="daily-home-attention" aria-label={t('home.attention')}>
    <div className="section-heading"><div><span className="overline">{t('home.attention')}</span><h2>{priorities.length?t('home.reviewThese'):t('home.nothingNeeds')}</h2></div></div>
    {priorities.length?<div className="queue-list daily-more-list">{priorities.map((item,index)=><Link className="queue-row" to={item.to} key={item.key}><span className="queue-priority">{index+1}</span><div><b>{item.reference}</b><small>{item.reason}</small><small>{item.next}</small></div><strong>{item.action}</strong><ArrowRight size={15}/></Link>)}</div>:<div className="daily-clear-note"><ShieldCheck size={19}/><div><b>{t('home.noAlerts')}</b><small>{t('home.historyIsolation')}</small></div></div>}
-  </section>
+  </section>}
  </>:null}</>
 }
