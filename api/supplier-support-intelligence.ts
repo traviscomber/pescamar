@@ -3,9 +3,10 @@ import {getSql} from './_db.js'
 
 type Request={method?:string;headers?:Record<string,string|string[]|undefined>}
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void}
-type MainRow={source_row:unknown;supplier:unknown;process_site:unknown;guide_number:unknown;lot_code:unknown}
+type MainRow={source_row:unknown;supplier:unknown;process_site:unknown;guide_number:unknown;lot_code:unknown;received_kg:unknown;event_date:unknown}
 type SupportHeader={sheet_name:unknown;source_block:unknown;family_key:unknown;supplier_name:unknown;process_site:unknown;guide_number:unknown;lot_reference:unknown;observation_count:unknown;data_quality_flags:unknown}
 type SupportMetricRow={supplier_name:unknown;grade_code:unknown;observations:unknown;guide_kg:unknown;accepted_kg:unknown;destined_kg:unknown;accepted_obs:unknown;destined_obs:unknown;flagged_obs:unknown}
+type SupportPeriodRow={supplier_name:unknown;period:unknown;observations:unknown;accepted_kg:unknown;destined_kg:unknown}
 type MatchStatus='exact_both'|'guide_only'|'lot_only'|'conflict'|'ambiguous'|'unmatched'
 
 const text=(value:unknown)=>String(value??'').trim()
@@ -13,6 +14,7 @@ const normalized=(value:unknown)=>text(value).normalize('NFD').replace(/[\u0300-
 const n=(value:unknown)=>{const parsed=Number(value);return Number.isFinite(parsed)?parsed:0}
 const pct=(part:number,total:number)=>total?Number((part/total*100).toFixed(1)):null
 const flags=(value:unknown)=>Array.isArray(value)?value.map(item=>text(item)).filter(Boolean):[]
+const month=(value:unknown)=>{if(!value)return null;const date=new Date(String(value));return Number.isNaN(date.getTime())?null:date.toISOString().slice(0,7)}
 function familyFor(site:string,lot:string){const normalizedLot=lot.toLowerCase(),normalizedSite=site.toLowerCase();if(normalizedLot.startsWith('ig')||normalizedSite==='curanue')return'IG';if(normalizedLot.startsWith('mdq')||normalizedSite==='santa rosa')return'MDQ';if(normalizedLot.startsWith('mi')||normalizedSite==='candelaria')return'MI';return'RF'}
 
 export default async function handler(request:Request,response:Response){
@@ -32,16 +34,16 @@ export default async function handler(request:Request,response:Response){
    headers=(Array.isArray(raw)?raw:[]) as SupportHeader[]
   }catch(error){
    const message=error instanceof Error?error.message:''
-   if(message.includes('canonical_production_support_blocks')||message.includes('42P01'))return response.status(200).json({ok:true,status:'migration_required',validationCase:'PV-006',maturity:'implemented',historicalOnly:true,writesLive:false,method:{version:'supplier-support-v2-evidence'},summary:{blocks:0,observations:0,autoLinkedBlocks:0,exceptions:0,suppliersWithSupport:0,coveragePct:null},reviewQueue:[],suppliers:[]})
+   if(message.includes('canonical_production_support_blocks')||message.includes('42P01'))return response.status(200).json({ok:true,status:'migration_required',validationCase:'PV-006',maturity:'implemented',historicalOnly:true,writesLive:false,method:{version:'supplier-support-v3-cross-layer'},summary:{blocks:0,observations:0,autoLinkedBlocks:0,exceptions:0,suppliersWithSupport:0,coveragePct:null},reviewQueue:[],suppliers:[]})
    throw error
   }
-  if(!headers.length)return response.status(200).json({ok:true,status:'not_imported',validationCase:'PV-006',maturity:'implemented',historicalOnly:true,writesLive:false,method:{version:'supplier-support-v2-evidence'},summary:{blocks:0,observations:0,autoLinkedBlocks:0,exceptions:0,suppliersWithSupport:0,coveragePct:null},reviewQueue:[],suppliers:[]})
+  if(!headers.length)return response.status(200).json({ok:true,status:'not_imported',validationCase:'PV-006',maturity:'implemented',historicalOnly:true,writesLive:false,method:{version:'supplier-support-v3-cross-layer'},summary:{blocks:0,observations:0,autoLinkedBlocks:0,exceptions:0,suppliersWithSupport:0,coveragePct:null},reviewQueue:[],suppliers:[]})
 
-  const [mainRaw,metricRaw]=await Promise.all([
+  const [mainRaw,metricRaw,supportPeriodRaw]=await Promise.all([
    sql`select h.source_row,
     coalesce(nullif(btrim(h.supplier_name),''),nullif(btrim(h.supplier_original),''),'Sin proveedor') supplier,
     coalesce(nullif(btrim(h.process_site_original),''),nullif(btrim(h.plant_id),''),'Sin planta') process_site,
-    h.guide_number,h.lot_code
+    h.guide_number,h.lot_code,h.received_kg,coalesce(h.production_date,h.process_date,h.reception_date,h.event_date) event_date
    from historical_production_records h
    where h.record_status='operational'
     and h.source_file_hash in(select file_hash from canonical_source_files where canonical and (source_kind='production' or file_name ilike '%produccion%'))
@@ -58,11 +60,20 @@ export default async function handler(request:Request,response:Response){
     where parser_version='production-support-v2'
       and source_file_hash in(select file_hash from canonical_source_files where canonical and (source_kind='production' or file_name ilike '%produccion%'))
     group by supplier_name,grade_code
-    order by supplier_name,grade_code`
+    order by supplier_name,grade_code`,
+   sql`select supplier_name,date_trunc('month',event_date)::date period,count(*)::int observations,
+      coalesce(sum(accepted_kg),0)::numeric accepted_kg,coalesce(sum(destined_kg),0)::numeric destined_kg
+    from canonical_production_support_rows
+    where parser_version='production-support-v2'
+      and source_file_hash in(select file_hash from canonical_source_files where canonical and (source_kind='production' or file_name ilike '%produccion%'))
+      and event_date is not null
+    group by supplier_name,date_trunc('month',event_date)::date
+    order by supplier_name,period`
   ])
   const main=(Array.isArray(mainRaw)?mainRaw:[]) as MainRow[]
   const metricRows=(Array.isArray(metricRaw)?metricRaw:[]) as SupportMetricRow[]
-  const candidates=main.map(row=>({sourceRow:n(row.source_row),supplier:text(row.supplier),familyKey:familyFor(text(row.process_site),text(row.lot_code)),guide:text(row.guide_number),lot:text(row.lot_code)}))
+  const supportPeriods=(Array.isArray(supportPeriodRaw)?supportPeriodRaw:[]) as SupportPeriodRow[]
+  const candidates=main.map(row=>({sourceRow:n(row.source_row),supplier:text(row.supplier),familyKey:familyFor(text(row.process_site),text(row.lot_code)),guide:text(row.guide_number),lot:text(row.lot_code),receivedKg:n(row.received_kg),period:month(row.event_date)}))
 
   const blocks=headers.map(header=>{
    const supplier=text(header.supplier_name)||'Proveedor no identificado',familyKey=text(header.family_key),guide=text(header.guide_number),lotReference=text(header.lot_reference)
@@ -102,7 +113,24 @@ export default async function handler(request:Request,response:Response){
     confidence:'derived' as const,
     rule:'acceptedVsGuidePct y destinedVsGuidePct son razones históricas derivadas de las celdas pobladas de las hojas auxiliares. No son rendimiento productivo, calidad final ni score de proveedor; la cobertura de accepted/destined es parcial y debe mostrarse junto a los conteos de observaciones.'
    }
-   return {supplier,physicalBlocks,observations,autoLinkedBlocks,matchCoveragePct:pct(autoLinkedBlocks,physicalBlocks),exactBoth,guideOnly,lotOnly,conflicts,ambiguous,unmatched,exceptions,traceabilityScore,noGradeObservationBlocks,unresolved,physicalEvidence,gradeEvidence}
+   const mainSupplierRows=candidates.filter(row=>normalized(row.supplier)===normalized(supplier))
+   const mainReceivedKg=mainSupplierRows.reduce((sum,row)=>sum+row.receivedKg,0)
+   const mainPeriods=[...new Set(mainSupplierRows.map(row=>row.period).filter((value):value is string=>Boolean(value)))].sort()
+   const supplierSupportPeriods=supportPeriods.filter(row=>normalized(row.supplier_name)===normalized(supplier)).map(row=>({period:month(row.period),observations:n(row.observations),acceptedKg:n(row.accepted_kg),destinedKg:n(row.destined_kg)})).filter(row=>row.period)
+   const supportPeriodKeys=new Set(supplierSupportPeriods.map(row=>row.period as string)),overlapPeriods=mainPeriods.filter(period=>supportPeriodKeys.has(period))
+   const periodWarnings=supplierSupportPeriods.flatMap(row=>{const received=mainSupplierRows.filter(item=>item.period===row.period).reduce((sum,item)=>sum+item.receivedKg,0);return received>0&&row.acceptedKg>received?[{period:row.period,receivedKg:Number(received.toFixed(1)),acceptedKg:Number(row.acceptedKg.toFixed(1)),reason:'accepted_kg exceeds received_kg at monthly aggregate; grains are not validated as directly comparable'}]:[]})
+   const crossLayerEvidence={
+    mainReceptionRows:mainSupplierRows.length,
+    mainReceivedKg:Number(mainReceivedKg.toFixed(1)),
+    mainPeriods,
+    supportPeriods:supplierSupportPeriods,
+    overlappingPeriods:overlapPeriods.length,
+    periodComparabilityWarnings:periodWarnings,
+    comparability:'not_validated' as const,
+    confidence:'needs-human-validation' as const,
+    rule:'La hoja principal y las hojas auxiliares se muestran lado a lado por proveedor y periodo, pero no se calcula accepted/received ni ranking mientras no exista una regla validada que pruebe que ambas capas usan el mismo grano, universo y ventana temporal.'
+   }
+   return {supplier,physicalBlocks,observations,autoLinkedBlocks,matchCoveragePct:pct(autoLinkedBlocks,physicalBlocks),exactBoth,guideOnly,lotOnly,conflicts,ambiguous,unmatched,exceptions,traceabilityScore,noGradeObservationBlocks,unresolved,physicalEvidence,gradeEvidence,crossLayerEvidence}
   }).sort((a,b)=>b.traceabilityScore-a.traceabilityScore||b.physicalBlocks-a.physicalBlocks)
   const autoLinkedBlocks=suppliers.reduce((sum,item)=>sum+item.autoLinkedBlocks,0),exceptions=suppliers.reduce((sum,item)=>sum+item.exceptions,0),observations=suppliers.reduce((sum,item)=>sum+item.observations,0)
   const reviewQueue=blocks.filter(block=>!autoLinkedStatuses.has(block.matchStatus)).map(block=>({
@@ -116,16 +144,17 @@ export default async function handler(request:Request,response:Response){
    historicalOnly:true,
    writesLive:false
   }))
+  const crossLayerWarnings=suppliers.reduce((sum,item)=>sum+item.crossLayerEvidence.periodComparabilityWarnings.length,0)
   return response.status(200).json({
    ok:true,
    status:'ready',
    validationCase:'PV-006',
    maturity:'pilot-evidence',
-   confidence:exceptions?'needs-human-validation':'observed',
+   confidence:exceptions||crossLayerWarnings?'needs-human-validation':'observed',
    historicalOnly:true,
    writesLive:false,
-   method:{version:'supplier-support-v2-evidence',rule:'Las cadenas físicas v2 mejoran trazabilidad y exponen evidencia histórica de kilos por grado. No generan ranking de proveedor. Un bloque sólo se considera conciliado cuando guía y/o lote identifican una única fila principal sin contradicción. Razones de kilos aceptados o destinados son derivadas y sólo interpretables junto a su cobertura de observaciones.'},
-   summary:{blocks:blocks.length,observations,autoLinkedBlocks,exceptions,suppliersWithSupport:suppliers.length,coveragePct:pct(autoLinkedBlocks,blocks.length)},
+   method:{version:'supplier-support-v3-cross-layer',rule:'Las cadenas físicas v2 mejoran trazabilidad y exponen evidencia histórica de kilos por grado. No generan ranking de proveedor. La hoja principal y las hojas auxiliares permanecen como capas distintas hasta validar su grano de comparación.'},
+   summary:{blocks:blocks.length,observations,autoLinkedBlocks,exceptions,suppliersWithSupport:suppliers.length,coveragePct:pct(autoLinkedBlocks,blocks.length),crossLayerWarnings},
    reviewQueue,
    suppliers
   })
