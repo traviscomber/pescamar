@@ -31,8 +31,8 @@ export function HomeHero(props:Props){
    <p className="pescamar-home-alert"><b>{props.attention||'✓'}</b> {copy.attention}</p>
    <p className="pescamar-home-sub">{copy.sub}</p>
    <div className="pescamar-home-actions">
-    <label className="inline-field">{copy.date}<input id="home-hero-date" name="homeHeroDate" type="date" value={props.date} onChange={event=>props.onDate(event.target.value)}/></label>
-    <label className="inline-field">{copy.plant}<select id="home-hero-plant" name="homeHeroPlant" value={props.plantId} onChange={event=>props.onPlant(event.target.value)}>{props.showAllPlants?<option value="">{copy.all}</option>:null}{props.plants.map(plant=><option key={plant.id} value={plant.id}>{plant.name}</option>)}</select></label>
+    {!props.compact?<label className="inline-field">{copy.date}<input id="home-hero-date" name="homeHeroDate" type="date" value={props.date} onChange={event=>props.onDate(event.target.value)}/></label>:null}
+    {(!props.compact||props.showAllPlants)?<label className="inline-field">{copy.plant}<select id="home-hero-plant" name="homeHeroPlant" value={props.plantId} onChange={event=>props.onPlant(event.target.value)}>{props.showAllPlants?<option value="">{copy.all}</option>:null}{props.plants.map(plant=><option key={plant.id} value={plant.id}>{plant.name}</option>)}</select></label>:null}
     <button className="button secondary" onClick={props.onRefresh} aria-label={copy.refresh}><RefreshCw size={15}/></button>
    </div>
   </div>
