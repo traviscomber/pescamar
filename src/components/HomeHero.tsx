@@ -12,6 +12,7 @@ type Props={
  lots:number
  movements:number
  inventoryLabel:string
+ compact?:boolean
  onDate:(value:string)=>void
  onPlant:(value:string)=>void
  onRefresh:()=>void
@@ -19,11 +20,11 @@ type Props={
 
 export function HomeHero(props:Props){
  const copy=props.locale==='es'?{
-  title:'Operación de hoy',attention:props.attention===0?'Operación bajo control':`${props.attention} ${props.attention===1?'asunto requiere':'asuntos requieren'} atención`,sub:'Trazabilidad, evidencia y control operacional.',date:'Fecha',plant:'Planta',all:'Todas las plantas',refresh:'Actualizar',lots:'Lotes activos',movements:'Movimientos hoy',inventory:'Inventario ubicado',live:'operación viva',flow:'recepción · proceso · despacho',available:'disponible para operar'
+  title:props.compact?'Hoy':'Operación de hoy',attention:props.attention===0?'Operación bajo control':`${props.attention} ${props.attention===1?'asunto requiere':'asuntos requieren'} atención`,sub:props.compact?'Seafood AI resume lo relevante; abre sólo la acción que requiere decisión.':'Trazabilidad, evidencia y control operacional.',date:'Fecha',plant:'Planta',all:'Todas las plantas',refresh:'Actualizar',lots:'Lotes activos',movements:'Movimientos hoy',inventory:'Inventario ubicado',live:'operación viva',flow:'recepción · proceso · despacho',available:'disponible para operar'
  }:{
-  title:'Today’s operation',attention:props.attention===0?'Operation under control':`${props.attention} ${props.attention===1?'item needs':'items need'} attention`,sub:'Traceability, evidence and operational control.',date:'Date',plant:'Plant',all:'All plants',refresh:'Refresh',lots:'Active lots',movements:'Movements today',inventory:'Located inventory',live:'live operation',flow:'reception · process · dispatch',available:'available to operate'
+  title:props.compact?'Today':'Today’s operation',attention:props.attention===0?'Operation under control':`${props.attention} ${props.attention===1?'item needs':'items need'} attention`,sub:props.compact?'Seafood AI summarizes what matters and surfaces only decisions that need action.':'Traceability, evidence and operational control.',date:'Date',plant:'Plant',all:'All plants',refresh:'Refresh',lots:'Active lots',movements:'Movements today',inventory:'Located inventory',live:'live operation',flow:'reception · process · dispatch',available:'available to operate'
  }
- return <section className="pescamar-home-hero" aria-labelledby="pescamar-home-title">
+ return <section className={`pescamar-home-hero${props.compact?' pescamar-home-hero-compact':''}`} aria-labelledby="pescamar-home-title">
   <div className="pescamar-home-copy">
    <h1 id="pescamar-home-title">{copy.title}</h1>
    <p className="pescamar-home-date">{props.plantName} · {props.date}</p>
@@ -35,10 +36,10 @@ export function HomeHero(props:Props){
     <button className="button secondary" onClick={props.onRefresh} aria-label={copy.refresh}><RefreshCw size={15}/></button>
    </div>
   </div>
-  <div className="pescamar-home-stats" aria-label="Estado operacional">
+  {!props.compact?<div className="pescamar-home-stats" aria-label="Estado operacional">
    <div><small>{copy.lots}</small><b>{props.lots}</b><span>{copy.live}</span></div>
    <div><small>{copy.movements}</small><b>{props.movements}</b><span>{copy.flow}</span></div>
    <div><small>{copy.inventory}</small><b>{props.inventoryLabel}</b><span>{copy.available}</span></div>
-  </div>
+  </div>:null}
  </section>
 }
