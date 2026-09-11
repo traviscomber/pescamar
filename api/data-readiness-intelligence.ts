@@ -4,6 +4,7 @@ import {getSql} from './_db.js'
 type Request={method?:string;headers?:Record<string,string|string[]|undefined>}
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void}
 type Metric={name:string,available:number,total:number,pct:number|null,state:'ready'|'partial'|'blocked',note:string}
+type CapabilityGate={capability:string,state:'ready'|'pilot'|'blocked',confidence:'observed'|'derived'|'needs-human-validation',evidence:string[],blockers:string[]}
 const num=(v:unknown)=>{const x=Number(v);return Number.isFinite(x)?x:0}
 const pct=(a:number,b:number)=>b?Number((a/b*100).toFixed(1)):null
 const metric=(name:string,available:number,total:number,readyAt:number,note:string):Metric=>{const p=pct(available,total);return{name,available,total,pct:p,state:p==null?'blocked':p>=readyAt?'ready':available>0?'partial':'blocked',note}}
@@ -54,10 +55,22 @@ export default async function handler(req:Request,res:Response){
   const weightedHistoricalPct=historicalCore.length?Number((historicalCore.reduce((s,m)=>s+(m.pct??0),0)/historicalCore.length).toFixed(1)):null
   const liveCommercialReady=live.salesOrders>0&&live.lotSales>0&&live.settlements>0
   const pilotReady=(weightedHistoricalPct??0)>=85&&dimensions.production.every(m=>m.state==='ready')&&dimensions.packing.every(m=>m.state==='ready')&&dimensions.finance.every(m=>m.state==='ready')
+  const priceReady=dimensions.economics[0].state==='ready'
+  const supplierTraceReady=dimensions.supplierSupport[0].state==='ready'&&dimensions.production[0].state==='ready'&&dimensions.production[1].state==='ready'
+  const packingTraceReady=dimensions.packing.every(m=>m.state==='ready')&&dimensions.production[1].state==='ready'
+  const financeStructureReady=dimensions.finance.every(m=>m.state==='ready')
+  const capabilityGates:CapabilityGate[]=[
+   {capability:'historical-traceability',state:supplierTraceReady&&packingTraceReady?'ready':'pilot',confidence:'derived',evidence:[`${num(r.production_lot)}/${pt} producción con lote`,`${num(r.support_guide)}/${sb} soportes con guía`,`${num(r.packing_lot)}/${pk} cajas con lote`],blockers:packingTraceReady?[]:['IQF y/o packing sin lote explícito requieren continuidad determinística o validación humana.']},
+   {capability:'supplier-pattern-intelligence',state:supplierTraceReady?'pilot':'blocked',confidence:'needs-human-validation',evidence:[`${sb} bloques auxiliares disponibles`,'Patrones históricos detectables por proveedor y régimen'],blockers:['La semántica de Kilos Aceptados/D no está validada de forma homogénea entre proveedores.','No habilitar ranking transversal todavía.']},
+   {capability:'exception-intelligence',state:pilotReady?'ready':'pilot',confidence:'derived',evidence:[`${pt} registros de producción`,`${pk} cajas de packing`,`${lt} entradas de cuenta corriente`],blockers:[]},
+   {capability:'margin-intelligence',state:priceReady&&liveCommercialReady?'ready':priceReady?'pilot':'blocked',confidence:priceReady?'needs-human-validation':'observed',evidence:[`${num(r.production_price)}/${pt} registros con precio histórico`,`${live.lotSales} ventas live por lote`,`${live.settlements} liquidaciones live`],blockers:[...(!priceReady?['Cobertura histórica de precio/costo insuficiente.']:[]),...(!liveCommercialReady?['Falta ciclo comercial live pedido→venta por lote→liquidación.']:[])]},
+   {capability:'order-fulfilment-intelligence',state:live.salesOrders>0&&live.lotSales>0?'pilot':'blocked',confidence:'observed',evidence:[`${live.salesOrders} pedidos live`,`${live.lotSales} ventas por lote live`],blockers:live.salesOrders>0&&live.lotSales>0?['Aún requiere continuidad física despacho/venta validada.']:['Sin pedidos y ventas por lote live no se puede validar fulfilment real.']},
+   {capability:'predictive-intelligence',state:'blocked',confidence:'observed',evidence:['Baselines históricas existen parcialmente, pero no están validadas por especie/proveedor/origen/proceso/período.'],blockers:['Faltan baselines segmentadas y validadas.','Falta suficiente evidencia live para medir error de predicción.']}
+  ]
   const blockers=[
    ...(dimensions.economics.some(m=>m.state!=='ready')?['Cobertura de precio/costo histórico insuficiente para margen automatizado.']:[]),
    ...(!liveCommercialReady?['No existe todavía evidencia live suficiente en ventas por pedido/lote y liquidaciones.']:[])
   ]
-  return res.status(200).json({ok:true,status:'ready',maturity:'pilot-evidence',historicalOnly:true,writesLive:false,method:{version:'data-readiness-v1',rule:'Cada porcentaje es completitud estructural observada sobre registros existentes. Los umbrales son gates explícitos de preparación, no imputaciones. La presencia de un campo no valida su significado contable u operacional.'},summary:{historicalEvidencePct:weightedHistoricalPct,pilotOperationalReady:pilotReady,liveCommercialReady,predictiveReady:false},counts:{production:pt,supplierSupportBlocks:sb,packingBoxes:pk,ledgerEntries:lt,transfers:tt,live},dimensions,blockers,guardrail:'No usar estos porcentajes para afirmar validación Pescamar, exactitud contable, rendimiento causal ni capacidad predictiva. Es readiness de evidencia, no certeza de negocio.'})
+  return res.status(200).json({ok:true,status:'ready',maturity:'pilot-evidence',historicalOnly:true,writesLive:false,method:{version:'data-readiness-v2-capability-gates',rule:'Cada porcentaje es completitud estructural observada sobre registros existentes. Los umbrales son gates explícitos de preparación, no imputaciones. La presencia de un campo no valida su significado contable u operacional.'},summary:{historicalEvidencePct:weightedHistoricalPct,pilotOperationalReady:pilotReady,liveCommercialReady,predictiveReady:false},counts:{production:pt,supplierSupportBlocks:sb,packingBoxes:pk,ledgerEntries:lt,transfers:tt,live},dimensions,capabilityGates,blockers,guardrail:'No usar estos porcentajes para afirmar validación Pescamar, exactitud contable, rendimiento causal ni capacidad predictiva. Es readiness de evidencia, no certeza de negocio.'})
  }catch(error){const message=error instanceof Error?error.message:'';return res.status(message.includes('DATABASE_URL')?503:500).json({ok:false,error:message.includes('DATABASE_URL')?'Base de datos no conectada':'No fue posible construir data readiness intelligence'})}
 }
