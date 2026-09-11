@@ -46,6 +46,32 @@
 .page-header.section-hero[data-section="quality"]{--section-hero-accent:var(--success)}
 .page-header.section-hero[data-section="inventory"]{--section-hero-accent:var(--teal-2)}
 .page-header.section-hero[data-section="sales"]{--section-hero-accent:var(--ocean-2)}
+.page-header.section-hero[data-section="quality"] .page-actions{max-width:590px}
+.page-header.section-hero[data-section="quality"] .row-actions{gap:4px;flex-wrap:nowrap}
+.page-header.section-hero[data-section="quality"] .row-actions .button{
+  min-height:30px;
+  padding:5px 8px;
+  border-color:transparent;
+  background:transparent;
+  font-size:10px;
+  font-weight:600;
+  color:var(--muted);
+}
+.page-header.section-hero[data-section="quality"] .row-actions .button:hover{
+  border-color:color-mix(in srgb,var(--section-hero-accent) 20%,var(--line));
+  background:color-mix(in srgb,var(--section-hero-accent) 5%,transparent);
+  color:var(--text);
+}
+.page-header.section-hero[data-section="quality"] .row-actions .button[href="/control-regulatorio"]{
+  color:var(--section-hero-accent);
+  border-color:color-mix(in srgb,var(--section-hero-accent) 22%,var(--line));
+  background:color-mix(in srgb,var(--section-hero-accent) 6%,transparent);
+}
+@media(max-width:1100px){
+  .page-header.section-hero[data-section="quality"]{grid-template-columns:minmax(0,1fr) auto}
+  .page-header.section-hero[data-section="quality"] .page-actions{grid-column:1/-1;justify-content:flex-start;max-width:none}
+  .page-header.section-hero[data-section="quality"] .row-actions{flex-wrap:wrap}
+}
 @media(max-width:900px){
   .page-header.section-hero{grid-template-columns:minmax(0,1fr) auto;align-items:start}
   .section-hero-mark{grid-column:2;grid-row:1}
@@ -57,4 +83,6 @@
   .page-header.section-hero h1{font-size:27px}
   .page-header.section-hero p{font-size:12px}
   .page-header.section-hero .page-actions{margin-top:12px;justify-content:flex-start}
+  .page-header.section-hero[data-section="quality"] .row-actions{gap:2px}
+  .page-header.section-hero[data-section="quality"] .row-actions .button{padding:4px 6px;font-size:9px}
 }
