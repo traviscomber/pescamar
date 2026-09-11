@@ -31,10 +31,10 @@ export default async function handler(request:Request,response:Response){
    headers=(Array.isArray(raw)?raw:[]) as SupportHeader[]
   }catch(error){
    const message=error instanceof Error?error.message:''
-   if(message.includes('canonical_production_support_blocks')||message.includes('42P01'))return response.status(200).json({ok:true,status:'migration_required',method:{version:'supplier-support-v1-physical-blocks'},summary:{blocks:0,observations:0,autoLinkedBlocks:0,exceptions:0,suppliersWithSupport:0},suppliers:[]})
+   if(message.includes('canonical_production_support_blocks')||message.includes('42P01'))return response.status(200).json({ok:true,status:'migration_required',validationCase:'PV-006',maturity:'implemented',historicalOnly:true,writesLive:false,method:{version:'supplier-support-v1-physical-blocks'},summary:{blocks:0,observations:0,autoLinkedBlocks:0,exceptions:0,suppliersWithSupport:0,coveragePct:null},reviewQueue:[],suppliers:[]})
    throw error
   }
-  if(!headers.length)return response.status(200).json({ok:true,status:'not_imported',method:{version:'supplier-support-v1-physical-blocks'},summary:{blocks:0,observations:0,autoLinkedBlocks:0,exceptions:0,suppliersWithSupport:0},suppliers:[]})
+  if(!headers.length)return response.status(200).json({ok:true,status:'not_imported',validationCase:'PV-006',maturity:'implemented',historicalOnly:true,writesLive:false,method:{version:'supplier-support-v1-physical-blocks'},summary:{blocks:0,observations:0,autoLinkedBlocks:0,exceptions:0,suppliersWithSupport:0,coveragePct:null},reviewQueue:[],suppliers:[]})
 
   const mainRaw=await sql`select h.source_row,
     coalesce(nullif(btrim(h.supplier_name),''),nullif(btrim(h.supplier_original),''),'Sin proveedor') supplier,
@@ -64,6 +64,7 @@ export default async function handler(request:Request,response:Response){
    return {supplier,sheetName:text(header.sheet_name),sourceBlock:n(header.source_block),familyKey,guide:guide||null,lotReference:lotReference||null,observationCount:n(header.observation_count),flags:sourceFlags,matchStatus}
   })
 
+  const autoLinkedStatuses=new Set<MatchStatus>(['exact_both','guide_only','lot_only'])
   const groups=new Map<string,typeof blocks>()
   for(const block of blocks){const k=normalized(block.supplier),bucket=groups.get(k);if(bucket)bucket.push(block);else groups.set(k,[block])}
   const suppliers=[...groups.values()].map(items=>{
@@ -73,10 +74,33 @@ export default async function handler(request:Request,response:Response){
    const autoLinkedBlocks=exactBoth+guideOnly+lotOnly,exceptions=conflicts+ambiguous+unmatched
    const identitySlots=physicalBlocks*2,identityPresent=items.reduce((sum,item)=>sum+(item.guide?1:0)+(item.lotReference?1:0),0),identityCoverage=identitySlots?identityPresent/identitySlots:0,linkCoverage=physicalBlocks?autoLinkedBlocks/physicalBlocks:0
    const traceabilityScore=Number((100*(linkCoverage*.8+identityCoverage*.2)).toFixed(1)),noGradeObservationBlocks=items.filter(item=>item.observationCount===0||item.flags.includes('no_grade_observations')).length
-   const unresolved=items.filter(item=>!['exact_both','guide_only','lot_only'].includes(item.matchStatus)).map(item=>({sheetName:item.sheetName,sourceBlock:item.sourceBlock,guide:item.guide,lotReference:item.lotReference,status:item.matchStatus})).slice(0,5)
+   const unresolved=items.filter(item=>!autoLinkedStatuses.has(item.matchStatus)).map(item=>({sheetName:item.sheetName,sourceBlock:item.sourceBlock,guide:item.guide,lotReference:item.lotReference,status:item.matchStatus,confidence:'needs-human-validation' as const})).slice(0,5)
    return {supplier,physicalBlocks,observations,autoLinkedBlocks,matchCoveragePct:pct(autoLinkedBlocks,physicalBlocks),exactBoth,guideOnly,lotOnly,conflicts,ambiguous,unmatched,exceptions,traceabilityScore,noGradeObservationBlocks,unresolved}
   }).sort((a,b)=>b.traceabilityScore-a.traceabilityScore||b.physicalBlocks-a.physicalBlocks)
   const autoLinkedBlocks=suppliers.reduce((sum,item)=>sum+item.autoLinkedBlocks,0),exceptions=suppliers.reduce((sum,item)=>sum+item.exceptions,0),observations=suppliers.reduce((sum,item)=>sum+item.observations,0)
-  return response.status(200).json({ok:true,status:'ready',method:{version:'supplier-support-v1-physical-blocks',rule:'Las cadenas físicas v2 mejoran trazabilidad y confianza, no castigan por sí solas el desempeño del proveedor. Un bloque sólo se considera conciliado cuando guía y/o lote identifican una única fila principal sin contradicción. Una cadena sin observaciones de grado sigue siendo evidencia válida.'},summary:{blocks:blocks.length,observations,autoLinkedBlocks,exceptions,suppliersWithSupport:suppliers.length},suppliers})
+  const reviewQueue=blocks.filter(block=>!autoLinkedStatuses.has(block.matchStatus)).map(block=>({
+   validationCase:'PV-006' as const,
+   priority:1 as const,
+   state:'needs-human-validation' as const,
+   supplier:block.supplier,
+   evidence:{sheetName:block.sheetName,sourceBlock:block.sourceBlock,guide:block.guide,lotReference:block.lotReference,matchStatus:block.matchStatus},
+   action:'Confirmar la guía y/o el lote correcto contra el respaldo físico original. No crear ni corregir una relación automáticamente.',
+   responsibleRole:'operations' as const,
+   historicalOnly:true,
+   writesLive:false
+  }))
+  return response.status(200).json({
+   ok:true,
+   status:'ready',
+   validationCase:'PV-006',
+   maturity:'pilot-evidence',
+   confidence:exceptions?'needs-human-validation':'observed',
+   historicalOnly:true,
+   writesLive:false,
+   method:{version:'supplier-support-v1-physical-blocks',rule:'Las cadenas físicas v2 mejoran trazabilidad y confianza, no castigan por sí solas el desempeño del proveedor. Un bloque sólo se considera conciliado cuando guía y/o lote identifican una única fila principal sin contradicción. Una cadena sin observaciones de grado sigue siendo evidencia válida.'},
+   summary:{blocks:blocks.length,observations,autoLinkedBlocks,exceptions,suppliersWithSupport:suppliers.length,coveragePct:pct(autoLinkedBlocks,blocks.length)},
+   reviewQueue,
+   suppliers
+  })
  }catch(error){const message=error instanceof Error?error.message:'';return response.status(message.includes('DATABASE_URL')?503:500).json({ok:false,error:message.includes('DATABASE_URL')?'Base de datos no conectada':'No fue posible calcular trazabilidad física de proveedores'})}
 }
