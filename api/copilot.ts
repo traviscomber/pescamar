@@ -86,7 +86,7 @@ function deterministicAnswer(question:string,lotControl:Record<string,unknown>|n
  const q=question.toLocaleLowerCase('es-CL'),state=record(lotControl?.state),diagnosis=record(lotControl?.diagnosis),signals=record(lotControl?.signals),quality=record(signals?.quality),balance=record(signals?.balance),release=record(signals?.release),blockers=strings(diagnosis?.blockers),unknowns=strings(diagnosis?.unknowns),nextAction=typeof diagnosis?.nextAction==='string'?diagnosis.nextAction:'',asksJapan=/jap[oó]n|export|liberad|apto/.test(q),asksPhoto=/foto|fotograf|imagen|visual|color|lab|homogene/.test(q)
  if(lotControl){
   const stateLabel=String(state?.label??(blockers.length?'REQUIERE ATENCIÓN':'LOTE EN CURSO'))
-  let meaning='Estado operacional calculado desde la evidencia disponible del lote. [lot_control]'
+  let meaning:string
   if(seniorUrchin&&graph){const processData=record(graph.process);meaning=`Grade ${String(processData?.grade??'—')} · Color ${String(processData?.colorStatus??'pendiente')} · RX ${String(processData?.xrayStatus??'pendiente')}. [urchin_graph]`}
   else{const yieldPct=finite(balance?.yieldPct);meaning=`Calidad ${String(quality?.label??'—')}${yieldPct==null?'':` · Yield ${fmt(yieldPct)}%`}${release?.label!=null?` · ${release?.kind==='japan'?'Japón':'Evidencia'} ${String(release.label)}`:''}. [lot_control]`}
   if(measurements.length&&(asksPhoto||seniorUrchin)){const m=measurements[0];meaning+=` Visual Twin LAB ${fmt(m.lMean)} / ${fmt(m.aMean)} / ${fmt(m.bMean)} · dispersión ${fmt(m.dispersion)}${comparison[0]?` · ΔE76 ${fmt(comparison[0].deltaE76,2)}`:''}. [photo_observation]`}
