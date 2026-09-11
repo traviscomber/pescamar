@@ -1,4 +1,4 @@
-export const SEAFOOD_QUERY_ROUTER_VERSION='seafood.router.v3' as const
+export const SEAFOOD_QUERY_ROUTER_VERSION='seafood.router.v4' as const
 
 export type SeafoodQueryRouteName='deterministic'|'fast_evidence'|'investigative'
 export type SeafoodCapability=
@@ -86,6 +86,14 @@ const historicalComparisonPatterns=[
  /\bmejor\b/,/\bpeor\b/,/\bbest\b/,/\bworst\b/,/\bprevious\b/,/\bprior\b/,/\bover time\b/,
  /\blast (week|month|year|season)\b/,/\bsemana pasada\b/,/\bmes pasado\b/,/\bano pasado\b/
 ]
+const executiveOperationalPatterns=[
+ /\batencion\b/,/\battention\b/,/\bprioridad/,/\bpriorit/,/\bpendient/,/\bpending\b/,
+ /\bbloquead/,/\bbloqueo/,/\bblocked\b/,/\bblocker/,/\bque falta para cerrar\b/,/\bwhat is missing to close\b/,
+ /\bfalta para el cierre\b/,/\bmissing for close\b/,/\bcierre de hoy\b/,/\btoday'?s close\b/
+]
+const plantComparisonPatterns=[
+ /\bcompar\w*\s+(?:las\s+)?plantas\b/,/\bplantas\b.*\bcompar/,/\bcompare\w*\s+(?:the\s+)?plants\b/,/\bplants\b.*\bcompare/
+]
 const deterministicLotPatterns=[
  /\bque bloquea/,/\bwhat blocks\b/,/\bbloqueo/,/\bblocked\b/,/\bestado\b/,/\bstatus\b/,
  /\bsiguiente accion/,/\bnext action\b/,/\bque hago/,/\bwhat should i do\b/,/\bque sigue/,/\bwhat next\b/,
@@ -108,7 +116,7 @@ function fastCapabilities(question:string,hasLot:boolean):SeafoodCapability[]{
  if(/\bliquidacion|\bsettlement\b|\bfinanz|\bfinance\b|\bmonto\b|\bamount\b|\bcosto\b|\bcost\b|\bcuenta\b|\baccount\b|\bpago\b|\bpayment\b|\bmargen\b|\bmargin\b/.test(question))capabilities.push('finance')
  if(/\bfuente|\bsource\b|\barchivo|\bfile\b|\bcobertura\b|\bcoverage\b|\bplanilla|\bspreadsheet\b|\bdocumento|\bdocument\b|\bprovenance\b/.test(question))capabilities.push('canonical_sources')
  if(/\bpacking\b|\bcaja\b|\bbox\b|\bcarton\b|\bpackage\b|\binventario histor|\bhistorical inventory\b/.test(question))capabilities.push('canonical_inventory')
- if(!hasLot&&!capabilities.length&&/\batencion\b|\battention\b|\bprioridad\b|\bpriority\b|\bpendient|\bpending\b|\bbloque|\bblocker/.test(question))capabilities.push('quality','orders','inventory')
+ if(!hasLot&&hasAny(question,executiveOperationalPatterns))capabilities.push('operational_intelligence','quality','orders','inventory')
  return unique(capabilities)
 }
 
@@ -116,13 +124,17 @@ export function routeSeafoodQuery(input:{question:string;hasLot:boolean;hasPhoto
  const question=normalize(input.question)
  const historicalLotCode=input.hasLot?null:explicitLotCode(question)
  const predictive=hasAny(question,predictivePatterns)
+ const plantComparison=!input.hasLot&&hasAny(question,plantComparisonPatterns)
  const investigative=predictive||hasAny(question,investigationPatterns)||Boolean(historicalLotCode)
- const historicalComparison=hasAny(question,historicalComparisonPatterns)||Boolean(historicalLotCode)
+ const historicalComparison=!plantComparison&&(hasAny(question,historicalComparisonPatterns)||Boolean(historicalLotCode))
  const urchinSpecific=input.seniorUrchin||/\berizo|\burchin|\buni\b|\broe\b|\bjapon\b|\bjapan\b|\bgrade\b|\bxray\b|\bx-ray\b|\brayos? x|\bcolor\b/.test(question)
  if(input.hasLot&&!input.hasPhotos&&!investigative&&hasAny(question,deterministicLotPatterns)){
   const required:SeafoodCapability[]=['lot_control','operational_intelligence']
   if(input.seniorUrchin||/\bxray\b|\bx-ray\b|\brayos? x/.test(question))required.push('urchin_graph')
   return {version:SEAFOOD_QUERY_ROUTER_VERSION,route:'deterministic',intent:urchinSpecific?'lot_specialist_status':'lot_operational_status',requiredCapabilities:unique(required),optionalCapabilities:urchinSpecific&&!required.includes('urchin_graph')?['urchin_graph']:[],writesAllowed:false,humanGate:hasAny(question,materialActionPatterns)?'material_action_review':'none'}
+ }
+ if(plantComparison){
+  return {version:SEAFOOD_QUERY_ROUTER_VERSION,route:'investigative',intent:'compare_plants_current',requiredCapabilities:['operational_intelligence','production','quality','inventory'],optionalCapabilities:['receptions','orders'],writesAllowed:false,humanGate:'none'}
  }
  const fast=fastCapabilities(question,input.hasLot)
  if(input.hasPhotos&&!investigative){
