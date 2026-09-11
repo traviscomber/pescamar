@@ -3,6 +3,7 @@ import {buildCanonicalBusinessIntelligence} from './_canonical-business-intellig
 import {buildCanonicalSourceHealth} from './_canonical-source-health.js'
 import {buildCopilotContext,type CopilotContext,type CopilotSource} from './_copilot-context.js'
 import {buildCopilotOperationalIntelligence} from './_copilot-operational-intelligence.js'
+import {buildCopilotOperationalOverview} from './_copilot-operational-overview.js'
 import {buildCopilotReadinessEvidence} from './_copilot-readiness.js'
 import {buildHistoricalLineageEvidence} from './_copilot-historical-lineage.js'
 import {buildSeaUrchinCopilotEvidence} from './_copilot-sea-urchin.js'
@@ -12,6 +13,7 @@ import {allowedPlantIds} from './_plants.js'
 import type {SeafoodCapability,SeafoodQueryRoute} from './_seafood-query-router.js'
 
 const baseCapabilities=new Set<SeafoodCapability>(['receptions','production','quality','inventory','orders','canonical_sources','canonical_inventory','finance'])
+const receptionUuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 type BaseCapability='receptions'|'production'|'quality'|'inventory'|'orders'|'canonical_sources'|'canonical_inventory'|'finance'
 type SupplierSupportMatchStatus='exact_both'|'guide_only'|'lot_only'|'conflict'|'ambiguous'|'unmatched'
@@ -126,24 +128,26 @@ export async function buildRoutedCopilotEvidence(operator:SessionOperator,plantI
  const selected=[...route.requiredCapabilities]
  const selectedBase=selectBaseCapabilities(selected)
  const routedScope=scopeFor(operator,plantId)
- const needLot=selected.includes('lot_control')||selected.includes('operational_intelligence')||selected.includes('urchin_graph')
+ const receptionToken=typeof receptionId==='string'?receptionId.trim():''
+ const hasLot=receptionUuid.test(receptionToken)
+ const needLot=hasLot&&(selected.includes('lot_control')||selected.includes('operational_intelligence')||selected.includes('urchin_graph'))
  const sourceHealthAllowed=selected.includes('canonical_intelligence')&&routedScope.corporateHistory&&['admin','operations'].includes(operator.role)
  const supplierSupportAllowed=selected.includes('canonical_intelligence')&&routedScope.corporateHistory
  const readinessRelevant=routedScope.corporateHistory&&(route.route==='investigative'||selected.some(capability=>['canonical_intelligence','orders','finance','production','inventory'].includes(capability)))
  const [base,cardRaw,operationalRaw,historicalRaw,canonicalRaw,urchinRaw,sourceHealthRaw,supplierSupportRaw,readinessRaw]=await Promise.all([
   selectedBase.length?buildCopilotContext(operator,plantId,selectedBase):Promise.resolve(null),
   needLot?buildLotControlCard(operator,receptionId):Promise.resolve(null),
-  selected.includes('operational_intelligence')?buildCopilotOperationalIntelligence(operator,receptionId):Promise.resolve(null),
+  selected.includes('operational_intelligence')?(hasLot?buildCopilotOperationalIntelligence(operator,receptionId):buildCopilotOperationalOverview(operator,plantId)):Promise.resolve(null),
   selected.includes('historical_lineage')?buildHistoricalLineageEvidence(operator,route.focusHistoricalLotCode??null):Promise.resolve(null),
   selected.includes('canonical_intelligence')?buildCanonicalBusinessIntelligence(operator):Promise.resolve(null),
-  selected.includes('urchin_graph')?buildSeaUrchinCopilotEvidence(operator,receptionId):Promise.resolve(null),
+  selected.includes('urchin_graph')&&hasLot?buildSeaUrchinCopilotEvidence(operator,receptionId):Promise.resolve(null),
   sourceHealthAllowed?buildCanonicalSourceHealth():Promise.resolve(null),
   supplierSupportAllowed?buildSupplierSupportEvidence():Promise.resolve(null),
   readinessRelevant?buildCopilotReadinessEvidence():Promise.resolve(null),
  ])
  const lotMatchesScope=Boolean(cardRaw&&(!plantId||cardRaw.reception.plantId===plantId))
  const card=lotMatchesScope?cardRaw:null
- const operational=lotMatchesScope?operationalRaw:null
+ const operational=hasLot?(lotMatchesScope?operationalRaw:null):operationalRaw
  const urchinGraph=lotMatchesScope?urchinRaw:null
  const lotSource=card?.source
  const operationalSource=operational?.source
