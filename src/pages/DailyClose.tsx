@@ -1,8 +1,8 @@
-import {ArrowRight,PackageCheck,RefreshCw,ShieldCheck} from 'lucide-react'
+import {ArrowRight,PackageCheck,ShieldCheck} from 'lucide-react'
 import {useCallback,useEffect,useMemo,useState} from 'react'
 import {Link,useSearchParams} from 'react-router-dom'
 import {useAuth} from '../auth'
-import {PageHeader} from '../components/PageHeader'
+import {HomeHero} from '../components/HomeHero'
 import {useLocale,localeTag} from '../i18n'
 import {plants as configuredPlants} from '../plants'
 
@@ -63,26 +63,33 @@ export function DailyClose(){
  const operationalCounts=operational?.counts??{p1:0,p2:0,p3:0},eventGraphOpen=operationalCounts.p1+operationalCounts.p2+operationalCounts.p3,dedupedDaily=Math.max(0,(snapshot?.risk.total??0)-riskItems.filter(item=>item.receptionId&&eventGraphReceptionIds.has(item.receptionId)).length),attention=eventGraphOpen+dedupedDaily,firstPriority=priorities[0]
  const movementCount=snapshot?snapshot.receptions.count+snapshot.production.events+snapshot.dispatches.count:0
  const emptyLive=Boolean(snapshot&&(operational?.lots??0)===0&&movementCount===0&&snapshot.inventory.locatedKg===0)
- const actions=<div className="page-actions"><label className="inline-field">{t('home.date')}<input type="date" value={date} onChange={event=>setDate(event.target.value)}/></label><label className="inline-field">{t('home.plant')}<select value={plantId} onChange={event=>setPlantId(event.target.value)}>{operator?.role==='admin'||accessiblePlants.length>1?<option value="">{t('home.allPlants')}</option>:null}{accessiblePlants.map(plant=><option key={plant.id} value={plant.id}>{plant.name}</option>)}</select></label><button className="button secondary" onClick={()=>void load(date,plantId)}><RefreshCw size={15}/>{t('home.refresh')}</button></div>
+ const plantName=accessiblePlants.find(plant=>plant.id===plantId)?.name??(locale==='es'?'Todas las plantas':'All plants')
 
- return <><PageHeader eyebrow="Pescamar" title={t('home.title')} description={t('home.description')} actions={actions}/>
+ return <>
  {error?<div className="system-banner error">{error}</div>:null}
  {loading?<div className="system-banner">{t('home.updating')}</div>:null}
  {snapshot?<>
-  <section className={`daily-cockpit ${attention?'has-attention':'is-clear'}`} aria-label={t('home.whatHappening')}>
-   <div className="daily-cockpit-copy">
-    <span className="overline">{t('home.whatHappening')}</span>
-    <h2>{attention?t(attention===1?'home.itemToReview':'home.itemsToReview',{count:attention}):t('home.noTasks')}</h2>
-    <p>{attention?t('home.reviewCopy'):t('home.clearCopy')}</p>
-   </div>
-   <div className="daily-status-mark" aria-hidden="true"><span>{attention||'✓'}</span><small>{attention?t('home.reviewStatus'):t('home.upToDate')}</small></div>
-  </section>
+  <HomeHero
+   locale={locale}
+   date={date}
+   plantId={plantId}
+   plantName={plantName}
+   plants={accessiblePlants}
+   showAllPlants={operator?.role==='admin'||accessiblePlants.length>1}
+   attention={attention}
+   lots={operational?.lots??0}
+   movements={movementCount}
+   inventoryLabel={kg(snapshot.inventory.locatedKg)}
+   onDate={setDate}
+   onPlant={setPlantId}
+   onRefresh={()=>void load(date,plantId)}
+   primaryTo={firstPriority?.to??'/recepciones'}
+   primaryLabel={firstPriority?.action??t('home.registerReception')}
+  />
 
   <section className="daily-priority" aria-label={t('home.whatDo')}>
    <div className="daily-priority-head"><div><span className="overline">{t('home.whatDo')}</span><h2>{firstPriority?firstPriority.reference:t('home.startOperation')}</h2><p>{firstPriority?firstPriority.reason:t('home.startCopy')}</p></div>{firstPriority?<Link className="button primary" to={firstPriority.to}>{firstPriority.action}<ArrowRight size={15}/></Link>:<Link className="button primary" to="/recepciones">{t('home.registerReception')}<ArrowRight size={15}/></Link>}</div>{firstPriority?<><small className="daily-priority-detail"><b>{t('home.next')}:</b> {firstPriority.next}</small><small className="daily-priority-detail"><b>{t('home.owner')}:</b> {firstPriority.owner}</small>{firstPriority.source==='event_graph'?<small className="daily-priority-detail"><b>{t('home.source')}:</b> {t('home.sourceCurrent')}</small>:null}</>:null}
   </section>
-
-  <section className="daily-clear-context" aria-label={t('home.available')}><div><small>{t('home.currentLots')}</small><b>{t('home.lots',{count:operational?.lots??0})}</b><span>{t('home.liveOperation')}</span></div><div><small>{t('home.dayMovements')}</small><b>{movementCount}</b><span>{t('home.receptions',{count:snapshot.receptions.count})} · {t('home.production',{count:snapshot.production.events})} · {t('home.dispatches',{count:snapshot.dispatches.count})}</span></div><div><small>{t('home.locatedInventory')}</small><b>{kg(snapshot.inventory.locatedKg)}</b><span>{t('home.locatedProduct')}</span></div></section>
 
   {emptyLive?<section className="daily-home-attention" aria-label={starter.eyebrow}><div className="section-heading"><div><span className="overline">{starter.eyebrow}</span><h2>{starter.title}</h2><p>{starter.copy}</p></div><Link className="button primary" to="/recepciones">{t('home.registerReception')}<ArrowRight size={15}/></Link></div><div className="daily-clear-context"><div><small>{starter.step1}</small><span>{starter.step1copy}</span></div><div><small>{starter.step2}</small><span>{starter.step2copy}</span></div><div><small>{starter.step3}</small><span>{starter.step3copy}</span></div></div><Link className="text-action inline-link" to="/pescamar-ia">{starter.ask}<ArrowRight size={14}/></Link></section>:null}
 
