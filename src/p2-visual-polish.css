@@ -26,12 +26,81 @@
 .decision-brief+.signal-grid .signal-card:first-child{padding-left:0!important}
 .decision-brief+.signal-grid .signal-card:last-child{border-right:0!important;padding-right:0!important}
 
+/* HOME — visual language inherited from pescamarchile.cl: sea, air, light controls. */
+.main-content:has(>.daily-cockpit){padding-top:0!important}
+.main-content:has(>.daily-cockpit)>.page-header{
+  position:relative;
+  min-height:clamp(360px,48vw,610px);
+  margin:0 calc(var(--content-pad,32px)*-1)!important;
+  padding:clamp(36px,5vw,68px) var(--content-pad,32px) clamp(112px,13vw,160px)!important;
+  display:flex!important;
+  align-items:flex-end!important;
+  border:0!important;
+  overflow:hidden;
+  background-color:#4f9fca!important;
+  background-image:url('https://pescamarchile.cl/wp-content/uploads/2021/06/AAAAAA.jpg')!important;
+  background-size:cover!important;
+  background-position:center 56%!important;
+}
+.main-content:has(>.daily-cockpit)>.page-header:before{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:rgba(3,20,29,.36);
+  pointer-events:none;
+}
+.main-content:has(>.daily-cockpit)>.page-header>*{position:relative;z-index:1}
+.main-content:has(>.daily-cockpit)>.page-header h1{
+  max-width:760px;
+  color:#fff!important;
+  font-size:clamp(3.5rem,7.2vw,6.8rem)!important;
+  line-height:.82!important;
+  letter-spacing:-.045em!important;
+  text-shadow:0 2px 18px rgba(0,0,0,.18);
+}
+.main-content:has(>.daily-cockpit)>.page-header .overline,
+.main-content:has(>.daily-cockpit)>.page-header p{color:rgba(255,255,255,.88)!important}
+.main-content:has(>.daily-cockpit)>.page-header p{max-width:560px!important;font-size:1rem!important}
+.main-content:has(>.daily-cockpit)>.page-header .page-actions{
+  position:absolute;
+  top:28px;
+  right:var(--content-pad,32px);
+  display:flex;
+  gap:8px;
+  padding:8px;
+  border:1px solid rgba(255,255,255,.3);
+  background:rgba(3,25,35,.24);
+  backdrop-filter:blur(8px);
+}
+.main-content:has(>.daily-cockpit)>.page-header .inline-field{color:#fff!important}
+.main-content:has(>.daily-cockpit)>.page-header input,
+.main-content:has(>.daily-cockpit)>.page-header select,
+.main-content:has(>.daily-cockpit)>.page-header .button.secondary{
+  border-color:rgba(255,255,255,.34)!important;
+  background:rgba(2,18,27,.32)!important;
+  color:#fff!important;
+}
+.main-content:has(>.daily-cockpit)>.daily-cockpit{
+  position:relative;
+  z-index:3;
+  margin:-76px 0 0!important;
+  padding:20px 22px 18px!important;
+  border:1px solid rgba(255,255,255,.14)!important;
+  background:rgba(4,17,23,.94)!important;
+  backdrop-filter:blur(14px);
+}
+.daily-cockpit h2{font-size:clamp(2.4rem,5vw,4.6rem)!important}
+.daily-status-mark{border-color:rgba(255,255,255,.24)!important;background:rgba(255,255,255,.03)}
+.daily-clear-context{margin-top:0!important}
+
 @media(max-width:900px){
  .lineage-overview .panel:nth-child(2){border-right:0!important}
  .lineage-overview .panel:nth-child(-n+2){border-bottom:1px solid var(--line)!important}
  .lineage-stage:nth-child(4n){border-right:1px solid var(--line)!important}
  .lineage-stage:nth-child(2n){border-right:0!important}
  .decision-primary{align-items:start!important;grid-template-columns:1fr!important}
+ .main-content:has(>.daily-cockpit)>.page-header .page-actions{left:var(--content-pad,24px);right:var(--content-pad,24px);top:20px;overflow-x:auto;flex-wrap:nowrap}
+ .main-content:has(>.daily-cockpit)>.page-header .page-actions>*{flex:0 0 auto}
 }
 @media(max-width:700px){
  .lineage-overview{border-bottom:0}
@@ -41,4 +110,9 @@
  .decision-primary .button{width:100%;justify-content:center}
  .decision-brief+.signal-grid .signal-card{border-right:0!important;border-bottom:1px solid var(--line)!important;padding:14px 0!important}
  .decision-brief+.signal-grid .signal-card:last-child{border-bottom:0!important}
+ .main-content:has(>.daily-cockpit)>.page-header{min-height:410px;padding:92px 18px 108px!important;margin:0 -18px!important;background-position:center!important}
+ .main-content:has(>.daily-cockpit)>.page-header .page-actions{left:18px;right:18px;top:18px;padding:6px}
+ .main-content:has(>.daily-cockpit)>.page-header h1{font-size:clamp(3.1rem,18vw,5rem)!important}
+ .main-content:has(>.daily-cockpit)>.page-header p{max-width:88%!important}
+ .main-content:has(>.daily-cockpit)>.daily-cockpit{margin:-58px 0 0!important;padding:18px 16px!important}
 }
