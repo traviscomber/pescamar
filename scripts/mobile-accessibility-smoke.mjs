@@ -18,12 +18,12 @@ assert(a11y.includes(':focus-visible')&&a11y.includes('@media(prefers-reduced-mo
 assert(a11y.includes('min-width:44px;min-height:44px')||ux.includes('min-height:44px'),'mobile interactive targets must preserve a minimum 44px interaction height')
 assert(shell.includes('<a className="skip-link" href="#main-content">'),'keyboard users must have a skip-to-content control')
 
-assert(lotTable.includes('mobile-card-table')&&lotTable.includes('data-label="Lote / hora"')&&lotTable.includes('data-label="Evidencia"'),'active reception rows must carry labels for mobile card recomposition')
-assert(receptions.includes('canonical-receptions mobile-card-table')&&receptions.includes('data-label="Kg recibidos"'),'historical reception rows must carry canonical labels for mobile card recomposition')
+assert(lotTable.includes('mobile-card-table')&&lotTable.includes('data-label={c.lotTime}')&&lotTable.includes('data-label={c.evidence}'),'active reception rows must carry localized labels for mobile card recomposition')
+assert(receptions.includes('canonical-receptions mobile-card-table')&&receptions.includes('data-label={c.receivedKg}'),'historical reception rows must carry localized canonical labels for mobile card recomposition')
 assert(ux.includes('.mobile-card-table tbody{display:grid')&&ux.includes('content:attr(data-label)'),'mobile CSS must transform tagged operational tables into labeled cards instead of shrinking columns')
 assert(ux.includes('.mobile-card-scroll{width:100%;margin-inline:0;padding-inline:0;overflow:visible}'),'cardified mobile tables must not depend on horizontal scrolling')
 
 assert(browser.includes("test('viewport has no horizontal overflow'")&&browser.includes("test('mobile drawer traps focus, closes with Escape and restores trigger focus'"),'Chromium suite must retain overflow and mobile keyboard interaction coverage')
 
 if(failures.length){console.error('Mobile accessibility smoke FAILED');failures.forEach(f=>console.error(`- ${f}`));process.exit(1)}
-console.log('Mobile accessibility smoke PASS: safe areas, focus, Escape behavior, 44px targets and card-based reception tables are protected without changing canonical values')
+console.log('Mobile accessibility smoke PASS: safe areas, focus, Escape behavior, 44px targets and localized card-based reception tables are protected without changing canonical values')

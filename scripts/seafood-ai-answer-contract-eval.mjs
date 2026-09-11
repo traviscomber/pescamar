@@ -26,12 +26,17 @@ const seniorPrompt=seafoodAiSystemPrompt('Pescamar — Implementation 01')
 for(const required of ['Estado:','Qué significa:','Atención:','Siguiente acción:','Falta:','Confianza:','observed','derived','needs-human-validation']){
  if(!seniorPrompt.includes(required))failures.push(`senior brief contract missing ${required}`)
 }
+for(const required of ['Situación:','Comparación histórica:','Impacto/Riesgo:','Acción:','Máximo 3 hallazgos materiales','Normal, Cambio, Desviación o Patrón nuevo']){
+ if(!seniorPrompt.includes(required))failures.push(`executive outcome contract missing ${required}`)
+}
 if(!seniorPrompt.includes('La ausencia de registros no prueba que un evento no ocurrió'))failures.push('senior brief must preserve missing-evidence boundary')
 if(!seniorPrompt.includes('Nunca inventes impacto económico, urgencia ni responsable'))failures.push('senior brief must fail closed on unsupported management claims')
+if(!seniorPrompt.includes('missing_lot_reference significa brecha de trazabilidad documental en packing'))failures.push('ML packing signal must not be promoted to product quality failure')
+if(!seniorPrompt.includes('no uses grade_breakdown como yield'))failures.push('ML grade breakdown exclusion must remain explicit')
 
 if(failures.length){
  console.error('Seafood AI answer contract eval FAILED')
  failures.forEach(failure=>console.error(`- ${failure}`))
  process.exit(1)
 }
-console.log(`Seafood AI answer contract eval PASS · ${cases.length} grounded/adversarial cases · senior operator brief enforced · missing citations, unknown sources and uncited calculations/inferences fail closed`)
+console.log(`Seafood AI answer contract eval PASS · ${cases.length} grounded/adversarial cases · operator and executive outcome briefs enforced · missing citations, unknown sources and uncited calculations/inferences fail closed`)
