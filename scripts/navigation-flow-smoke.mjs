@@ -1,23 +1,26 @@
 import {readFile} from 'node:fs/promises'
 
-const [shell,css,modules,app,operatingModel]=await Promise.all([
+const [shell,css,modules,app,operatingModel,roleExperience]=await Promise.all([
   readFile(new URL('../src/components/AppShell.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/navigation-groups.css',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/Modules.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/App.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/OperatingModel.tsx',import.meta.url),'utf8'),
+  readFile(new URL('../src/roleExperience.ts',import.meta.url),'utf8'),
 ])
 const failures=[]
 const check=(ok,msg)=>{if(!ok)failures.push(msg)}
 
-check(shell.includes("t('nav.home')")&&shell.includes("t('nav.reception')")&&shell.includes("t('nav.production')")&&shell.includes("t('nav.quality')")&&shell.includes("t('nav.inventory')")&&shell.includes("t('nav.sales')"),'sidebar must expose the six localized daily tasks')
-check(shell.includes("t('nav.history')")&&shell.includes("t('nav.reports')")&&shell.includes("t('nav.settings')"),'history, reports and settings must remain separate low-frequency destinations')
+check(shell.includes("t('nav.home')")&&shell.includes('Seafood AI')&&shell.includes("t('nav.reception')")&&shell.includes("t('nav.production')")&&shell.includes("t('nav.inventory')")&&shell.includes("t('nav.sales')"),'operations workspace must expose Home, Seafood AI, receptions, production, inventory and sales as the clean daily surface')
+check(shell.includes("primary('/control-regulatorio')")&&shell.includes('<NavLink to="/control-regulatorio"')&&roleExperience.includes("quality:{")&&roleExperience.includes("'/control-regulatorio'")&&app.includes('<Route path="/control-regulatorio"'),'Quality must remain a primary workspace for the quality role without competing in the operations-manager sidebar')
+check(roleExperience.includes("operations:{")&&roleExperience.includes("primaryPaths:['/','/pescamar-ia','/recepciones','/lineas','/inventario','/ordenes-venta']"),'operations role must preserve the six-surface primary experience contract')
+check(shell.includes("operator?.role==='operations'")&&shell.includes('!operationsView?<>'),'operations must suppress low-frequency secondary navigation while retaining those destinations for other authorized roles')
+check(shell.includes("t('nav.history')")&&shell.includes("t('nav.reports')")&&shell.includes("t('nav.settings')"),'history, reports and settings must remain available as separate low-frequency destinations for applicable roles')
 check(!shell.includes("t('nav.more')")&&!shell.includes('<span>Más</span>'),'legacy More navigation must not return')
 check(shell.includes('{to:`/plantas/${encodeURIComponent(plantContextId)}`,labelKey:\'nav.overview\',step:1}')&&shell.includes('{to:`/recepciones?${plantQuery}`,labelKey:\'nav.reception\',step:2}')&&shell.includes('{to:`/proceso?${plantQuery}`,labelKey:\'nav.process\',step:3}')&&shell.includes('{to:`/floor?${plantQuery}`,labelKey:\'nav.packing\',step:4}')&&shell.includes('{to:`/pallets?${plantQuery}`,labelKey:\'nav.pallets\',step:5}')&&shell.includes('{to:`/frio?${plantQuery}`,labelKey:\'nav.cold\',step:6}')&&shell.includes('{to:`/inventario?${plantQuery}`,labelKey:\'nav.inventory\',step:7}')&&shell.includes('{to:`/ordenes-venta?${plantQuery}`,labelKey:\'nav.orders\',step:8}')&&shell.includes('{to:`/timeline?${plantQuery}`,labelKey:\'nav.history\',step:9}'),'plant operation must preserve the ordered nine-stage detailed flow')
 check(shell.includes('{to:"/ordenes-venta",labelKey:"nav.orders",step:1}')&&shell.includes('{to:"/despachos-ventas",labelKey:"nav.dispatch",step:2}')&&shell.includes('{to:"/liquidaciones",labelKey:"nav.settlement",step:3}'),'sales must preserve the ordered three-stage execution flow')
 check(!shell.includes('{to:"/proveedores-clientes",labelKey:'),'partner master data must not compete in the daily sales execution flow')
 check(shell.includes('<NavLink to="/lineage"')&&app.includes('<Route path="/pescamar-ia"')&&app.includes('<Route path="/rentabilidad"'),'advanced intelligence capabilities must remain reachable without competing in primary daily navigation')
-check(shell.includes("allowed('/control-regulatorio')")&&shell.includes('<NavLink to="/control-regulatorio"')&&app.includes('<Route path="/control-regulatorio"'),'primary Quality must open the broad quality and compliance workspace')
 check(modules.includes("{to:'/uni',label:'Revisión visual (Uni)'")&&app.includes('<Route path="/uni"')&&app.includes('<Route path="/edgevision" element={<Navigate to="/uni" replace/>}/>'),'specialized visual review must remain reachable from administration with the legacy redirect')
 check(shell.includes("t('shell.plantFlow')")&&shell.includes("t('shell.commercialFlow')")&&shell.includes('aria-label={tabsLabel}'),'detailed workspace flows must expose localized process semantics for assistive technology')
 check(shell.includes('aria-label="Trabajo diario"')&&shell.includes('aria-label="Consulta y configuración"'),'primary and secondary navigation groups must expose explicit assistive labels')
@@ -32,4 +35,4 @@ check(operatingModel.includes("title:'Recepción'")&&operatingModel.includes("ti
 check(operatingModel.includes('2–3 usuarios activos')&&operatingModel.includes('escalar sólo excepciones'),'operating model must preserve minimum staffing and exception-only escalation principles')
 
 if(failures.length){console.error('Navigation flow smoke FAILED');failures.forEach(f=>console.error(`- ${f}`));process.exit(1)}
-console.log('Navigation flow smoke PASS: six localized daily tasks, broad quality entry, secondary history/report-close/settings, detailed plant and sales flows, specialist visual review access and operating responsibility model verified')
+console.log('Navigation flow smoke PASS: role-first daily surfaces, executive Seafood AI access, quality-specific primary workspace, detailed plant and sales flows, secondary admin access and minimum-team responsibility model verified')
