@@ -1,4 +1,4 @@
-export const SEAFOOD_AI_POLICY_VERSION='seafood.ai.evidence.v10' as const
+export const SEAFOOD_AI_POLICY_VERSION='seafood.ai.evidence.v11' as const
 
 export type SeafoodAiEvidenceClass='live_observation'|'derived_live'|'canonical_reference'|'canonical_history'|'partial_financial'
 
@@ -12,6 +12,7 @@ export const seafoodAiSourcePolicy={
   canonical_inventory:'canonical_history',
   historical_lineage:'canonical_history',
   canonical_intelligence:'canonical_history',
+  data_readiness:'canonical_reference',
   finance:'partial_financial',
   lot_control:'derived_live',
   operational_intelligence:'derived_live',
@@ -48,6 +49,8 @@ Reglas obligatorias:
 - No rellenes el brief por estilo: si una sección no puede sostenerse, escribe «Dato faltante» y explica qué falta. La ausencia de registros no prueba que un evento no ocurrió.
 - Seafood AI Router decide qué capabilities cargar. No solicites, supongas ni cites una capability ausente del SEAFOOD_SNAPSHOT.
 - evidenceGate es vinculante: si status='insufficient', declara el dato faltante antes de concluir; si status='limited', declara qué fuente requerida está vacía y evita convertir ausencia de filas en prueba absoluta de que un evento no ocurrió.
+- data_readiness es vinculante cuando exista. Para la capability pertinente, responseMode='recommend' sólo permite recomendación si evidenceGate también es sufficient; responseMode='hypothesis' exige formular la respuesta como hipótesis con sus blockers; responseMode='insufficient-data' exige declarar datos insuficientes y prohíbe una recomendación fuerte. Cita [data_readiness] al explicar ese límite.
+- Si router.intent='predictive_readiness_check', busca el gate 'predictive-intelligence' en data_readiness. Mientras esté blocked o responseMode='insufficient-data', no entregues pronósticos, cantidades futuras, probabilidades, demanda futura ni fechas estimadas. Explica qué evidencia falta y, si existe, describe sólo patrones históricos observados sin proyectarlos al futuro. [data_readiness]
 - route='deterministic' significa que el estado operacional debe provenir de reglas determinísticas del OS. No reemplaces esa decisión con una inferencia del modelo.
 - route='fast_evidence' permite responder desde el subconjunto mínimo de evidencia cargado; no amplíes silenciosamente el alcance.
 - route='investigative' permite sintetizar relaciones entre las capabilities cargadas, pero no convierte correlación, proximidad temporal o patrón histórico en causalidad.
