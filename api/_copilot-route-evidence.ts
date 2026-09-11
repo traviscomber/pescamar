@@ -30,7 +30,7 @@ function supplierFamily(site:string,lot:string){const normalizedLot=lot.toLowerC
 
 async function buildSupplierSupportEvidence(){
  const sql=getSql()
- let headerRaw:unknown=[]
+ let headerRaw:unknown
  try{headerRaw=await sql`select sheet_name,source_block,family_key,supplier_name,guide_number,lot_reference,observation_count from canonical_production_support_blocks where parser_version='production-support-v2' and source_file_hash in(select file_hash from canonical_source_files where canonical and (source_kind like '%production%' or file_name ilike '%produccion 2026%')) order by sheet_name,source_block`}
  catch(error){const message=error instanceof Error?error.message:'';if(message.includes('canonical_production_support_blocks')||message.includes('42P01'))return {status:'migration_required' as const,validationCase:'PV-006' as const,maturity:'implemented' as const,historicalOnly:true,summary:{blocks:0,observations:0,autoLinkedBlocks:0,exceptions:0,coveragePct:null},exceptions:[]};throw error}
  const headers=(Array.isArray(headerRaw)?headerRaw:[]) as SupplierSupportHeader[]
