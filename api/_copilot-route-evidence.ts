@@ -3,6 +3,7 @@ import {buildCanonicalBusinessIntelligence} from './_canonical-business-intellig
 import {buildCanonicalSourceHealth} from './_canonical-source-health.js'
 import {buildCopilotContext,type CopilotContext,type CopilotSource} from './_copilot-context.js'
 import {buildCopilotOperationalIntelligence} from './_copilot-operational-intelligence.js'
+import {buildCopilotReadinessEvidence} from './_copilot-readiness.js'
 import {buildHistoricalLineageEvidence} from './_copilot-historical-lineage.js'
 import {buildSeaUrchinCopilotEvidence} from './_copilot-sea-urchin.js'
 import {getSql} from './_db.js'
@@ -128,7 +129,8 @@ export async function buildRoutedCopilotEvidence(operator:SessionOperator,plantI
  const needLot=selected.includes('lot_control')||selected.includes('operational_intelligence')||selected.includes('urchin_graph')
  const sourceHealthAllowed=selected.includes('canonical_intelligence')&&routedScope.corporateHistory&&['admin','operations'].includes(operator.role)
  const supplierSupportAllowed=selected.includes('canonical_intelligence')&&routedScope.corporateHistory
- const [base,cardRaw,operationalRaw,historicalRaw,canonicalRaw,urchinRaw,sourceHealthRaw,supplierSupportRaw]=await Promise.all([
+ const readinessRelevant=routedScope.corporateHistory&&(route.route==='investigative'||selected.some(capability=>['canonical_intelligence','orders','finance','production','inventory'].includes(capability)))
+ const [base,cardRaw,operationalRaw,historicalRaw,canonicalRaw,urchinRaw,sourceHealthRaw,supplierSupportRaw,readinessRaw]=await Promise.all([
   selectedBase.length?buildCopilotContext(operator,plantId,selectedBase):Promise.resolve(null),
   needLot?buildLotControlCard(operator,receptionId):Promise.resolve(null),
   selected.includes('operational_intelligence')?buildCopilotOperationalIntelligence(operator,receptionId):Promise.resolve(null),
@@ -137,6 +139,7 @@ export async function buildRoutedCopilotEvidence(operator:SessionOperator,plantI
   selected.includes('urchin_graph')?buildSeaUrchinCopilotEvidence(operator,receptionId):Promise.resolve(null),
   sourceHealthAllowed?buildCanonicalSourceHealth():Promise.resolve(null),
   supplierSupportAllowed?buildSupplierSupportEvidence():Promise.resolve(null),
+  readinessRelevant?buildCopilotReadinessEvidence():Promise.resolve(null),
  ])
  const lotMatchesScope=Boolean(cardRaw&&(!plantId||cardRaw.reception.plantId===plantId))
  const card=lotMatchesScope?cardRaw:null
@@ -146,12 +149,14 @@ export async function buildRoutedCopilotEvidence(operator:SessionOperator,plantI
  const operationalSource=operational?.source
  const historical=historicalRaw
  const canonical=canonicalRaw
- const sources=mergeSources(base?.sources??[],[lotSource,operationalSource,historical?.source,canonical?.source,urchinGraph?.source])
+ const readinessSource:CopilotSource|undefined=readinessRaw?{id:'data_readiness',label:'Preparación de evidencia por capacidad',path:'/inteligencia',rows:readinessRaw.capabilityGates.length,freshness:new Date().toISOString()}:undefined
+ const sources=mergeSources(base?.sources??[],[lotSource,operationalSource,historical?.source,canonical?.source,urchinGraph?.source,readinessSource])
  const data:Record<string,unknown>={...(base?.data??{})}
  if(card){const {source:_,...lotControl}=card;void _;data.lot_control=lotControl}
  if(operational)data.operational_intelligence=operational.data
  if(historical)data.historical_lineage=historical.data
  if(canonical)data.canonical_intelligence={...canonical.data,...(sourceHealthRaw?{sourceHealth:sourceHealthRaw}:{}),...(supplierSupportRaw?{supplierSupport:supplierSupportRaw}:{})}
+ if(readinessRaw)data.data_readiness=readinessRaw
  if(urchinGraph)data.urchin_graph=urchinGraph.data
  const context:CopilotContext={generatedAt:base?.generatedAt??new Date().toISOString(),scope:base?.scope??routedScope,sources,data}
  return {context,urchinGraph,loadedCapabilities:selected,route}
