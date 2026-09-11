@@ -6,6 +6,7 @@ import { AuthProvider } from './auth'
 import { RouteScrollReset } from './components/RouteScrollReset'
 import {LocaleProvider,localeFromPath,localeTag,type Locale} from './i18n'
 import './app.css'
+import './p2-visual-polish.css'
 
 const PlantAssistant=lazy(()=>import('./components/PlantAssistant').then(module=>({default:module.PlantAssistant})))
 
