@@ -1,0 +1,44 @@
+/* Targeted P2 visual polish: lineage + profitability. */
+
+/* LINEAGE — read as a sequence, not a card grid */
+.lineage-overview{gap:0!important;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.lineage-overview .panel{border:0!important;border-right:1px solid var(--line)!important;border-radius:0!important;background:transparent!important;padding:18px 20px!important}
+.lineage-overview .panel:first-child{padding-left:0!important}
+.lineage-overview .panel:last-child{border-right:0!important;padding-right:0!important}
+.lineage-coverage.panel,.lineage-events.panel,.lineage-intelligence.panel{border-left:0!important;border-right:0!important;border-radius:0!important;background:transparent!important;padding:24px 0!important}
+.lineage-stage-grid{gap:0!important;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.lineage-stage{border:0!important;border-right:1px solid var(--line)!important;border-radius:0!important;background:transparent!important;padding:13px 14px!important}
+.lineage-stage:nth-child(4n){border-right:0!important}
+.lineage-stage.present{background:color-mix(in srgb,var(--teal) 4%,transparent)!important}
+.lineage-events ol{margin-top:12px!important}
+.lineage-event-marker{border-radius:6px!important}
+
+/* PROFITABILITY FOCUS — separate status, action and evidence */
+.decision-brief{padding:28px 0!important;border-left:0!important;border-right:0!important;border-radius:0!important;background:transparent!important}
+.decision-brief>p{max-width:760px;margin:10px 0 0!important;color:var(--muted);line-height:1.6}
+.decision-primary{margin-top:22px!important;padding-top:18px!important;border-top:1px solid var(--line);align-items:end!important;gap:28px!important}
+.decision-primary>div{display:grid!important;gap:7px!important;max-width:760px}
+.decision-primary small{text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-size:.62rem!important}
+.decision-primary b{display:block;font-family:Rajdhani,sans-serif;font-size:clamp(1.35rem,2.2vw,1.7rem)!important;font-weight:600!important;line-height:1.05}
+.decision-primary span{display:block!important;margin:0!important;color:var(--muted);line-height:1.5}
+.decision-brief+.signal-grid{border-top:1px solid var(--line);border-bottom:1px solid var(--line);gap:0!important}
+.decision-brief+.signal-grid .signal-card{border:0!important;border-right:1px solid var(--line)!important;border-radius:0!important;background:transparent!important;padding:17px 20px!important}
+.decision-brief+.signal-grid .signal-card:first-child{padding-left:0!important}
+.decision-brief+.signal-grid .signal-card:last-child{border-right:0!important;padding-right:0!important}
+
+@media(max-width:900px){
+ .lineage-overview .panel:nth-child(2){border-right:0!important}
+ .lineage-overview .panel:nth-child(-n+2){border-bottom:1px solid var(--line)!important}
+ .lineage-stage:nth-child(4n){border-right:1px solid var(--line)!important}
+ .lineage-stage:nth-child(2n){border-right:0!important}
+ .decision-primary{align-items:start!important;grid-template-columns:1fr!important}
+}
+@media(max-width:700px){
+ .lineage-overview{border-bottom:0}
+ .lineage-overview .panel{border-right:0!important;border-bottom:1px solid var(--line)!important;padding:14px 0!important}
+ .lineage-stage{border-right:0!important;border-bottom:1px solid var(--line)!important;padding:13px 0!important}
+ .lineage-stage:last-child{border-bottom:0!important}
+ .decision-primary .button{width:100%;justify-content:center}
+ .decision-brief+.signal-grid .signal-card{border-right:0!important;border-bottom:1px solid var(--line)!important;padding:14px 0!important}
+ .decision-brief+.signal-grid .signal-card:last-child{border-bottom:0!important}
+}
