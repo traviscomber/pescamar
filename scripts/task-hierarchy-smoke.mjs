@@ -25,8 +25,8 @@ assert(cold.includes('eyebrow="Operación de planta" title="Cadena de frío"'),'
 assert(!cold.includes('daily-footer-actions'),'Cold chain must not repeat the same detail navigation below its primary action')
 assert(cold.includes("value:'Registro manual'")&&cold.includes("value:'Automáticas'"),'Cold-chain capture state must be concise while retaining truthful manual/automatic distinction')
 
-assert(inventory.includes('eyebrow="Operación de planta" title="Inventario"'),'Inventory must use the same plant-operating hierarchy')
-assert(inventory.includes('aria-label="Prioridad de inventario"')&&inventory.includes('className="button primary"'),'Inventory must remain decision-first with one explicit primary action')
+assert(inventory.includes("eyebrow={text('Operación de planta','Plant operations')}")&&inventory.includes("title={text('Inventario','Inventory')}"),'Inventory must use the same localized plant-operating hierarchy')
+assert(inventory.includes("aria-label={text('Prioridad de inventario','Inventory priority')}")&&inventory.includes('className="button primary"'),'Inventory must remain decision-first with one explicit primary action')
 
 assert(lot.includes('>Preguntar al asistente</button>'),'Ficha 360 must use human-first assistant language')
 assert(!lot.includes('>Preguntar IA</button>'),'Ficha 360 must not require AI terminology for the secondary help action')
@@ -35,7 +35,7 @@ assert(lot.includes('<details className="lot360-fold">'),'Ficha 360 must keep ev
 
 assert(receptions.includes('<details className="panel list-panel receptions-history">'),'Receptions must keep historical evidence behind progressive disclosure')
 assert(receptions.includes('className="button primary" onClick={onNew}'),'Receptions must retain a single primary creation action for authorized operators')
-assert(orders.includes('title="Órdenes de venta"')&&orders.includes('Nueva orden'),'Sales orders must retain a clear commercial task and primary creation action')
+assert(orders.includes("title={isEs?'Órdenes de venta':'Sales orders'}")&&orders.includes("{isEs?'Nueva orden':'New order'}"),'Sales orders must retain a clear localized commercial task and primary creation action')
 
 if(failures.length){console.error('Task hierarchy smoke FAILED');failures.forEach(f=>console.error(`- ${f}`));process.exit(1)}
 console.log('Task hierarchy smoke PASS: critical plant and lot surfaces expose one dominant task, human-first location context, progressive detail and no duplicated primary navigation')
