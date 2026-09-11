@@ -1,4 +1,4 @@
-export const SEAFOOD_QUERY_ROUTER_VERSION='seafood.router.v2' as const
+export const SEAFOOD_QUERY_ROUTER_VERSION='seafood.router.v3' as const
 
 export type SeafoodQueryRouteName='deterministic'|'fast_evidence'|'investigative'
 export type SeafoodCapability=
@@ -64,6 +64,13 @@ function explicitLotCode(value:string){
 }
 
 // Pescamar is bilingual. Router semantics must remain equivalent in Spanish and English.
+const predictivePatterns=[
+ /\bpronostic/,/\bforecast/,/\bpredict/,/\bprediccion/,/\bproyeccion/,/\bprojection/,
+ /\bproxima semana\b/,/\bproximo mes\b/,/\bsemana que viene\b/,/\bnext week\b/,/\bnext month\b/,
+ /\bque voy a producir\b/,/\bque produciremos\b/,/\bwhat will (?:we|i) produce\b/,
+ /\bdemanda futura\b/,/\bfuture demand\b/,/\bventa futura\b/,/\bfuture sales\b/,
+ /\bcuanto (?:voy|vamos) a (?:producir|vender|recibir)\b/,/\bhow much will (?:we|i) (?:produce|sell|receive)\b/
+]
 const investigationPatterns=[
  /\bpor que\b/,/\bporque\b/,/\bexplica/,/\bwhy\b/,/\bexplain/,
  /\bcompar/,/\bcompare/,/\bhistor/,/\btendenc/,/\btrend/,
@@ -108,7 +115,8 @@ function fastCapabilities(question:string,hasLot:boolean):SeafoodCapability[]{
 export function routeSeafoodQuery(input:{question:string;hasLot:boolean;hasPhotos:boolean;seniorUrchin:boolean}):SeafoodQueryRoute{
  const question=normalize(input.question)
  const historicalLotCode=input.hasLot?null:explicitLotCode(question)
- const investigative=hasAny(question,investigationPatterns)||Boolean(historicalLotCode)
+ const predictive=hasAny(question,predictivePatterns)
+ const investigative=predictive||hasAny(question,investigationPatterns)||Boolean(historicalLotCode)
  const historicalComparison=hasAny(question,historicalComparisonPatterns)||Boolean(historicalLotCode)
  const urchinSpecific=input.seniorUrchin||/\berizo|\burchin|\buni\b|\broe\b|\bjapon\b|\bjapan\b|\bgrade\b|\bxray\b|\bx-ray\b|\brayos? x|\bcolor\b/.test(question)
  if(input.hasLot&&!input.hasPhotos&&!investigative&&hasAny(question,deterministicLotPatterns)){
@@ -130,14 +138,15 @@ export function routeSeafoodQuery(input:{question:string;hasLot:boolean;hasPhoto
  }
  const required:SeafoodCapability[]=[...fast]
  const optional:SeafoodCapability[]=[]
+ if(predictive){required.push('production','canonical_intelligence')}
  if(input.hasLot)required.push('lot_control','operational_intelligence')
  if(historicalComparison)required.push('historical_lineage','canonical_intelligence')
- else optional.push('historical_lineage','canonical_intelligence')
+ else if(!predictive)optional.push('historical_lineage','canonical_intelligence')
  if(!input.hasLot&&!required.length)required.push('canonical_intelligence')
  if(urchinSpecific)required.push('urchin_graph')
  if(input.hasLot)optional.push('receptions','production','quality','inventory','orders')
  else optional.push('receptions','production','quality','inventory')
- return {version:SEAFOOD_QUERY_ROUTER_VERSION,route:'investigative',intent:historicalLotCode?'investigate_historical_lot':historicalComparison?'investigate_historical_comparison':fast.length?`investigate_${fast.join('_')}`:'investigate_cross_domain',requiredCapabilities:unique(required),optionalCapabilities:unique(optional.filter(capability=>!required.includes(capability))),writesAllowed:false,humanGate:'material_action_review',focusHistoricalLotCode:historicalLotCode}
+ return {version:SEAFOOD_QUERY_ROUTER_VERSION,route:'investigative',intent:predictive?'predictive_readiness_check':historicalLotCode?'investigate_historical_lot':historicalComparison?'investigate_historical_comparison':fast.length?`investigate_${fast.join('_')}`:'investigate_cross_domain',requiredCapabilities:unique(required),optionalCapabilities:unique(optional.filter(capability=>!required.includes(capability))),writesAllowed:false,humanGate:'material_action_review',focusHistoricalLotCode:historicalLotCode}
 }
 
 export function evaluateEvidenceSufficiency(route:SeafoodQueryRoute,sources:SeafoodEvidenceSource[]):SeafoodEvidenceGate{
