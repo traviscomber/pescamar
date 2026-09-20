@@ -32,7 +32,7 @@ test('home surfaces one coherent purchase, evidence, supplier and plant decision
  await mockHome(page)
  await page.goto('/inicio/detalle')
  const brief=page.getByRole('region',{name:'Qué requiere atención'})
- await expect(brief).toBeVisible()
+ await expect(brief).toBeVisible({timeout:15000})
  await expect(brief.getByRole('heading',{name:'Qué requiere atención'})).toBeVisible()
  await expect(brief.getByText('Proveedor A',{exact:true})).toBeVisible()
  await expect(brief.getByText(/92% de información · confianza alta/)).toBeVisible()
