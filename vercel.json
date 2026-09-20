@@ -22,6 +22,7 @@
     { "source": "/comunicaciones", "destination": "/index.html" },
     { "source": "/comunicaciones/detalle", "destination": "/index.html" },
     { "source": "/auditoria", "destination": "/index.html" },
+    { "source": "/admin/salud", "destination": "/index.html" },
     { "source": "/observabilidad", "destination": "/index.html" },
     { "source": "/rollout", "destination": "/index.html" },
     { "source": "/floor", "destination": "/index.html" },
