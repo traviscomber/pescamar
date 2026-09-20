@@ -108,6 +108,8 @@ jobs:
         run: node scripts/operator-identity-smoke.mjs
       - name: Operational audit contracts
         run: node scripts/audit-smoke.mjs
+      - name: Public production health check
+        run: node scripts/public-health-smoke.mjs
       - name: Install pinned browser test runtime
         run: |
           npm install --no-save --ignore-scripts @playwright/test@1.55.0

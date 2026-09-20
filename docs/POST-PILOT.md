@@ -29,7 +29,7 @@ A partir de este cierre, **toda mejora cosmética o idea nueva pasa a POST-PILOT
 
 - **Flakiness de carga inicial** en `control-tower-operational-intelligence` y `executive-decision-brief`: pasan estable en retry y aislados; no es defecto UX. Monitorear si aparece en CI.
 - **Warnings de lint preexistentes** (unused vars, `any`): no bloquean; candidatos a higiene en el próximo sprint técnico.
-- **Deploy Vercel protegido por SSO**: verificable solo vía estado del deployment, no por fetch del contenido.
+- **Deploy Vercel protegido por SSO**: verificable vía estado del deployment; además `GET /api/public-health` (sin auth, sin datos sensibles) permite smoke de liveness en prod cuando el SSO no cubra ese path.
 
 ## Criterio de reactivación
 
