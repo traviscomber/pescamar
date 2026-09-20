@@ -40,7 +40,7 @@ Criterio de salida:
 - recepciones activas e históricas recompuestas en tarjetas semánticas en móvil en vez de comprimir columnas;
 - valores canónicos conservados sin transformación de datos.
 
-## UX-4 · Verificación y cierre — VERIFICACIÓN LOCAL PASS · 2026-09-20
+## UX-4 · Verificación y cierre — CERRADO · CI + VERCEL PASS · 2026-09-20
 
 Criterio de salida:
 - Quality PASS;
@@ -55,12 +55,15 @@ Criterio de salida:
 - **Chromium desktop PASS** — 212 tests en 106 specs, proyecto `desktop-chromium`, contra preview de producción (`vite preview`).
 - **Chromium mobile PASS** — mismo universo de tests, proyecto `mobile-chromium` (Pixel 7).
 - **Revisión visual autenticada PASS** — home, trazabilidad por período y Seafood AI revisadas en Chromium desktop y mobile con sesión mock: 0 errores de consola, 0 overflow horizontal. Evidencia: `ux4-evidence/` en workspace de la sesión.
-- **Alineación de contratos previa al PASS** — los specs de home decisión/navegación por rol/lang, Control Tower, executive brief, Seafood AI, trazabilidad histórica (period-report UX) y product-identity quedaron alineados al rediseño CEO/role-first; `AppShell` ahora rotula el sidebar con el producto (Seafood Intelligence OS) y el topbar con la identidad de implementación (`Pescamar · Implementación 01`), cerrando el drift de productización P0.
+- **Alineación de contratos previa al PASS** — los specs de home decisión/navegación por rol/lang, Control Tower, executive brief, Seafood AI, trazabilidad histórica (period-report UX) y product-identity quedaron alineados al rediseño CEO/role-first; `AppShell` rotula el sidebar con el producto (Seafood Intelligence OS) y el topbar con la identidad de implementación sin filtrar el numbering al shell diario, cerrando el drift de productización P0.
 - **Runtime de tests** — `@playwright/test` fijado a `1.55.0` en `devDependencies`, igual que el pin de CI.
 
-### Pendiente de este gate
+### Evidencia de cierre 2026-09-20 (SHA `f33cec0b14a9f924deec7c892503f0ecf2f6fb9c`)
 
-- **Vercel SUCCESS en el mismo SHA** — requiere push a `main` y confirmación del deploy de producción; no verificable desde el entorno local.
+- **CI PASS** — workflow Quality, run `35538780704`: `conclusion=success` sobre `f33cec0`.
+- **Vercel SUCCESS en el mismo SHA** — deployment Production `6557934501` creado por `vercel[bot]` para `f33cec0`, estado `success` ("Deployment has completed"). URL protegida por Vercel SSO (herramienta interna): contenido no fetchable sin credenciales, consistente con el acceso autenticado del producto.
+- **Backlog de smokes CI cerrado** — los 32 smokes del workflow corren locales: 32/32 PASS (`release-smoke` verificado con preview atado a `127.0.0.1`; en CI usa el mismo bindeo). Se corrigió drift real de contratos: policy `seafood.ai.evidence.v13`, router `seafood.router.v5`, contexto live de Hoy migrado a `HomeHero`, label de procedencia Event Graph restaurado en `DailyClose`, y fix de paridad bilingüe del router (`/\banomali/` → `/\banomal/`: inglés "anomaly" ruteaba distinto de español "anomalía"; parity 95.7% → 100%).
+- **Quality PASS** — `npm run quality` sobre `f33cec0`: lint 0 errores (warnings preexistentes), typecheck y build OK; specs Playwright tocados (product-identity, browser-smoke, copilot-browser, control-tower-operational-intelligence) re-corridos: 23 passed.
 
 ### Nota de estabilidad
 
