@@ -46,8 +46,7 @@ export function AppShell({children,onNewReception}:{children:ReactNode;onNewRece
  const plantName=plantContextId?plantContextId.split('-').map(part=>part?part[0].toUpperCase()+part.slice(1):part).join(' '):'';
  const plantContextLabel=plantName?`${locale==='en'?'Plant':'Planta'} ${plantName}`:'';
  const context=plantContextId?plantContextLabel:pathname==="/"?t('shell.todayContext'):currentModule?.label??implementation.name;
- const implementationLabel=locale==='es'?implementation.label.replace('Implementation','Implementación'):implementation.label
- const contextStage=plantContextId?t('shell.plantFlow'):pathname==="/"?`${implementation.name} · ${implementationLabel}`:currentModule?.stageLabel??implementation.name;
+ const contextStage=plantContextId?t('shell.plantFlow'):pathname==="/"?implementation.name:currentModule?.stageLabel??implementation.name;
  const initials=operator?.fullName.split(" ").map(part=>part[0]).slice(0,2).join("").toUpperCase()||"PS";
  const roleKey=operator?.role?(`role.${operator.role}` as const):'role.viewer';
  const mayCreate=operator?canCreateReception(operator.role):false,platformLabel=!status?t('shell.checking'):status.ok?t('shell.active'):t('shell.review'),databaseLabel=!status?t('shell.syncing'):status.persistence.database?`${implementation.name} · ${t('shell.databaseConnected')}`:`${implementation.name} · ${t('shell.databasePending')}`;

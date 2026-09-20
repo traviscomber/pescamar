@@ -13,7 +13,7 @@ assert(lineage.includes("const intelligence=mode==='live'?data?.intelligence:und
 assert(lineage.includes("mode==='live'&&intelligence?<section className=\"panel lineage-intelligence\""),'Operational intelligence panel must render only in live mode')
 assert(lineage.includes('Qué requiere atención'),'Lineage must expose a decision-first attention heading')
 assert(lineage.includes('Orientan revisión humana; no modifican estado operacional.'),'UI must state the non-writing operational boundary')
-assert(lineage.includes('Histórico canónico · solo lectura.'),'Historical lineage must remain explicitly read-only')
+assert(lineage.includes('Reporte del período · solo lectura.'),'Historical lineage must remain explicitly read-only')
 assert(lineage.includes("const priorityLabels:Record<1|2|3,string>={1:'P1 · Crítico',2:'P2 · Revisar',3:'P3 · Completar'}"),'Priority semantics must remain explicit')
 assert(lineage.includes("const confidenceLabels:Record<OperationalSignal['confidence'],string>={observed:'Observado',derived:'Derivado'}"),'Observed versus derived confidence must remain visible')
 assert(lineage.includes('signal.evidenceEventIds.map(id=>eventById.get(id))'),'Signals must resolve back to Event Graph evidence')
