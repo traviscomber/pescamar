@@ -20,9 +20,9 @@ export default async function handler(req:Request,res:Response){
       and (notes is not null or jsonb_array_length(coalesce(raw_record->'auxiliaryEvidence','[]'::jsonb))>0)
     order by sheet_name,source_block`
   const blocks=(Array.isArray(raw)?raw:[]) as Record<string,unknown>[]
-  const evidence=blocks.map((row:any)=>{
-   const payload=row.raw_record&&typeof row.raw_record==='object'?row.raw_record:{}
-   const auxiliary=Array.isArray(payload.auxiliaryEvidence)?payload.auxiliaryEvidence.map((item:any)=>({cell:t(item?.cell),value:item?.value??null,kind:t(item?.kind)||'unknown'})):[]
+  const evidence=blocks.map((row)=>{
+   const payload=(row.raw_record&&typeof row.raw_record==='object'?row.raw_record:{}) as Record<string,unknown>
+   const auxiliary=Array.isArray(payload.auxiliaryEvidence)?payload.auxiliaryEvidence.map(item=>({cell:t(item?.cell),value:item?.value??null,kind:t(item?.kind)||'unknown'})):[]
    const note=t(row.notes)||null
    return {sheetName:t(row.sheet_name),sourceBlock:Number(row.source_block)||0,supplier:t(row.supplier_name),guide:t(row.guide_number)||null,lotReference:t(row.lot_reference)||null,note,auxiliaryEvidence:auxiliary,semanticStatus:'unlabeled_reconciliation_evidence' as const,confidence:'needs-human-validation' as const,historicalOnly:true,writesLive:false}
   })

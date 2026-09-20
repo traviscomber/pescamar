@@ -1,4 +1,4 @@
-import {Building2,Handshake,Landmark,MapPin,Pencil,Scale,UserRound,X} from 'lucide-react'
+import {Building2,Handshake,Landmark,Pencil,Scale,X} from 'lucide-react'
 import './historical-lot-drawer.css'
 
 export type Party360Party={id:string;kind:'supplier'|'customer';legal_name:string;tax_id:string|null;phone:string|null;contact_name:string|null;email:string|null;address:string|null;city:string|null;country:string|null;payment_terms:string|null;notes:string|null;tags:string[]}

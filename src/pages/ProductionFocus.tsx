@@ -1,5 +1,5 @@
 import {Factory} from 'lucide-react'
-import {useEffect,useState} from 'react'
+import {useCallback,useEffect,useState} from 'react'
 import {Link} from 'react-router-dom'
 import {ContextualGuidance} from '../components/ContextualGuidance'
 import {HistoricalContinuity} from '../components/HistoricalContinuity'
@@ -26,7 +26,7 @@ export function ProductionFocus({lots}:{lots:Lot[]}){
   const {openLive}=useLot360()
   const {locale}=useLocale()
   const en=locale==='en'
-  const text=(es:string,english:string)=>en?english:es
+  const text=useCallback((es:string,english:string)=>en?english:es,[en])
   const kg=(value:number)=>`${value.toLocaleString(en?'en-US':'es-CL',{maximumFractionDigits:1})} kg`
   const actionLabel=(value:PlanRow['action'])=>value==='allocate_finished'?text('Asignar producto terminado','Allocate finished product'):value==='produce'?text('Producir ahora','Produce now'):text('Resolver bloqueo','Resolve blocker')
   const [priority,setPriority]=useState<PlanRow|null>(null)
@@ -44,7 +44,7 @@ export function ProductionFocus({lots}:{lots:Lot[]}){
       .catch(cause=>{if(active)setError(cause instanceof Error?cause.message:text('No fue posible calcular la siguiente acción','Unable to calculate the next action'))})
       .finally(()=>{if(active)setLoading(false)})
     return()=>{active=false}
-  },[en])
+  },[en,text])
 
   const hasLots=lots.length>0
   const blocked=priority?.action==='blocked'

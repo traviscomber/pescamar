@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- i18n module exports the LocaleProvider component together with its companion hooks and helpers by design */
 import {createContext,useContext,type ReactNode} from 'react'
 
 export type Locale='es'|'en'

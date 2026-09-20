@@ -43,8 +43,8 @@ export default async function handler(req:Request,res:Response){
   const supportRows=(Array.isArray(rowRaw)?rowRaw:[]) as Record<string,unknown>[]
   const byBlock=new Map<string,Record<string,unknown>[]>()
   for(const row of supportRows){const key=`${t(row.sheet_name)}:${n(row.source_block)}`,bucket=byBlock.get(key);if(bucket)bucket.push(row);else byBlock.set(key,[row])}
-  const main=(Array.isArray(mainRaw)?mainRaw:[]).map((r:any)=>({sourceRow:n(r.source_row),supplier:t(r.supplier),familyKey:family(t(r.process_site),t(r.lot_code)),guide:t(r.guide_number),lot:t(r.lot_code),receivedKg:n(r.received_kg),gradeBreakdown:(r.grade_breakdown&&typeof r.grade_breakdown==='object'?r.grade_breakdown:{}) as Record<string,{kg?:unknown}>}))
-  const links=blocks.map((b:any)=>{
+  const main=((Array.isArray(mainRaw)?mainRaw:[]) as Record<string,unknown>[]).map((r)=>({sourceRow:n(r.source_row),supplier:t(r.supplier),familyKey:family(t(r.process_site),t(r.lot_code)),guide:t(r.guide_number),lot:t(r.lot_code),receivedKg:n(r.received_kg),gradeBreakdown:(r.grade_breakdown&&typeof r.grade_breakdown==='object'?r.grade_breakdown:{}) as Record<string,{kg?:unknown}>}))
+  const links=blocks.map((b:Record<string,unknown>)=>{
    const supplier=t(b.supplier_name),familyKey=t(b.family_key),guide=t(b.guide_number),lotRef=t(b.lot_reference),pool=main.filter(r=>r.familyKey===familyKey&&norm(r.supplier)===norm(supplier))
    const byGuide=guide?pool.filter(r=>r.guide===guide):[],token=norm(lotRef),byLot=token?pool.filter(r=>norm(r.lot).startsWith(token)):[]
    const guideIds=new Set(byGuide.map(r=>r.sourceRow)),lotIds=new Set(byLot.map(r=>r.sourceRow)),both=[...guideIds].filter(id=>lotIds.has(id))

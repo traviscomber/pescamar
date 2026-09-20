@@ -1,5 +1,5 @@
 import {AlertTriangle,ArrowRight,CheckCircle2,MapPin,PackageCheck} from 'lucide-react'
-import {useEffect,useMemo,useState} from 'react'
+import {useCallback,useEffect,useMemo,useState} from 'react'
 import {Link,useSearchParams} from 'react-router-dom'
 import {ContextualGuidance} from '../components/ContextualGuidance'
 import {HistoricalContinuity} from '../components/HistoricalContinuity'
@@ -12,7 +12,7 @@ type Payload={lots?:Lot[];error?:string}
 export function InventoryFocus(){
   const {locale}=useLocale()
   const en=locale==='en'
-  const text=(es:string,english:string)=>en?english:es
+  const text=useCallback((es:string,english:string)=>en?english:es,[en])
   const kg=(value:number)=>`${value.toLocaleString(en?'en-US':'es-CL',{maximumFractionDigits:1})} kg`
   const [params]=useSearchParams()
   const plantId=params.get('plantId')??''
@@ -20,7 +20,7 @@ export function InventoryFocus(){
   const [data,setData]=useState<Payload|null>(null)
   const [loading,setLoading]=useState(true)
   const [error,setError]=useState('')
-  useEffect(()=>{let active=true;void fetch('/api/inventory',{cache:'no-store'}).then(async response=>{const payload=await response.json() as Payload;if(!response.ok)throw new Error(payload.error??text('No fue posible cargar inventario','Unable to load inventory'));if(active)setData(payload)}).catch(cause=>{if(active)setError(cause instanceof Error?cause.message:text('No fue posible cargar inventario','Unable to load inventory'))}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[en])
+  useEffect(()=>{let active=true;void fetch('/api/inventory',{cache:'no-store'}).then(async response=>{const payload=await response.json() as Payload;if(!response.ok)throw new Error(payload.error??text('No fue posible cargar inventario','Unable to load inventory'));if(active)setData(payload)}).catch(cause=>{if(active)setError(cause instanceof Error?cause.message:text('No fue posible cargar inventario','Unable to load inventory'))}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[en,text])
   const lots=useMemo(()=>{const scoped=plantId?(data?.lots??[]).filter(lot=>lot.plant_id===plantId):(data?.lots??[]);return receptionId?scoped.filter(lot=>lot.reception_id===receptionId):scoped},[data,plantId,receptionId])
   const totals=useMemo(()=>lots.reduce((acc,lot)=>({physical:acc.physical+lot.availablePhysicalKg,planning:acc.planning+lot.planningAvailableKg,unlocated:acc.unlocated+lot.unlocatedKg,blocked:acc.blocked+(lot.releaseStatus==='blocked'?1:0)}),{physical:0,planning:0,unlocated:0,blocked:0}),[lots])
   const firstBlocked=lots.find(lot=>lot.releaseStatus==='blocked')

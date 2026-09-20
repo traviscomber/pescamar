@@ -44,8 +44,8 @@ export function Copilot(){
  const inputRef=useRef<HTMLTextAreaElement>(null),deepLinkHandled=useRef('')
  const selectableLots=useMemo(()=>lots.filter(lot=>Boolean(lot.receptionId)&&(!plantId||lot.plantId===plantId)),[lots,plantId])
  const memoryKey=operator?`pescamar:seafood-ai:scope:${operator.id}`:''
- useEffect(()=>{if(!executiveMode||requestedPlantId||plantId||!memoryKey)return;try{const remembered=window.localStorage.getItem(memoryKey)??'';if(remembered&&available.some(plant=>plant.id===remembered))setPlantId(remembered)}catch{}},[executiveMode,requestedPlantId,plantId,memoryKey,available])
- useEffect(()=>{if(!executiveMode||!memoryKey)return;try{if(plantId)window.localStorage.setItem(memoryKey,plantId);else window.localStorage.removeItem(memoryKey)}catch{}},[executiveMode,memoryKey,plantId])
+ useEffect(()=>{if(!executiveMode||requestedPlantId||plantId||!memoryKey)return;try{const remembered=window.localStorage.getItem(memoryKey)??'';if(remembered&&available.some(plant=>plant.id===remembered))setPlantId(remembered)}catch{/* localStorage unavailable or denied; remembered scope is optional */}},[executiveMode,requestedPlantId,plantId,memoryKey,available])
+ useEffect(()=>{if(!executiveMode||!memoryKey)return;try{if(plantId)window.localStorage.setItem(memoryKey,plantId);else window.localStorage.removeItem(memoryKey)}catch{/* localStorage unavailable or denied; scope memory is best-effort */}},[executiveMode,memoryKey,plantId])
  useEffect(()=>{if(requestedPlantId&&available.some(plant=>plant.id===requestedPlantId)&&plantId!==requestedPlantId){setPlantId(requestedPlantId);setReceptionId('');setTurns([])}},[requestedPlantId,available,plantId])
  useEffect(()=>{if(requestedReceptionId&&selectableLots.some(lot=>lot.receptionId===requestedReceptionId)){setReceptionId(requestedReceptionId);setTurns([])}},[requestedReceptionId,selectableLots])
  useEffect(()=>{if(receptionId&&!selectableLots.some(lot=>lot.receptionId===receptionId)){setReceptionId('');setTurns([])}},[receptionId,selectableLots])

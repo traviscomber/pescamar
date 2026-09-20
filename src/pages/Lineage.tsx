@@ -34,7 +34,7 @@ export function Lineage(){
  const requested=params.get('receptionId')??'',selectedId=requested||lots[0]?.receptionId||''
  const [data,setData]=useState<Payload|null>(null),[loading,setLoading]=useState(false),[error,setError]=useState('')
  const [historicalIndex,setHistoricalIndex]=useState<HistoricalIndex|null>(null),[historicalLoading,setHistoricalLoading]=useState(false),[historicalError,setHistoricalError]=useState('')
- const historicalRecords=historicalIndex?.records??[]
+ const historicalRecords=useMemo(()=>historicalIndex?.records??[],[historicalIndex?.records])
  const availableMonths=useMemo(()=>Array.from(new Set(historicalRecords.map(record=>monthKey(record.eventDate)).filter((value):value is string=>Boolean(value)))).sort((a,b)=>Number(b)-Number(a)),[historicalRecords])
  const requestedMonth=params.get('month')??''
  const month=requestedMonth&&availableMonths.includes(requestedMonth)?requestedMonth:(availableMonths[0]??'all')

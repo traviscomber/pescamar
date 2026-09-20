@@ -1,5 +1,5 @@
 import {ArrowRight,Boxes,Landmark,Scale,Truck} from 'lucide-react'
-import {useEffect,useMemo,useState} from 'react'
+import {useCallback,useEffect,useMemo,useState} from 'react'
 import {Link} from 'react-router-dom'
 import {useLocale} from '../i18n'
 
@@ -16,13 +16,14 @@ type Payload={
 type Context='operation'|'inventory'|'commercial'
 
 export function HistoricalContinuity({context}:{context:Context}){
- const {locale}=useLocale(),en=locale==='en',text=(es:string,english:string)=>en?english:es
+ const {locale}=useLocale(),en=locale==='en'
+ const text=useCallback((es:string,english:string)=>en?english:es,[en])
  const nf=new Intl.NumberFormat(en?'en-US':'es-CL',{maximumFractionDigits:1})
  const kg=(value:number)=>`${nf.format(value)} kg`
  const clp=(value:number)=>new Intl.NumberFormat(en?'en-US':'es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(value)
  const [data,setData]=useState<Payload|null>(null)
  const [error,setError]=useState('')
- useEffect(()=>{let active=true;void fetch('/api/pescamar-intelligence',{cache:'no-store'}).then(async response=>{const payload=await response.json() as Payload;if(!response.ok)throw new Error(payload.error??text('No fue posible cargar los reportes del período','Unable to load period reports'));if(active)setData(payload)}).catch(cause=>{if(active)setError(cause instanceof Error?cause.message:text('No fue posible cargar los reportes del período','Unable to load period reports'))});return()=>{active=false}},[en])
+ useEffect(()=>{let active=true;void fetch('/api/pescamar-intelligence',{cache:'no-store'}).then(async response=>{const payload=await response.json() as Payload;if(!response.ok)throw new Error(payload.error??text('No fue posible cargar los reportes del período','Unable to load period reports'));if(active)setData(payload)}).catch(cause=>{if(active)setError(cause instanceof Error?cause.message:text('No fue posible cargar los reportes del período','Unable to load period reports'))});return()=>{active=false}},[en,text])
  const stockKg=useMemo(()=>(data?.stock??[]).reduce((sum,row)=>sum+Number(row.observedNetKg||0),0),[data?.stock])
  if(error)return null
  if(!data)return null

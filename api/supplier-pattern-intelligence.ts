@@ -13,10 +13,19 @@ const pct=(a:number,b:number)=>b?Number((a/b*100).toFixed(1)):null
 const acceptedMap:Record<string,string>={GA:'A1',C:'C1',P:'PT',R:'R',V:'Vj100'}
 const family=(site:string,lot:string)=>{const s=site.toLowerCase(),l=lot.toLowerCase();if(l.startsWith('ig')||s==='curanue')return'IG';if(l.startsWith('mdq')||s==='santa rosa')return'MDQ';if(l.startsWith('mi')||s==='candelaria')return'MI';return'RF'}
 
-function detectRegime(items:any[],metric:(item:any)=>boolean){
+type SupportBlockRow={sheet_name?:unknown;source_block?:unknown;family_key?:unknown;supplier_name?:unknown;guide_number?:unknown;lot_reference?:unknown;raw_record?:unknown}
+type SupportRowRow={sheet_name?:unknown;source_block?:unknown;grade_code?:unknown;accepted_kg?:unknown;destined_kg?:unknown;guide_kg?:unknown}
+type MainRow={supplier?:unknown;process_site?:unknown;lot_code?:unknown;guide_number?:unknown;source_row?:unknown;grade_breakdown?:unknown}
+type AuxItem={cell?:unknown;kind?:unknown;value?:unknown}
+type NumericAux={cell:string;value:number;matches:string[]}
+type RegimeCandidate={afterBlock:number;beforeN:number;afterN:number;beforeRate:number;afterRate:number;lift:number}
+type EvidenceItem={supplier:string;sheetName:string;sourceBlock:number;guide:string|null;lotReference:string|null;linked:boolean;selectedMainSourceRow:number|null;guideKg:number;acceptedKg:number;destinedKg:number;mappedAcceptedKg:number|null;mainDestinationKg:number|null;internalBalanceDeltaKg:number;numericAux:NumericAux[];unknownGrades:string[]}
+type Pattern={id:string;state:PatternState;confidence:PatternState;evidence:unknown;interpretation:string;action:string}
+
+function detectRegime(items:EvidenceItem[],metric:(item:EvidenceItem)=>boolean){
  const ordered=[...items].sort((a,b)=>a.sourceBlock-b.sourceBlock)
  if(ordered.length<10)return null
- const candidates=[] as any[]
+ const candidates=[] as RegimeCandidate[]
  for(let i=5;i<=ordered.length-5;i++){
   const before=ordered.slice(0,i),after=ordered.slice(i)
   const beforeRate=before.filter(metric).length/before.length,afterRate=after.filter(metric).length/after.length
@@ -52,10 +61,10 @@ export default async function handler(req:Request,res:Response){
        where record_status='operational'
          and source_file_hash in(select file_hash from canonical_source_files where canonical and file_name='planilla de produccion 2026.xlsx')`
   ])
-  const blocks=(Array.isArray(blockRaw)?blockRaw:[]) as any[]
-  const rows=(Array.isArray(rowRaw)?rowRaw:[]) as any[]
-  const main=(Array.isArray(mainRaw)?mainRaw:[]) as any[]
-  const byBlock=new Map<string,any[]>()
+  const blocks=(Array.isArray(blockRaw)?blockRaw:[]) as SupportBlockRow[]
+  const rows=(Array.isArray(rowRaw)?rowRaw:[]) as SupportRowRow[]
+  const main=(Array.isArray(mainRaw)?mainRaw:[]) as MainRow[]
+  const byBlock=new Map<string,SupportRowRow[]>()
   for(const row of rows){const key=`${t(row.sheet_name)}:${n(row.source_block)}`,bucket=byBlock.get(key);if(bucket)bucket.push(row);else byBlock.set(key,[row])}
 
   const evidence=blocks.map(block=>{
@@ -69,9 +78,9 @@ export default async function handler(req:Request,res:Response){
    const gradeKg=(key:string)=>round1(n(grades[key]?.kg))
    const unknownGrades=[...new Set(support.map(row=>t(row.grade_code)).filter(code=>code&&!acceptedMap[code]))]
    const mappedAccepted=selected&&unknownGrades.length===0?round1(support.reduce((sum,row)=>sum+gradeKg(acceptedMap[t(row.grade_code)]),0)):null
-   const raw=block.raw_record&&typeof block.raw_record==='object'?block.raw_record:{}
+   const raw=(block.raw_record&&typeof block.raw_record==='object'?block.raw_record:{}) as Record<string,unknown>
    const aux=Array.isArray(raw.auxiliaryEvidence)?raw.auxiliaryEvidence:[]
-   const numericAux=aux.filter((item:any)=>item?.kind==='number'&&Number.isFinite(Number(item?.value))).map((item:any)=>({cell:t(item.cell),value:n(item.value),matches:['A1','C1','R','PT','D','Vj100'].filter(key=>exact(n(item.value),gradeKg(key))&&n(item.value)!==0)}))
+   const numericAux=aux.filter((item:AuxItem)=>item?.kind==='number'&&Number.isFinite(Number(item?.value))).map((item:AuxItem)=>({cell:t(item.cell),value:n(item.value),matches:['A1','C1','R','PT','D','Vj100'].filter(key=>exact(n(item.value),gradeKg(key))&&n(item.value)!==0)}))
    return {supplier,sheetName:t(block.sheet_name),sourceBlock:n(block.source_block),guide:guide||null,lotReference:t(block.lot_reference)||null,linked:!!selected,selectedMainSourceRow:selected?n(selected.source_row):null,guideKg,acceptedKg,destinedKg,mappedAcceptedKg:mappedAccepted,mainDestinationKg:selected?gradeKg('D'):null,internalBalanceDeltaKg:round1(guideKg-acceptedKg-destinedKg),numericAux,unknownGrades}
   })
 
@@ -83,7 +92,7 @@ export default async function handler(req:Request,res:Response){
    const fullyReconciled=linked.filter(x=>x.mappedAcceptedKg!=null&&x.mainDestinationKg!=null&&exact(x.acceptedKg,x.mappedAcceptedKg)&&exact(x.destinedKg,x.mainDestinationKg)&&exact(x.internalBalanceDeltaKg,0)).length
    const aux=items.flatMap(x=>x.numericAux)
    const auxByGrade=['D','PT','R','A1','C1','Vj100'].map(grade=>({grade,n:aux.filter(a=>a.matches.includes(grade)).length,pct:pct(aux.filter(a=>a.matches.includes(grade)).length,aux.length)}))
-   const patterns:any[]=[]
+   const patterns:Pattern[]=[]
    const acceptedRegime=detectRegime(linked,x=>x.mappedAcceptedKg!=null&&exact(x.acceptedKg,x.mappedAcceptedKg))
    if(acceptedRegime)patterns.push({id:'accepted-semantics-regime-shift',state:'derived' as PatternState,confidence:'needs-human-validation',evidence:acceptedRegime,interpretation:'La concordancia entre Kilos Aceptados y los grados equivalentes de la hoja principal cambia abruptamente dentro de la serie del proveedor.',action:'Mantener los regímenes separados hasta confirmar si cambió el criterio de registro, proceso o semántica.'})
    const destinationRegime=detectRegime(linked,x=>x.mainDestinationKg!=null&&exact(x.destinedKg,x.mainDestinationKg))
@@ -93,7 +102,7 @@ export default async function handler(req:Request,res:Response){
    return {supplier,sheetName:items[0]?.sheetName??null,summary:{blocks:items.length,linkedBlocks:linked.length,linkCoveragePct:pct(linked.length,items.length),acceptedExact,acceptedExactPct:pct(acceptedExact,linked.length),destinationExact,destinationExactPct:pct(destinationExact,linked.length),internalBalanceExact:internalExact,internalBalanceExactPct:pct(internalExact,items.length),fullyReconciled,fullyReconciledPct:pct(fullyReconciled,linked.length),numericAuxCells:aux.length},patterns}
   })
 
-  const crossSupplierPatterns=[] as any[]
+  const crossSupplierPatterns:Pattern[]=[]
   if(supplierGroups.length>=2){
    const acceptedRates=supplierGroups.filter(x=>x.summary.linkedBlocks>=5).map(x=>({supplier:x.supplier,pct:x.summary.acceptedExactPct}))
    const destinationRates=supplierGroups.filter(x=>x.summary.linkedBlocks>=5).map(x=>({supplier:x.supplier,pct:x.summary.destinationExactPct}))

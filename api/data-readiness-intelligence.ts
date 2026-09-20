@@ -58,7 +58,6 @@ export default async function handler(req:Request,res:Response){
   const priceReady=dimensions.economics[0].state==='ready'
   const supplierTraceReady=dimensions.supplierSupport[0].state==='ready'&&dimensions.production[0].state==='ready'&&dimensions.production[1].state==='ready'
   const packingTraceReady=dimensions.packing.every(m=>m.state==='ready')&&dimensions.production[1].state==='ready'
-  const financeStructureReady=dimensions.finance.every(m=>m.state==='ready')
   const capabilityGates:CapabilityGate[]=[
    {capability:'historical-traceability',state:supplierTraceReady&&packingTraceReady?'ready':'pilot',confidence:'derived',evidence:[`${num(r.production_lot)}/${pt} producción con lote`,`${num(r.support_guide)}/${sb} soportes con guía`,`${num(r.packing_lot)}/${pk} cajas con lote`],blockers:packingTraceReady?[]:['IQF y/o packing sin lote explícito requieren continuidad determinística o validación humana.']},
    {capability:'supplier-pattern-intelligence',state:supplierTraceReady?'pilot':'blocked',confidence:'needs-human-validation',evidence:[`${sb} bloques auxiliares disponibles`,'Patrones históricos detectables por proveedor y régimen'],blockers:['La semántica de Kilos Aceptados/D no está validada de forma homogénea entre proveedores.','No habilitar ranking transversal todavía.']},

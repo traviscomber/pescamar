@@ -44,11 +44,11 @@ export function PlantAssistant(){
  const lotQuery=receptionId?`receptionId=${encodeURIComponent(receptionId)}`:''
  const plantQuery=plantId?`plantId=${encodeURIComponent(plantId)}`:''
  const join=(base:string,...parts:string[])=>{const query=parts.filter(Boolean).join('&');return query?`${base}?${query}`:base}
- const copy=locale==='en'?{
+ const copy=useMemo(()=>locale==='en'?{
   name:'Plant Agent',tag:'Seafood AI',subtitle:'Pescamar data and operations',close:'Close assistant',lot:'Link lot',linked:'Lot linked',noLot:'No lot',photo:'Photo',send:'Send',placeholder:'Ask about Pescamar operations…',emptyTitle:'Ask about the plant',emptyText:'I can work across receptions, process, quality, packing, inventory, cold chain, commercial, finance and historical Pescamar data. I keep plant and role permissions.',thinking:'Analyzing…',evidence:'View evidence',allOps:'What needs attention now?',trace:'Trace this lot end to end',commercial:'What is committed and at risk?',inventory:'What product is available and where?',urchin:'Analyze this sea urchin lot',photoOnly:'Photos are enabled for sea urchin lots.',error:'Could not consult the plant agent.',actions:'Actions',actionsNote:'Only actions your current role can execute are shown. Material quality, regulatory and commercial decisions still require human confirmation.'
  }:{
   name:'Agente de Planta',tag:'Seafood AI',subtitle:'Datos y operación de Pescamar',close:'Cerrar asistente',lot:'Vincular lote',linked:'Lote vinculado',noLot:'Sin lote',photo:'Foto',send:'Enviar',placeholder:'Pregunta sobre la operación de Pescamar…',emptyTitle:'Pregunta por la planta',emptyText:'Puedo trabajar sobre recepciones, proceso, calidad, packing, inventario, frío, comercial, finanzas y la historia de Pescamar. Respeto el alcance de planta y rol.',thinking:'Analizando…',evidence:'Ver evidencia',allOps:'¿Qué requiere atención ahora?',trace:'Traza este lote de punta a punta',commercial:'¿Qué está comprometido y en riesgo?',inventory:'¿Qué producto hay disponible y dónde?',urchin:'Analiza este lote de erizo',photoOnly:'Las fotos se habilitan para lotes de erizo.',error:'No fue posible consultar al agente de planta.',actions:'Acciones',actionsNote:'Sólo se muestran acciones que tu rol actual puede ejecutar. Las decisiones materiales de calidad, regulación y comercial siguen requiriendo confirmación humana.'
- }
+ },[locale])
  const actions=useMemo<AgentAction[]>(()=>{
   if(!operator)return[]
   const candidates:AgentAction[]=[
