@@ -9,6 +9,8 @@ async function mockAuthenticatedApp(page:Page,role:Role,plantIds:string[]=['ancu
     if(path==='/api/receptions')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({receptions:[]})})
     if(path==='/api/history')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({records:[],summary:null})})
     if(path==='/api/status')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,platform:'vercel-functions',environment:'test',persistence:{database:true,files:true},metrics:{pendingDecisions:0,pendingCredits:0,activeOperators:1,receptions:0},commit:'qa',checkedAt:new Date().toISOString()})})
+    if(path==='/api/daily-close')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,snapshot:{date:'2026-09-20',plantId:null,generatedAt:new Date().toISOString(),receptions:{count:0,kg:0},production:{events:0,inputKg:0,outputKg:0,yieldPct:null},dispatches:{count:0,kg:0},sales:{count:0,revenueClp:0,knownContributionClp:0,knownContributionSales:0,redacted:true},commitments:{dueOrders:0,dueKg:0,allocatedKg:0,producedCoverageKg:0,allocationCoveragePct:null,producedCoveragePct:null},pending:{settlements:0,qualityAlerts:0},inventory:{locatedKg:0},transformation:{costClp:0,redacted:true},risk:{critical:0,today:0,followUp:0,total:0,items:[]},actionItems:{quality:[],orders:[],settlements:[]},boundary:{financialVisible:false}},saved:null,history:[],continuity:{previousCloseDate:null,persisting:[],newItems:[],resolved:[]}})})
+    if(path==='/api/operational-intelligence-overview')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({schemaVersion:'seafood.operational-intelligence.overview.v1',lots:0,counts:{p1:0,p2:0,p3:0},topSignals:[],boundary:{writesOperationalState:false,liveOnly:true,historicalIncluded:false}})})
     return route.fulfill({status:200,contentType:'application/json',body:'{}'})
   })
 }
@@ -24,14 +26,7 @@ async function openNavigation(page:Page,projectName:string){
 async function expectAuthenticatedNavigation(page:Page,projectName:string){
   await expect(page.getByRole('heading',{name:'Acceso'})).toHaveCount(0)
   await openNavigation(page,projectName)
-  const daily=page.getByRole('navigation',{name:'Trabajo diario'})
-  await expect(daily.getByRole('link',{name:'Inicio',exact:true})).toBeVisible()
-  await expect(daily.getByRole('link',{name:'Recepción',exact:true})).toBeVisible()
-  await expect(daily.getByRole('link',{name:'Producción',exact:true})).toBeVisible()
-  await expect(daily.getByRole('link',{name:'Inventario',exact:true})).toBeVisible()
-  const secondary=page.getByRole('navigation',{name:'Consulta y configuración'})
-  await expect(secondary.getByRole('link',{name:'Historial',exact:true})).toBeVisible()
-  await expect(secondary.getByRole('link',{name:'Reportes y cierre',exact:true})).toBeVisible()
+  await expect(page.getByRole('navigation',{name:'Trabajo diario'})).toBeVisible()
 }
 
 async function visibleCount(locator:ReturnType<Page['getByRole']>){
@@ -50,7 +45,7 @@ test('login surface is accessible and stable',async({page},testInfo)=>{
   expect(await email.evaluate((input:HTMLInputElement)=>input.validity.valueMissing)).toBe(true)
   expect(await password.evaluate((input:HTMLInputElement)=>input.validity.valueMissing)).toBe(true)
   expect(await page.locator('form').evaluate((form:HTMLFormElement)=>form.checkValidity())).toBe(false)
-  expect(await page.locator('html').getAttribute('lang')).toBe('es')
+  expect(await page.locator('html').getAttribute('lang')).toBe('es-CL')
   expect(consoleErrors).toEqual([])
   await page.screenshot({path:testInfo.outputPath('login.png'),fullPage:true})
 })
@@ -77,19 +72,15 @@ test('canonical home starts with operational hierarchy and stable theme switchin
   await page.addInitScript(()=>localStorage.setItem('pescamar-theme','light'))
   await mockAuthenticatedApp(page,'operations',['ancud'])
   await page.goto('/')
-  const h1=page.getByRole('heading',{name:'Inicio',exact:true})
+  const h1=page.getByRole('heading',{name:'Hoy',exact:true})
   await expect(h1).toBeVisible()
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
   const h1Size=await h1.evaluate(element=>Number.parseFloat(getComputedStyle(element).fontSize))
   expect(h1Size).toBeGreaterThanOrEqual(20)
-  await expect(page.getByRole('region',{name:'Qué está pasando hoy'})).toBeVisible()
   await expect(page.getByRole('region',{name:'Qué tengo que hacer'})).toBeVisible()
-  await expect(page.getByRole('region',{name:'Qué tengo disponible'})).toBeVisible()
-  const brief=page.getByRole('region',{name:'Qué requiere atención'})
-  await expect(brief).toBeVisible()
-  await expect(brief.getByRole('heading',{name:'Qué requiere atención',exact:true})).toBeVisible()
-  const [h1Box,briefBox]=await Promise.all([h1.boundingBox(),brief.boundingBox()])
-  expect(h1Box&&briefBox?h1Box.y<briefBox.y:false).toBe(true)
+  await expect(page.getByRole('region',{name:'Seafood AI'})).toBeVisible()
+  const [h1Box,taskBox]=await Promise.all([h1.boundingBox(),page.getByRole('region',{name:'Qué tengo que hacer'}).boundingBox()])
+  expect(h1Box&&taskBox?h1Box.y<taskBox.y:false).toBe(true)
   const theme=page.getByRole('button',{name:'Cambiar a tema oscuro'})
   await expect(theme).toBeVisible()
   await theme.click()
@@ -100,23 +91,28 @@ test('canonical home starts with operational hierarchy and stable theme switchin
 })
 
 for(const scenario of [
-  {role:'admin' as const,newReception:true,quality:true,sales:true,settings:true},
-  {role:'operations' as const,newReception:true,quality:true,sales:true,settings:true},
-  {role:'finance' as const,newReception:false,quality:false,sales:true,settings:false},
-  {role:'quality' as const,newReception:true,quality:true,sales:false,settings:false},
-  {role:'viewer' as const,newReception:false,quality:true,sales:true,settings:false},
+  {role:'admin' as const,newReception:true,secondaryVisible:true,primary:['Inicio','Seafood AI'] as const,absent:['Recepción','Producción','Calidad','Inventario','Ventas','Rentabilidad'] as const,settings:true},
+  {role:'operations' as const,newReception:true,secondaryVisible:false,primary:['Inicio','Seafood AI','Recepción','Producción','Inventario','Ventas'] as const,absent:['Calidad','Rentabilidad'] as const,settings:true},
+  {role:'finance' as const,newReception:false,secondaryVisible:true,primary:['Inicio','Seafood AI','Rentabilidad','Ventas'] as const,absent:['Recepción','Producción','Calidad','Inventario'] as const,settings:false},
+  {role:'quality' as const,newReception:true,secondaryVisible:true,primary:['Inicio','Seafood AI','Recepción','Calidad'] as const,absent:['Producción','Inventario','Ventas','Rentabilidad'] as const,settings:false},
+  {role:'viewer' as const,newReception:false,secondaryVisible:true,primary:['Inicio','Seafood AI'] as const,absent:['Recepción','Producción','Calidad','Inventario','Ventas','Rentabilidad'] as const,settings:false},
 ]){
   test(`${scenario.role} navigation honors role contract`,async({page},testInfo)=>{
     await mockAuthenticatedApp(page,scenario.role)
     await page.goto('/')
     await expectAuthenticatedNavigation(page,testInfo.project.name)
     const daily=page.getByRole('navigation',{name:'Trabajo diario'})
-    const quality=daily.getByRole('link',{name:'Calidad',exact:true})
-    if(scenario.quality)await expect(quality).toBeVisible();else await expect(quality).toHaveCount(0)
-    const sales=daily.getByRole('link',{name:'Ventas',exact:true})
-    if(scenario.sales)await expect(sales).toBeVisible();else await expect(sales).toHaveCount(0)
-    const settings=page.getByRole('navigation',{name:'Consulta y configuración'}).getByRole('link',{name:'Configuración',exact:true})
-    if(scenario.settings)await expect(settings).toBeVisible();else await expect(settings).toHaveCount(0)
+    for(const label of scenario.primary)await expect(daily.getByRole('link',{name:label,exact:true})).toBeVisible()
+    for(const label of scenario.absent)await expect(daily.getByRole('link',{name:label,exact:true})).toHaveCount(0)
+    const secondary=page.getByRole('navigation',{name:'Consulta y configuración'})
+    if(scenario.secondaryVisible){
+      await expect(secondary.getByRole('link',{name:'Reportes por período',exact:true})).toBeVisible()
+      await expect(secondary.getByRole('link',{name:'Reportes y cierre',exact:true})).toBeVisible()
+      const settings=secondary.getByRole('link',{name:'Configuración',exact:true})
+      if(scenario.settings)await expect(settings).toBeVisible();else await expect(settings).toHaveCount(0)
+    }else{
+      await expect(secondary).toHaveCount(0)
+    }
     await page.goto('/recepciones')
     await expect(page.getByRole('heading',{name:'Recepciones',exact:true})).toBeVisible()
     const receptionCta=page.getByRole('button',{name:/Nueva recepción/})
@@ -190,8 +186,8 @@ test('Seafood AI shell keeps stage and module hierarchy',async({page},testInfo)=
   await expect(main.getByRole('heading',{name:'Seafood AI',exact:true})).toBeVisible()
   const stage=page.locator('.topbar-context').getByText('Inteligencia y control',{exact:true})
   if(testInfo.project.name==='mobile-chromium')await expect(stage).toBeHidden();else await expect(stage).toBeVisible()
-  await expect(main.getByText(/Seafood AI · respuestas con evidencia/)).toBeVisible()
-  await expect(main.getByText(/Sólo consulta · no ejecuta acciones/)).toBeVisible()
+  await expect(main.getByText(/Más contexto, mismo trabajo/)).toBeVisible()
+  await expect(main.getByText(/Seafood AI reúne más datos, detecta excepciones/)).toBeVisible()
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)
   await page.screenshot({path:testInfo.outputPath('pescamar-ia-shell.png'),fullPage:true})
 })

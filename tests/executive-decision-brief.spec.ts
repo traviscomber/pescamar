@@ -30,7 +30,7 @@ async function mockHome(page:Page){
 
 test('home surfaces one coherent purchase, evidence, supplier and plant decision brief',async({page},testInfo)=>{
  await mockHome(page)
- await page.goto('/')
+ await page.goto('/inicio/detalle')
  const brief=page.getByRole('region',{name:'Qué requiere atención'})
  await expect(brief).toBeVisible()
  await expect(brief.getByRole('heading',{name:'Qué requiere atención'})).toBeVisible()
