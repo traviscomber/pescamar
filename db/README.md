@@ -86,6 +86,17 @@ Desde `041_schema_migration_baseline.sql`, Neon conserva un registro explícito 
 
 El inventario anterior describe el repositorio actual. Si se agrega una migración, debe agregarse también a esta tabla; CI verifica esa correspondencia y que los landmarks del preflight sigan alineados con el manifiesto runtime.
 
+## Contrato SQL de endpoints (CI)
+
+`scripts/pilot-insights-sql-smoke.mjs` ejecuta las consultas de solo lectura de `api/pilot-insights.ts` (fuente canónica: `scripts/pilot-insights-queries.mjs`, generada del endpoint y verificada contra él) contra una **rama efímera de Neon** creada desde la rama por defecto: aplica todas las migraciones de `db/migrations/` en orden canónico con `psql -v ON_ERROR_STOP=1` (idem al ejemplo de arriba), corre las 5 consultas del endpoint y borra la rama siempre, incluso ante fallo. Así un SQL inválido del endpoint (por ejemplo un alias con palabra reservada) falla en CI antes de desplegar.
+
+Configuración en GitHub (Settings → Secrets and variables → Actions):
+
+- `NEON_API_KEY` (secret): API key de Neon con alcance del proyecto `pescamar-control` y permisos de edición (crear/borrar ramas y endpoints). Nunca imprimirla ni registrarla.
+- `NEON_PROJECT_ID` (variable): `icy-union-17389410`.
+
+Sin esas dos variables la fase Neon se omite con un aviso explícito (estado de bootstrap); la verificación de deriva entre las consultas y el endpoint (fase 0) corre siempre y falla CI ante cualquier divergencia. Requiere `psql` (preinstalado en los runners `ubuntu-latest` de GitHub).
+
 ## Invariantes de datos
 
 - No crear seeds productivos, mocks ni filas sintéticas para completar un gate.
