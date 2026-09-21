@@ -4,7 +4,7 @@ const sharedPlant={id:'ancud',name:'Ancud Compartida QA',location:'Ancud · esta
 type MockOptions={role?:'admin'|'operations';plantStateFails?:boolean}
 
 async function mock(page:Page,options:MockOptions={}){
- const role=options.role??'admin',plantIds=role==='admin'?['ancud','quellon','iquique','piedra-azul','aqua-austral','natales']:['ancud']
+ const role=options.role??'admin',plantIds=role==='admin'?['ancud','quellon','iquique','piedra-azul','aqua-austral','natales','santa-rosa']:['ancud']
  await page.route('**/api/**',async route=>{
   const path=new URL(route.request().url()).pathname
   const json=(body:unknown,status=200)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)})

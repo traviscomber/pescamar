@@ -11,7 +11,7 @@ type ExtraPayload={events?:TimelineEvent[];error?:string}
 
 const moduleLabels:Record<string,string>={recepcion:'Recepción',calidad:'Calidad',produccion:'Producción',decisiones:'Decisiones',creditos:'Créditos',liquidaciones:'Liquidaciones',datos:'Datos',equipo:'Equipo',planificacion:'Planificación',inventario:'Inventario',costos:'Costos',cierre:'Cierre'}
 const icons:Record<string,typeof Boxes>={recepcion:Boxes,calidad:AlertTriangle,produccion:Factory,decisiones:CheckCheck,creditos:Landmark,liquidaciones:ReceiptText,datos:Database,equipo:Users,planificacion:Target,inventario:PackageSearch,costos:DollarSign,cierre:CalendarCheck2}
-const plantLabels:Record<string,string>={ancud:'Ancud',quellon:'Quellón',iquique:'Iquique','piedra-azul':'Piedra Azul','aqua-austral':'Aqua Austral',natales:'Natales'}
+const plantLabels:Record<string,string>={ancud:'Ancud',quellon:'Quellón',iquique:'Iquique','piedra-azul':'Piedra Azul','aqua-austral':'Aqua Austral',natales:'Natales','santa-rosa':'Santa Rosa'}
 
 function parseTimelineDate(value:string){
   if(!value)return null

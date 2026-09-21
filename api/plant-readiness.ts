@@ -11,7 +11,7 @@ type InventoryRow={plant_id:string|null;kg:string|number}
 type CloseDayRow={plant_id:string|null;operating_date:string|Date}
 type UatState='blocked'|'in_progress'|'ready_for_human_uat'
 type LiveReadinessState='uat_incomplete'|'continuity_pending'|'ready_for_human_live_review'
-const ids=['ancud','quellon','iquique','piedra-azul','aqua-austral','natales'] as const
+const ids=['ancud','quellon','iquique','piedra-azul','aqua-austral','natales','santa-rosa'] as const
 const n=(value:unknown)=>{const parsed=Number(value);return Number.isFinite(parsed)?parsed:0}
 const byPlant=(rows:MetricRow[])=>new Map(rows.filter(row=>row.plant_id).map(row=>[row.plant_id as string,{count:n(row.count),lastAt:row.last_at??null}]))
 const inventoryMap=(rows:InventoryRow[])=>new Map(rows.filter(row=>row.plant_id).map(row=>[row.plant_id as string,n(row.kg)]))

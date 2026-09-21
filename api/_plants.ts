@@ -1,6 +1,6 @@
 import type { SessionOperator } from "./_auth.js";
 
-export const PLANT_IDS=["ancud","quellon","iquique","piedra-azul","aqua-austral","natales"] as const;
+export const PLANT_IDS=["ancud","quellon","iquique","piedra-azul","aqua-austral","natales","santa-rosa"] as const;
 const plantIdPattern=/^[a-z0-9][a-z0-9-]{1,48}$/;
 export function normalizePlantIds(value:unknown){if(!Array.isArray(value))return[];return Array.from(new Set(value.map(item=>String(item).trim().toLowerCase()).filter(item=>plantIdPattern.test(item))))}
 export function hasPlantAccess(operator:SessionOperator,plantId:string){return operator.role==="admin"||operator.plantIds.includes(plantId)}

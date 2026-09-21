@@ -27,7 +27,7 @@ test("admin registers a plant dataset batch from /uni and sees it pending review
       batches = [created];
       return json({ ok: true, batch: created }, 201);
     }
-    if (path === "/api/edgevision-datasets") return json({ ok: true, items: batches, plants: ["ancud", "quellon", "iquique", "piedra-azul", "aqua-austral", "natales"], capabilities: ["count", "calibre", "size", "defects", "biomass", "anomaly"], qaStatuses: ["pending_review", "validated", "rejected"] });
+    if (path === "/api/edgevision-datasets") return json({ ok: true, items: batches, plants: ["ancud", "quellon", "iquique", "piedra-azul", "aqua-austral", "natales", "santa-rosa"], capabilities: ["count", "calibre", "size", "defects", "biomass", "anomaly"], qaStatuses: ["pending_review", "validated", "rejected"] });
     if (path === "/api/edgevision-baseline") return json({ ok: false, promoted: false, code: "NO_VALIDATED_BATCH", reason: "No existe ningún lote qa_status=validated para la capacidad 'count'. La frontera predictiva permanece cerrada.", policyBoundary: "La frontera predictiva permanece cerrada." }, 409);
     return json({ ok: true });
   });
@@ -59,7 +59,7 @@ test("baseline promotion evaluation answers 409 with the policy boundary and the
     const json = (body: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
     if (path === "/api/status") return json(statusPayload);
     if (path === "/api/auth") return json({ ok: true, operator: adminOperator() });
-    if (path === "/api/edgevision-datasets") return json({ ok: true, items: [], plants: ["ancud", "quellon", "iquique", "piedra-azul", "aqua-austral", "natales"], capabilities: ["count", "calibre", "size", "defects", "biomass", "anomaly"], qaStatuses: ["pending_review", "validated", "rejected"] });
+    if (path === "/api/edgevision-datasets") return json({ ok: true, items: [], plants: ["ancud", "quellon", "iquique", "piedra-azul", "aqua-austral", "natales", "santa-rosa"], capabilities: ["count", "calibre", "size", "defects", "biomass", "anomaly"], qaStatuses: ["pending_review", "validated", "rejected"] });
     if (path === "/api/edgevision-baseline") return json({ ok: false, promoted: false, code: "NO_VALIDATED_BATCH", reason: "No existe ningún lote qa_status=validated para la capacidad 'count'. La frontera predictiva permanece cerrada: promover un dataset a línea de base sólo registra evidencia. Las capacidades predictivas se habilitan únicamente después de Gate 5 y Gate 7 de docs/SEAFOOD-GRADE-A.md.", policyBoundary: "La frontera predictiva permanece cerrada." }, 409);
     return json({ ok: true });
   });

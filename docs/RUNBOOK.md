@@ -44,6 +44,8 @@ En Neon, la práctica segura es crear una rama efímera desde `main`, aplicar ah
 - Después de aplicar: verificar `select migration_name,evidence_kind,applied_at from schema_migrations order by 1` y el `pilotGate` de `/api/schema-preflight` (debe pasar a `pass`).
 - CI protege el SQL de los endpoints de solo lectura con `scripts/endpoint-sql-contracts.mjs` (rama efímera + migraciones + consultas canónicas); un SQL inválido falla CI antes de desplegar, pero **aplicar la migración en Neon sigue siendo manual**.
 
+**Decisión 060 — Santa Rosa, 7ª planta (2026-09-21):** `060_santa_rosa_plant.sql` expande los CHECK de `plant_id` en `receptions` y `plant_identity_links` para incluir `santa-rosa` (expand-only). Decisión evidence-based: el sitio «Santa Rosa» es un lugar histórico distinto de Planta Quellón (sector Santa Rosa, zona de extracción Quellón; 87 registros históricos abr-2025–jun-2026 y 121 canónicos hasta sep-2026, la actividad más reciente de cualquier sitio) y ninguna de las 6 plantas del catálogo coincide con esa evidencia. Queda **pendiente confirmación en terreno**: el modo `Maquila` y la ubicación en `src/plants.ts` son inferidos de la evidencia histórica (clientes tipo Maruha, recepción/proceso de erizo) y deben verificarse en la primera visita. El contrato `scripts/migration-inventory-smoke.mjs` pinea que las 7 slugs sean idénticas en `src/plants.ts`, `api/_plants.ts` y los CHECK de 060.
+
 ## 4. CI/CD
 
 Workflow `Quality` (`.github/workflows/quality.yml`), corre en cada push a `main` y en PRs hacia `main`, `feat/**` y `docs/**`:
