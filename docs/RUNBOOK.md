@@ -48,7 +48,7 @@ Workflow `Quality` (`.github/workflows/quality.yml`), corre en cada push a `main
 
 1. `npm ci` → `npm run quality` (lint 0 warnings + typecheck + build).
 2. ~39 contratos en `scripts/*.mjs` (inventario de migraciones, contratos de UI, contrato SQL de endpoints contra Neon efímero).
-3. Playwright desktop + mobile (Chromium) con artefactos de evidencia adjuntos al run.
+3. Playwright desktop + mobile (Chromium) con artefactos de evidencia adjuntos al run. Incluye el gate de accesibilidad `tests/a11y-axe.spec.ts` (axe-core, reglas `wcag2a`/`wcag2aa`): escanea 8 rutas autenticadas de alto tráfico y falla sólo en violaciones `critical`/`serious`; los warnings `moderate`/`minor` se reportan en la salida sin bloquear.
 
 **Regla same-SHA:** un cambio solo se considera desplegado cuando CI está en `success` **y** Vercel reporta `Deployment has completed` **sobre el mismo SHA**. Comprobar: API de GitHub Actions (`actions/runs?branch=main`) y Deployments del repo.
 

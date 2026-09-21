@@ -67,7 +67,7 @@ export function Receptions({lots,onNew}:{lots:Lot[];onNew:()=>void}){
       <summary><span><b>{c.history}</b><small>{historyCount.toLocaleString(formatLocale)} {c.recordsAvailable}</small></span><span>{c.viewHistory}</span></summary>
       <div className="receptions-history-body">
         <DataContinuityBanner compact/>
-        <section className="summary-strip reception-context" aria-label={c.historyAria}>
+        <section className="summary-strip reception-context" aria-label={c.historyAria} tabIndex={0}>
           <div><small>{c.records}</small><b>{historyCount.toLocaleString(formatLocale)}</b></div>
           <div><small>{c.guideKg}</small><b>{kg(summary?.guide_kg,formatLocale)}</b></div>
           <div><small>{c.receivedKg}</small><b>{kg(summary?.received_kg,formatLocale)}</b></div>

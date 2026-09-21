@@ -56,7 +56,7 @@ export function InventoryFocus(){
         <div className="decision-focus-copy"><span className="overline">{primary.eyebrow}</span><h2>{primary.title}</h2><p>{primary.text}</p></div>
         <Link className="button primary" to={primary.to}>{primary.label}<ArrowRight size={16}/></Link>
       </section>
-      <section className="summary-strip" aria-label={text('Resumen de inventario actual','Current inventory summary')}>
+      <section className="summary-strip" aria-label={text('Resumen de inventario actual','Current inventory summary')} tabIndex={0}>
         <div><small>{text('Disponible','Available')}</small><b>{kg(totals.planning)}</b></div>
         <div><small>{text('Lotes retenidos','Held lots')}</small><b>{totals.blocked}</b></div>
         <div><small>{text('Por ubicar','Unlocated')}</small><b>{kg(totals.unlocated)}</b></div>

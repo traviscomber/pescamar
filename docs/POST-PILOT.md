@@ -28,6 +28,7 @@ A partir de este cierre, **toda mejora cosmética o idea nueva pasa a POST-PILOT
 ## Conocido y aceptado
 
 - **Warnings de lint preexistentes** (unused vars, `any`): no bloquean; candidatos a higiene en el próximo sprint técnico.
+- **Cobertura a11y activa**: gate axe (`tests/a11y-axe.spec.ts`, wcag2a/2aa) en 8 rutas autenticadas clave, desktop y mobile; barra critical/serious. Warnings moderate/minor restantes conocidos y reportados en salida de CI; no bloquean por política (promover a aserción solo si un usuario piloto lo exige).
 - **Deploy Vercel protegido por SSO**: verificable vía estado del deployment; además `GET /api/public-health` (sin datos sensibles) se monitorea en prod con un cron horario (minuto 17, America/Santiago) que resuelve la URL del deployment más reciente vía GitHub Deployments y consulta el endpoint con el header `x-vercel-protection-bypass` (Protection Bypass for Automation), alertando si cae (HTTP ≠ 200 o `ok` ≠ true). Mientras un deployment está construyéndose reporta `deploying` sin alarma. El equipo también tiene una vista interna de salud dentro del sitio en `/admin/salud` (solo admin, protegida por el SSO del deployment): muestra el build desplegado y el estado vivo del endpoint público medido con la sesión propia, como complemento del monitor externo programado.
 
 ## Criterio de reactivación
