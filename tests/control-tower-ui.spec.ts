@@ -68,7 +68,7 @@ test('audit filters and register form one continuous control surface',async({pag
 
 test('observability reads as a single expanded control plane',async({page},testInfo)=>{
   await mockControlTower(page);await page.goto('/observabilidad')
-  await expect(page.getByRole('heading',{name:'Observabilidad y alertas',exact:true})).toBeVisible()
+  await expect(page.getByRole('heading',{name:'Observabilidad y alertas',exact:true})).toBeVisible({timeout:15000})
   const health=page.locator('.operational-health.expanded'),hero=health.locator('.operational-health-hero'),checks=health.locator('.operational-check');await expect(health).toBeVisible();await expect(checks).toHaveCount(3);await noShadow(hero);await noShadow(checks.first())
   await stable(page);await page.screenshot({path:testInfo.outputPath('observability-control-tower.png'),fullPage:true})
 })

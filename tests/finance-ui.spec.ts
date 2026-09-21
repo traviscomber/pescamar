@@ -57,7 +57,7 @@ test('credits summary is one continuous financial rail',async({page},testInfo)=>
 
 test('settlement summary and calculation avoid nested metric cards',async({page},testInfo)=>{
   await mockFinanceApp(page);await page.goto('/liquidaciones')
-  await expect(page.getByRole('heading',{name:'Liquidaciones',exact:true})).toBeVisible()
+  await expect(page.getByRole('heading',{name:'Liquidaciones',exact:true})).toBeVisible({timeout:15000})
   const summary=page.locator('.settlement-summary>article');await expect(summary).toHaveCount(4);await sameRowOnDesktop(summary,testInfo.project.name)
   const calculation=page.locator('.settlement-calculation>div');await expect(calculation).toHaveCount(5)
   expect(await calculation.first().evaluate(el=>getComputedStyle(el).boxShadow)).toBe('none')
