@@ -123,3 +123,46 @@ test('build watcher reloads once when the served shell references a newer main a
  await page.waitForSelector('.app-shell')
  await page.waitForFunction(()=>Boolean(window.sessionStorage.getItem('pescamar-build-reload-at')),{timeout:20_000})
 })
+
+test('rapid navigation dedupes same-path bursts, keeps one heartbeat and a stable locale',async({page})=>{
+ const bodies:string[]=[]
+ await page.route('**/api/**',async route=>{
+  const path=new URL(route.request().url()).pathname
+  const json=(body:unknown,status=200)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)})
+  if(path==='/api/auth')return json({ok:true,operator:{id:'22222222-2222-4222-8222-222222222222',fullName:'QA Admin',email:'admin@example.test',role:'admin',plantIds:['ancud']}})
+  if(path==='/api/status')return json({ok:true,platform:'vercel-functions',environment:'test',persistence:{database:true,files:true},metrics:{pendingDecisions:0,pendingCredits:0,activeOperators:1,receptions:0},commit:'qa12345',checkedAt:new Date().toISOString()})
+  if(path==='/api/pilot-events'){bodies.push(route.request().postData()??'');return json({ok:true,received:1},201)}
+  return json({ok:true})
+ })
+ // Three distinct routes in quick succession, then the same route again
+ // within the 2 s dedupe window via an immediate reload: exactly the
+ // build-watcher / redirect-flap shape that used to duplicate both the route
+ // event and the heartbeat. Each document flushes explicitly before leaving
+ // (unload-time beacons are not reliably observable from the test process).
+ const flush=()=>page.evaluate(()=>window.dispatchEvent(new Event('pagehide')))
+ await page.goto('/recepciones')
+ await page.waitForSelector('.app-shell')
+ await flush()
+ await page.goto('/lineage')
+ await page.waitForSelector('.app-shell')
+ await flush()
+ await page.goto('/uni')
+ await page.waitForSelector('.app-shell')
+ await flush()
+ await page.goto('/modulos')
+ await page.waitForSelector('.app-shell')
+ await flush()
+ await page.reload({waitUntil:'domcontentloaded'})
+ await page.waitForSelector('.app-shell')
+ await flush()
+ await expect.poll(()=>bodies.length).toBe(4)
+ const events=bodies.flatMap(body=>{const payload=JSON.parse(body) as {events?:Array<{event:string;path:string;locale:string}>};return payload.events??[]})
+ const routes=events.filter(event=>event.event==='route_visited')
+ const heartbeats=events.filter(event=>event.event==='instrumentation_heartbeat')
+ const distinctPaths=[...new Set(routes.map(event=>event.path))]
+ expect(routes).toHaveLength(4)
+ expect(distinctPaths).toEqual(['/recepciones','/lineage','/uni','/modulos'])
+ expect(routes.filter(event=>event.path==='/modulos')).toHaveLength(1)
+ expect(heartbeats).toHaveLength(1)
+ for(const event of events)expect(event.locale).toBe('es')
+})
