@@ -9,7 +9,7 @@ export const plants:Plant[]=[
   {id:'piedra-azul',name:'Planta Piedra Azul',location:'Puerto Montt · Los Lagos',mode:'Maquila y producto terminado',products:['Centolla','Salmón Chinook','Corvina'],sourceStatus:'unlinked',active:true},
   {id:'aqua-austral',name:'Planta Aqua Austral',location:'Región de Aysén',mode:'Producto terminado',products:['Merluza austral','Congrio','Salmón de cultivo'],sourceStatus:'unlinked',active:true},
   {id:'natales',name:'Planta Natales',location:'Puerto Natales · Magallanes',mode:'Producto terminado',products:['Erizos','Centolla','Centollón','Ostiones'],sourceStatus:'unlinked',active:true},
-  {id:'santa-rosa',name:'Planta Santa Rosa',location:'Santa Rosa · Quellón (Chiloé)',mode:'Maquila',products:[],sourceStatus:'linked',active:true,description:'Séptima planta: sitio histórico distinto de Planta Quellón (sector Santa Rosa, zona de extracción Quellón). Evidencia: 87 registros históricos abr-2025–jun-2026 y 121 canónicos hasta sep-2026; modo maquila inferido de clientes/observaciones históricas; pendiente confirmación en terreno.'}
+  {id:'santa-rosa',name:'Planta Santa Rosa',location:'Santa Rosa · Quellón (Chiloé)',mode:'Maquila',products:[],sourceStatus:'unlinked',active:true,description:'Séptima planta: sitio histórico distinto de Planta Quellón (sector Santa Rosa, zona de extracción Quellón). Evidencia: 87 registros históricos abr-2025–jun-2026 y 121 canónicos hasta sep-2026; modo maquila inferido de clientes/observaciones históricas; pendiente confirmación en terreno.'}
 ]
 
 export const canonicalSource={name:'planilla de produccion 2025.xlsx',period:'03 abr — 24 oct 2025',records:394,status:'Validada · planta pendiente de confirmación'}
