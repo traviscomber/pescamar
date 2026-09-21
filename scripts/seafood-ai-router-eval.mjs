@@ -21,12 +21,12 @@ const cases=[
  {id:'en_orders',q:'Which customer orders are pending?',route:'fast_evidence',required:['orders']},
  {id:'es_finance',q:'¿Cuál es el costo actual?',route:'fast_evidence',required:['finance']},
  {id:'en_finance',q:'What is our current margin?',route:'fast_evidence',required:['finance']},
- {id:'es_finance_history',q:'¿Cuál es la tendencia del margen por cliente?',route:'investigative',intent:'investigate_historical_comparison',required:['finance','orders','historical_lineage','canonical_intelligence','ml_intelligence'],humanGate:'material_action_review'},
- {id:'en_finance_history',q:'What is the margin trend by customer?',route:'investigative',intent:'investigate_historical_comparison',required:['finance','orders','historical_lineage','canonical_intelligence','ml_intelligence'],humanGate:'material_action_review'},
+ {id:'es_finance_history',q:'¿Cómo evolucionó el margen por cliente este año?',route:'investigative',intent:'investigate_historical_comparison',required:['finance','orders','historical_lineage','canonical_intelligence','ml_intelligence'],humanGate:'material_action_review'},
+ {id:'en_finance_history',q:'How did margin by customer evolve this year?',route:'investigative',intent:'investigate_historical_comparison',required:['finance','orders','historical_lineage','canonical_intelligence','ml_intelligence'],humanGate:'material_action_review'},
  {id:'es_dispatch_orders',q:'¿Qué órdenes de venta puedo despachar hoy?',route:'fast_evidence',intent:'direct_orders',required:['orders'],humanGate:'material_action_review'},
  {id:'en_dispatch_orders',q:'Which sales orders can I dispatch today?',route:'fast_evidence',intent:'direct_orders',required:['orders'],humanGate:'material_action_review'},
- {id:'es_release_hold',q:'¿Puedo despachar este lote con hold regulatorio?',hasLot:true,route:'deterministic',intent:'lot_operational_status',required:['lot_control','operational_intelligence'],humanGate:'material_action_review'},
- {id:'en_release_hold',q:'Can I dispatch this lot with the regulatory hold?',hasLot:true,route:'deterministic',intent:'lot_operational_status',required:['lot_control','operational_intelligence'],humanGate:'material_action_review'},
+ {id:'es_release_hold',q:'¿Puedo liberar el hold regulatorio de este lote?',hasLot:true,route:'deterministic',intent:'lot_operational_status',required:['lot_control','operational_intelligence'],humanGate:'material_action_review'},
+ {id:'en_release_hold',q:'Can I release the regulatory hold on this lot?',hasLot:true,route:'deterministic',intent:'lot_operational_status',required:['lot_control','operational_intelligence'],humanGate:'material_action_review'},
  {id:'es_quality_rejections',q:'¿Hay rechazos de calidad pendientes?',route:'fast_evidence',required:['quality','operational_intelligence','orders','inventory'],humanGate:'material_action_review'},
  {id:'en_quality_rejections',q:'Are there pending quality rejections?',route:'fast_evidence',required:['quality','operational_intelligence','orders','inventory'],humanGate:'material_action_review'},
  {id:'es_priority_why',q:'¿Por qué subieron las prioridades P1 esta semana?',route:'investigative',intent:'investigate_operational_intelligence_quality_orders_inventory',required:['operational_intelligence','quality','orders','inventory'],humanGate:'material_action_review'},
@@ -99,7 +99,7 @@ if(sufficient.status!=='sufficient'||sufficient.coveragePct!==100)failures.push(
 if(limited.status!=='limited'||limited.coveragePct!==100||!limited.empty.includes('operational_intelligence'))failures.push('evidence gate: present-but-empty required evidence must be limited')
 if(insufficient.status!=='insufficient'||insufficient.coveragePct!==50||!insufficient.missing.includes('operational_intelligence'))failures.push('evidence gate: missing required evidence must be insufficient with reduced coverage')
 
-const crossDomain=routeSeafoodQuery({question:'¿Cuál es la tendencia del margen por cliente?',hasLot:false,hasPhotos:false,seniorUrchin:false})
+const crossDomain=routeSeafoodQuery({question:'¿Cómo evolucionó el margen por cliente este año?',hasLot:false,hasPhotos:false,seniorUrchin:false})
 const crossSufficient=evaluateEvidenceSufficiency(crossDomain,[{id:'finance',rows:3},{id:'orders',rows:2},{id:'historical_lineage',rows:2},{id:'canonical_intelligence',rows:1},{id:'ml_intelligence',rows:1}])
 const crossLimited=evaluateEvidenceSufficiency(crossDomain,[{id:'finance',rows:3},{id:'orders',rows:2},{id:'historical_lineage',rows:0},{id:'canonical_intelligence',rows:1},{id:'ml_intelligence',rows:1}])
 const crossInsufficient=evaluateEvidenceSufficiency(crossDomain,[{id:'finance',rows:3},{id:'orders',rows:2},{id:'historical_lineage',rows:2},{id:'canonical_intelligence',rows:1}])
