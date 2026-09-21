@@ -16,7 +16,7 @@ async function mockSession(page:Page,operator:Record<string,unknown>){
 
 async function openNavigation(page:Page,projectName:string){
  if(projectName!=='mobile-chromium')return
- const trigger=page.getByRole('button',{name:'Abrir menú'})
+ const trigger=page.getByRole('button',{name:/Abrir menú|Open menu/})
  await expect(trigger).toBeVisible()
  await trigger.click()
  await expect(page.locator('.sidebar')).toHaveClass(/is-open/)
@@ -28,7 +28,7 @@ test('executive flag enables CEO experience without email matching',async({page}
  await openNavigation(page,testInfo.project.name)
  await expect(page.getByRole('navigation',{name:'Dirección'})).toBeVisible()
  await expect(page.getByRole('navigation',{name:'Trabajo diario'})).toHaveCount(0)
- if(testInfo.project.name!=='mobile-chromium')await expect(page.getByText(/Ejecutivo QA · CEO/)).toBeVisible()
+ if(testInfo.project.name!=='mobile-chromium')await expect(page.getByRole('button',{name:/Ejecutivo QA · CEO/})).toBeVisible()
 })
 
 test('admin without executive flag keeps the standard daily view',async({page},testInfo)=>{

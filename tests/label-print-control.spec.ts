@@ -20,8 +20,8 @@ test('physical Label Engine preserves validated-label, printer and idempotency g
  expect(options).toContain("l.status='validated'")
  expect(options).toContain("d.device_type='printer'")
  expect(access).toContain('"/impresion-etiquetas":["admin","operations","quality"]')
- expect(vercel).toContain('"source": "/impresion-etiquetas"')
- expect(vercel).toContain('"source": "/impresion-etiquetas/detalle"')
+ expect(vercel).toContain('"/:path((?!api/).*)"')
+ expect(vercel).toContain('"/index.html"')
 })
 
 async function mock(page:Page,writesEnabled=true){
