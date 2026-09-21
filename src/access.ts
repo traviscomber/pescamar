@@ -45,6 +45,7 @@ const access:Record<string,AppRole[]|"all">={
   "/operadores":["admin","operations"],
   "/modulos":["admin","operations"],
  "/admin/salud":["admin"],
+ "/admin/pilotaje":["admin"],
 };
 
 const plantAgentExecutors:Record<PlantAgentAction,AppRole[]>={

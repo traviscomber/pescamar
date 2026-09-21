@@ -110,6 +110,8 @@ jobs:
         run: node scripts/audit-smoke.mjs
       - name: Public production health check
         run: node scripts/public-health-smoke.mjs
+      - name: Pilot telemetry contract
+        run: node scripts/pilot-telemetry-smoke.mjs
       - name: Install pinned browser test runtime
         run: |
           npm install --no-save --ignore-scripts @playwright/test@1.55.0
