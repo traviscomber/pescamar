@@ -82,6 +82,7 @@ Desde `041_schema_migration_baseline.sql`, Neon conserva un registro explícito 
 | `053_gs1_identity_registry.sql` | registry versionado de identidades GS1 GTIN/GLN/SSCC con checksum, evidencia obligatoria y revisión humana |
 | `054_design_assets.sql` | registry de assets de diseño con lifecycle, provenance y binarios en Neon Object Storage |
 | `055_ml_human_feedback.sql` | feedback humano `good/bad` para Seafood AI/ML con comentario, contexto, revisión posterior y prohibición explícita de auto-retraining |
+| `056_pilot_events.sql` | telemetría de fricción de pilotaje: beacon de rutas visitadas autenticado por sesión, sin query strings ni PII, rol siempre server-side, sólo lectura para el criterio de reactivación UX |
 
 El inventario anterior describe el repositorio actual. Si se agrega una migración, debe agregarse también a esta tabla; CI verifica esa correspondencia y que los landmarks del preflight sigan alineados con el manifiesto runtime.
 
