@@ -6,13 +6,15 @@ const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
 const runtimeDdl=/\b(create table|alter table|create index|drop table|drop index)\b/i
 
-const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,receptionSchemaSource,evidenceFileSource,bootstrapSource,visionSource,receptionsSource,inventorySource,commercialSource,settlementsSource,approvalsSource,timelineSource,creditsSource,costsSource,dailyCloseSource,productionLinesSource,overviewSource,lot360Source,lotContinuitySource,appSource,operationalHealthSource,liveLotDrawerSource,receptionModalSource,creditsPageSource,commercialPageSource,inventoryPageSource]=await Promise.all([
+const [indexHtml,mainSource,appCss,mobileCss,a11yCss,authSource,authHandlerSource,webhookSource,receptionSchemaSource,evidenceFileSource,bootstrapSource,visionSource,receptionsSource,inventorySource,commercialSource,settlementsSource,approvalsSource,timelineSource,creditsSource,costsSource,dailyCloseSource,productionLinesSource,overviewSource,lot360Source,lotContinuitySource,appSource,operationalHealthSource,liveLotDrawerSource,receptionModalSource,creditsPageSource,commercialPageSource,inventoryPageSource]=await Promise.all([
   fetch(base,{redirect:'manual'}).then(async response=>({status:response.status,text:await response.text()})),
   readFile(new URL('../src/main.tsx',import.meta.url),'utf8'),
   readFile(new URL('../src/app.css',import.meta.url),'utf8'),
   readFile(new URL('../src/mobile.css',import.meta.url),'utf8'),
   readFile(new URL('../src/a11y.css',import.meta.url),'utf8'),
   readFile(new URL('../api/_auth.ts',import.meta.url),'utf8'),
+  readFile(new URL('../api/auth.ts',import.meta.url),'utf8'),
+  readFile(new URL('../api/whatsapp-webhook.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/_reception-schema.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/reception-evidence-file.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/bootstrap.ts',import.meta.url),'utf8'),
@@ -55,6 +57,9 @@ assert(a11yCss.includes(':focus-visible'),'visible focus contract is missing')
 assert(a11yCss.includes('prefers-reduced-motion'),'reduced-motion contract is missing')
 assert(a11yCss.includes('min-width:44px')&&a11yCss.includes('min-height:44px'),'touch target contract is missing')
 assert(!authSource.includes('AUTH_BYPASS')&&!authSource.includes('TEMPORARY_OPERATOR'),'authentication bypass code must not exist')
+assert(authHandlerSource.includes('DUMMY_PASSWORD_HASH')&&authHandlerSource.includes('hashPassword'),'login must verify unknown emails against a dummy scrypt hash so response time cannot enumerate accounts')
+assert(webhookSource.includes('timingSafeEqual')&&webhookSource.includes('x-pescamar-webhook-key')&&webhookSource.includes('allowClientIp'),'webhook secret must compare in constant time, accept the header channel and stay rate limited per IP')
+assert(bootstrapSource.includes('allowClientIp'),'admin bootstrap must be rate limited per IP')
 assert(!runtimeDdl.test(receptionSchemaSource),'runtime reception schema helper must remain side-effect free')
 assert(!runtimeDdl.test(bootstrapSource),'admin bootstrap must not execute schema DDL')
 assert(!runtimeDdl.test(productionLinesSource),'production lines endpoint must not execute schema DDL')

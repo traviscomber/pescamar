@@ -1,5 +1,6 @@
 import {timingSafeEqual} from 'node:crypto'
 import {getSql} from './_db.js'
+import {allowClientIp} from './_rate-limit.js'
 
 declare const process:{env:Record<string,string|undefined>}
 
@@ -28,6 +29,7 @@ export default async function handler(req:Request,res:Response){
  if(req.method!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({ok:false,error:'Método no permitido'})}
  if(!writesEnabled())return res.status(503).json({ok:false,code:'PLANT_EXECUTION_WRITES_DISABLED',error:'Ingesta de sensores deshabilitada hasta verificar Plant Execution'})
  if(!configuredSecret())return res.status(503).json({ok:false,code:'COLD_SENSOR_INGEST_NOT_CONFIGURED',error:'Ingesta automática de sensores no configurada'})
+ if(!allowClientIp(req,60_000,30))return res.status(429).json({ok:false,error:'Demasiadas lecturas de sensores por minuto'})
  if(!authorized(req))return res.status(401).json({ok:false,error:'Credencial de sensor inválida'})
  try{
   const input=(req.body??{}) as Input

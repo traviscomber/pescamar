@@ -1,4 +1,4 @@
-import { createSession, clearSessionCookie, destroySession, executiveExperienceFor, requireOperator, sessionCookie, verifyPassword } from "./_auth.js";
+import { createSession, clearSessionCookie, destroySession, executiveExperienceFor, hashPassword, requireOperator, sessionCookie, verifyPassword } from "./_auth.js";
 import { clearSuccessfulPair, loginRateState, recordAuthEvent, recordLoginFailure } from "./_auth-security.js";
 import { getSql } from "./_db.js";
 import { activeOrganization, resolveRequestOrganization } from "./_organization.js";
@@ -7,6 +7,9 @@ type Request={method?:string;body?:unknown;headers?:Record<string,string|string[
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void};
 type LoginInput={email?:unknown;password?:unknown};
 const emailPattern=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Dummy hash keeps scrypt cost constant for unknown emails so response time cannot
+// reveal whether an account exists (uniform work on both login branches).
+const DUMMY_PASSWORD_HASH=hashPassword('pescamar-login-timing-equalizer');
 
 export default async function handler(request:Request,response:Response){
   response.setHeader("Cache-Control","no-store");
@@ -34,7 +37,8 @@ export default async function handler(request:Request,response:Response){
 
       const rows=await getSql()`select id,full_name,email,role,password_hash,plant_ids from operators where lower(email)=${email} and active=true limit 1`;
       const row=Array.isArray(rows)?rows[0] as {id:string;full_name:string;email:string;role:string;password_hash:string|null;plant_ids:string[]}|undefined:undefined;
-      if(!row||!verifyPassword(password,row.password_hash)){
+      const passwordOk=verifyPassword(password,row?.password_hash??DUMMY_PASSWORD_HASH);
+      if(!row||!passwordOk){
         await recordLoginFailure(request,email);
         return response.status(401).json({ok:false,error:"Correo o contraseña inválidos"});
       }

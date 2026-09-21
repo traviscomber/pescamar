@@ -12,6 +12,7 @@ const [endpoint,statusEndpoint,integration,control,focus,model]=await Promise.al
 ])
 
 assert(endpoint.includes("COLD_SENSOR_INGEST_SECRET"),'sensor ingest must fail closed behind a dedicated secret')
+assert(endpoint.includes('allowClientIp'),'sensor ingest must be rate limited per IP')
 assert(endpoint.includes("PLANT_EXECUTION_WRITES_ENABLED"),'sensor ingest must honor Plant Execution write gate')
 assert(endpoint.includes("x-pescamar-sensor-key")&&endpoint.includes('timingSafeEqual'),'sensor ingest must authenticate machine writes without an operator session')
 assert(endpoint.includes("source,device_id,observed_by_operator_id")&&endpoint.includes("'sensor'")&&endpoint.includes('::uuid,null'),'sensor telemetry must be stored as machine-originated evidence without a fake operator')

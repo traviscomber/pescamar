@@ -1,6 +1,7 @@
 import { hashPassword } from "./_auth.js";
 import { isAdminAuthorized, isAdminConfigured } from "./_admin.js";
 import { getSql } from "./_db.js";
+import { allowClientIp } from "./_rate-limit.js";
 
 type Request = {
   method?: string;
@@ -37,6 +38,8 @@ export default async function handler(request: Request, response: Response) {
     }
     if (!isAdminConfigured())
       return response.status(503).json({ ok: false, error: "Bootstrap administrativo no configurado" });
+    if (!allowClientIp(request, 60_000, 10))
+      return response.status(429).json({ ok: false, error: "Demasiados intentos de activación por minuto" });
     if (!isAdminAuthorized(request))
       return response.status(401).json({ ok: false, error: "Clave de activación inválida" });
 
