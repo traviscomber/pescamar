@@ -2,7 +2,7 @@ import {readFile} from 'node:fs/promises'
 
 const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
-const [endpoint,engine,copilot,brief,css,today,passCss,hero]=await Promise.all([
+const [endpoint,engine,copilot,brief,css,today,passCss,hero,i18n]=await Promise.all([
  readFile(new URL('../api/operational-intelligence-overview.ts',import.meta.url),'utf8'),
  readFile(new URL('../api/_operational-intelligence.ts',import.meta.url),'utf8'),
  readFile(new URL('../api/_copilot-operational-intelligence.ts',import.meta.url),'utf8'),
@@ -11,6 +11,7 @@ const [endpoint,engine,copilot,brief,css,today,passCss,hero]=await Promise.all([
  readFile(new URL('../src/pages/DailyClose.tsx',import.meta.url),'utf8'),
  readFile(new URL('../src/control-tower-pass.css',import.meta.url),'utf8'),
  readFile(new URL('../src/components/HomeHero.tsx',import.meta.url),'utf8'),
+ readFile(new URL('../src/i18n.tsx',import.meta.url),'utf8'),
 ])
 
 assert(endpoint.includes("schemaVersion:'seafood.operational-intelligence.overview.v1'"),'Control Tower operational overview must be versioned')
@@ -52,10 +53,12 @@ assert(brief.includes('comparableCandidates=candidates.filter(item=>item.supplie
 assert(brief.includes("t('brief.scoreDetail',{score:nf.format(preferred.purchaseScore),coverage:nf.format(preferred.supplier.coverage),confidence:preferred.supplier.confidence})"),'supplier score presentation must expose score, evidence coverage and confidence')
 assert(today.includes("readJson<OperationalPayload>(`/api/operational-intelligence-overview"),'Today must consume the same Operational Intelligence overview as the executive Control Tower')
 assert(!today.includes("readJson<TowerPayload>(`/api/control-tower"),'Today must not use the legacy parallel lot ranking as a priority source')
-assert(today.includes("source:'event_graph' as const")&&today.includes("?'Origen':'Source'")&&today.includes("'registros del lote y operación actual'"),'Today must label Event Graph/live operational provenance explicitly')
+assert(today.includes("source:'event_graph' as const")&&today.includes("t('home.source')")&&today.includes("t('home.sourceCurrent')"),'Today must label Event Graph/live operational provenance explicitly')
+assert(i18n.includes("'home.source':'Origen'")&&i18n.includes("'home.sourceCurrent':'registros del lote y operación actual'"),'Today provenance label and live-record wording must stay pinned in the Spanish dictionary')
 assert(today.includes('eventScore=(priority:OperationalSignal')&&today.includes("priority===1?1000:priority===2?700:400"),'Today must preserve P1 > P2 > P3 ordering')
 assert(today.includes("operationalQuery.set('plantId',nextPlant)"),'Today must pass selected plant scope into Operational Intelligence')
-assert(today.includes('<HomeHero')&&hero.includes('<small>{copy.lots}</small>')&&hero.includes('<small>{copy.movements}</small>')&&hero.includes('<small>{copy.inventory}</small>')&&hero.includes("lots:'Lotes activos'")&&hero.includes("movements:'Movimientos hoy'")&&hero.includes("inventory:'Inventario ubicado'"),'green Today state must preserve useful live context rather than render an empty success state')
+assert(today.includes('<HomeHero')&&hero.includes("<small>{t('home.heroLots')}</small>")&&hero.includes("<small>{t('home.heroMovements')}</small>")&&hero.includes("<small>{t('home.locatedInventory')}</small>"),'green Today state must preserve useful live context rather than render an empty success state')
+assert(i18n.includes("'home.heroLots':'Lotes activos'")&&i18n.includes("'home.heroMovements':'Movimientos hoy'")&&i18n.includes("'home.locatedInventory':'Inventario ubicado'"),'Today live-context wording must stay pinned in the Spanish dictionary')
 assert(css.includes('.decision-operational-priority.p1')&&css.includes('.decision-operational-priority.p2')&&css.includes('.decision-operational-priority.p3'),'priority hierarchy must have explicit P1/P2/P3 visual states')
 assert(css.includes('@media(max-width:640px)'),'Control Tower priority surface must preserve mobile layout')
 assert(passCss.includes('.main-content:has(>.daily-cockpit)>.page-header')&&passCss.includes('.daily-clear-context'),'Today visual pass must keep a compact header and contextual clear state')

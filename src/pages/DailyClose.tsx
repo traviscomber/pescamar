@@ -58,8 +58,8 @@ export function DailyClose(){
  const priorities:Priority[]=[...operationalItems.map(item=>({key:`event-${item.receptionId}-${item.signal.kind}-${item.signal.evidenceEventIds.join('-')}`,score:eventScore(item.signal.priority),reference:`${item.receptionNumber?`REC-${item.receptionNumber}`:t('home.currentLot')}${item.supplier?` · ${item.supplier}`:''}`,reason:item.signal.title,why:item.signal.detail,next:item.signal.action,to:item.path,action:t('home.open'),owner:suggestedOwner(item.path),source:'event_graph' as const})),...dailyDistinct.map((item,index)=>{const to=target(item);return {key:`daily-${item.kind}-${item.reference}-${index}`,score:dailyScore(item.level),reference:item.reference,reason:item.reason,why:item.detail,next:action(item),to,action:action(item),owner:suggestedOwner(to),source:'daily' as const}})].sort((a,b)=>b.score-a.score).slice(0,3)
  const operationalCounts=operational?.counts??{p1:0,p2:0,p3:0},eventGraphOpen=operationalCounts.p1+operationalCounts.p2+operationalCounts.p3,dedupedDaily=Math.max(0,(snapshot?.risk.total??0)-riskItems.filter(item=>item.receptionId&&eventGraphReceptionIds.has(item.receptionId)).length),attention=eventGraphOpen+dedupedDaily,firstPriority=priorities[0]
  const movementCount=snapshot?snapshot.receptions.count+snapshot.production.events+snapshot.dispatches.count:0
- const plantName=accessiblePlants.find(plant=>plant.id===plantId)?.name??(locale==='es'?'Todas las plantas':'All plants')
- const aiPrompt=ceoView?(locale==='es'?'Resumen ejecutivo de hoy':'Today’s executive summary'):(locale==='es'?'Prioridades de hoy':'Today’s priorities')
+ const plantName=accessiblePlants.find(plant=>plant.id===plantId)?.name??t('home.allPlants')
+ const aiPrompt=ceoView?t('home.aiPromptExecutive'):t('home.aiPromptPriorities')
  const aiQuery=new URLSearchParams({source:'inicio',prompt:aiPrompt});if(plantId)aiQuery.set('plantId',plantId);const aiHref=`/pescamar-ia?${aiQuery.toString()}`
 
  return <>
@@ -67,7 +67,6 @@ export function DailyClose(){
  {loading?<div className="system-banner">{t('home.updating')}</div>:null}
  {snapshot?<>
   <HomeHero
-   locale={locale}
    date={date}
    plantId={plantId}
    plantName={plantName}
@@ -85,17 +84,17 @@ export function DailyClose(){
 
   <section className="daily-priority" aria-label={t('home.whatDo')}>
    <div className="daily-priority-head">
-    <div><span className="overline">{ceoView?(locale==='es'?'Decisión ejecutiva':'Executive decision'):assistantFirst?(locale==='es'?'Decisión inmediata':'Immediate decision'):t('home.whatDo')}</span><h2>{ceoView?(locale==='es'?'Qué requiere tu atención hoy':'What needs your attention today'):firstPriority?firstPriority.reference:t('home.startOperation')}</h2><p>{ceoView?(firstPriority?firstPriority.reason:(locale==='es'?'No hay una excepción material identificada en la evidencia disponible.':'No material exception is identified in the available evidence.')):firstPriority?firstPriority.reason:t('home.startCopy')}</p></div>
+    <div><span className="overline">{ceoView?t('home.decisionExecutive'):assistantFirst?t('home.decisionImmediate'):t('home.whatDo')}</span><h2>{ceoView?t('home.attentionToday'):firstPriority?firstPriority.reference:t('home.startOperation')}</h2><p>{ceoView?(firstPriority?firstPriority.reason:t('home.noMaterialException')):firstPriority?firstPriority.reason:t('home.startCopy')}</p></div>
     <div className="daily-priority-actions">
-     {ceoView?<Link className="button primary" to={aiHref}><Sparkles size={15}/>{locale==='es'?'Ver resumen ejecutivo':'Open executive summary'}<ArrowRight size={15}/></Link>:firstPriority?<Link className="button primary" to={firstPriority.to}>{firstPriority.action}<ArrowRight size={15}/></Link>:<Link className="button primary" to="/recepciones">{t('home.registerReception')}<ArrowRight size={15}/></Link>}
-     {assistantFirst&&!ceoView?<Link className="button secondary" to={aiHref}><Sparkles size={15}/>{locale==='es'?'Preguntar a Seafood AI':'Ask Seafood AI'}</Link>:null}
+     {ceoView?<Link className="button primary" to={aiHref}><Sparkles size={15}/>{t('home.openExecutiveSummary')}<ArrowRight size={15}/></Link>:firstPriority?<Link className="button primary" to={firstPriority.to}>{firstPriority.action}<ArrowRight size={15}/></Link>:<Link className="button primary" to="/recepciones">{t('home.registerReception')}<ArrowRight size={15}/></Link>}
+     {assistantFirst&&!ceoView?<Link className="button secondary" to={aiHref}><Sparkles size={15}/>{t('home.askSeafoodAi')}</Link>:null}
     </div>
    </div>
-   {firstPriority&&!ceoView?<small className="daily-priority-detail"><b>{t('home.next')}:</b> {firstPriority.next} · <b>{locale==='es'?'Origen':'Source'}:</b> {firstPriority.source==='event_graph'?(locale==='es'?'registros del lote y operación actual':'current lot and operation records'):(locale==='es'?'cierre del día':'day close')}{!assistantFirst?<> · <Link to={aiHref}><Sparkles size={13}/>{locale==='es'?' Ver 3 prioridades con Seafood AI':' See 3 priorities with Seafood AI'}</Link></>:null}</small>:ceoView&&firstPriority?<small className="daily-priority-detail"><b>{locale==='es'?'Contexto':'Context'}:</b> {firstPriority.why}</small>:!assistantFirst?<small className="daily-priority-detail"><Link to={aiHref}><Sparkles size={13}/>{locale==='es'?' Revisar operación con Seafood AI':' Review operations with Seafood AI'}</Link></small>:null}
+   {firstPriority&&!ceoView?<small className="daily-priority-detail"><b>{t('home.next')}:</b> {firstPriority.next} · <b>{t('home.source')}:</b> {firstPriority.source==='event_graph'?t('home.sourceCurrent'):t('home.sourceDayClose')}{!assistantFirst?<> · <Link to={aiHref}><Sparkles size={13}/>{' '}{t('home.seePrioritiesAi')}</Link></>:null}</small>:ceoView&&firstPriority?<small className="daily-priority-detail"><b>{t('home.context')}:</b> {firstPriority.why}</small>:!assistantFirst?<small className="daily-priority-detail"><Link to={aiHref}><Sparkles size={13}/>{' '}{t('home.reviewWithAi')}</Link></small>:null}
   </section>
 
   {assistantFirst?<section className="daily-home-attention" aria-label="Seafood AI">
-   <div className="daily-clear-note"><Sparkles size={19}/><div><b>{ceoView?(locale==='es'?'Seafood AI consolida la empresa para dirección':'Seafood AI consolidates the company for leadership'):(locale==='es'?'Seafood AI interpreta el resto de la operación':'Seafood AI interprets the rest of the operation')}</b><small>{ceoView?(locale==='es'?'Resultados conocidos, riesgos, compromisos, operación e histórico se reducen a lo que requiere decisión ejecutiva.':'Known outcomes, risks, commitments, operations and history are reduced to what requires executive decision.'):(locale==='es'?'Prioridades, comparación de plantas, bloqueos y faltantes se consultan desde una sola capa, con evidencia y sin modificar registros.':'Priorities, plant comparison, blockers and missing evidence are handled in one evidence-backed, read-only layer.')}</small></div><Link className="button secondary" to={aiHref}>{locale==='es'?'Abrir asistente':'Open assistant'}<ArrowRight size={15}/></Link></div>
+   <div className="daily-clear-note"><Sparkles size={19}/><div><b>{ceoView?t('home.aiBannerExecutive'):t('home.aiBannerAssistant')}</b><small>{ceoView?t('home.aiBannerExecutiveDetail'):t('home.aiBannerAssistantDetail')}</small></div><Link className="button secondary" to={aiHref}>{t('home.openAssistant')}<ArrowRight size={15}/></Link></div>
   </section>:<section className="daily-home-attention" aria-label={t('home.attention')}>
    <div className="section-heading"><div><span className="overline">{t('home.attention')}</span><h2>{priorities.length?t('home.reviewThese'):t('home.nothingNeeds')}</h2></div></div>
    {priorities.length?<div className="queue-list daily-more-list">{priorities.map((item,index)=><Link className="queue-row" to={item.to} key={item.key}><span className="queue-priority">{index+1}</span><div><b>{item.reference}</b><small>{item.reason}</small><small>{item.next}</small></div><strong>{item.action}</strong><ArrowRight size={15}/></Link>)}</div>:<div className="daily-clear-note"><ShieldCheck size={19}/><div><b>{t('home.noAlerts')}</b><small>{t('home.historyIsolation')}</small></div></div>}
