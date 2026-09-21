@@ -1,7 +1,7 @@
 {
-  "name": "pescamar-unigrade",
+  "name": "seafood-intelligence-os",
   "private": true,
-  "version": "0.2.0",
+  "version": "1.0.0-pilot.1",
   "type": "module",
   "engines": {
     "node": "22.x"

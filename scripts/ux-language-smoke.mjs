@@ -2,7 +2,7 @@ import {readFile} from 'node:fs/promises'
 
 const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
-const [shell,os,modules,i18n,main,appCss,uxCss]=await Promise.all([
+const [shell,os,modules,i18n,main,appCss,uxCss,indexHtml,enHtml]=await Promise.all([
  readFile(new URL('../src/components/AppShell.tsx',import.meta.url),'utf8'),
  readFile(new URL('../src/os.ts',import.meta.url),'utf8'),
  readFile(new URL('../src/pages/Modules.tsx',import.meta.url),'utf8'),
@@ -10,6 +10,8 @@ const [shell,os,modules,i18n,main,appCss,uxCss]=await Promise.all([
  readFile(new URL('../src/main.tsx',import.meta.url),'utf8'),
  readFile(new URL('../src/app.css',import.meta.url),'utf8'),
  readFile(new URL('../src/ux-unification.css',import.meta.url),'utf8'),
+ readFile(new URL('../index.html',import.meta.url),'utf8'),
+ readFile(new URL('../en.html',import.meta.url),'utf8'),
 ])
 
 assert(shell.includes('<strong className="brand-name">PESCAMAR</strong>')&&shell.includes('<small className="brand-product">Seafood Intelligence OS</small>'),'brand must identify Pescamar first while retaining the OS platform context')
@@ -25,6 +27,10 @@ assert(modules.includes("label:'Conexiones'")&&modules.includes("label:'Revisió
 assert(appCss.indexOf("./ux-unification.css")>appCss.indexOf("./uni-qa-polish.css"),'UX convergence layer must load after historical system passes')
 assert(uxCss.includes('.workspace-tabs{position:sticky')&&uxCss.includes('min-height:44px'),'shared UX layer must preserve workflow context and mobile touch targets')
 assert(uxCss.includes('.page-header>.page-actions')&&uxCss.includes('.inline-field>input'),'shared page actions must remain responsive and readable')
+
+const stripLocaleChrome=(html)=>html.replace(/^<html lang="[a-z]+">$/m,'<html lang="#">').replace(/<meta name="description" content="[^"]*" \/>/,'<meta name="description" />')
+assert(indexHtml.includes('<html lang="es">')&&enHtml.includes('<html lang="en">'),'ES/EN entry points must declare their lang before React loads')
+assert(stripLocaleChrome(indexHtml)===stripLocaleChrome(enHtml),'index.html and en.html must stay identical outside lang and meta description — update both in lockstep (cross-reference comments point at each other)')
 
 if(failures.length){
  console.error('UX language smoke FAILED')
