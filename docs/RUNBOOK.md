@@ -81,9 +81,25 @@ Notas: no existen `AI_GATEWAY_API_KEY` ni `AUTH_BYPASS` en el código — cualqu
 
 ## 6. Base de datos (Neon)
 
-- Proyecto `pescamar-control` (aws-us-east-2, PostgreSQL 18), plan **free** al momento de escribir.
-- Plan free: **sin backups programados** y ventana de restauración a punto-en-el-tiempo (PITR) de **6 horas** (`history_retention`). La rama `main` **no está protegida** (admite push/reset directo).
-- Recomendación: subir el plan de Neon para tener backups programados y protección de rama `main`; hasta entonces, como práctica manual: **exportar antes de cualquier cambio riesgoso** (`pg_dump` o consulta de evidencia previa) y usar **ramas efímeras para experimentos** (nunca probar contra `main`).
+- Proyecto `pescamar-control` (id `icy-union-17389410`, aws-us-east-2, PostgreSQL 18), plan **free** al momento de escribir. La rama `main` (`br-sweet-surf-axpwi30f`) **no está protegida** (admite push/reset directo).
+- Plan free: **sin backups programados** (`set_snapshot_schedule` es rechazado por el plan) y ventana de restauración a punto-en-el-tiempo (PITR) de **6 horas** (`history_retention`). **Los snapshots manuales sí están permitidos en el plan free** — verificados por probe el 2026-09-21 (`create_snapshot` vía API/Neon MCP en la rama `main`).
+
+### Backups — decisión: MANUALES (sin upgrade de plan)
+
+Cadencia recomendada:
+- **Antes de aplicar cualquier migración** o cambio riesgoso de esquema/datos (obligatorio).
+- **Semanal** (respaldo lógico pg_dump), aunque no haya migraciones.
+- Usar **ramas efímeras para experimentos** (nunca probar contra `main`).
+
+Dos caminos soportados:
+
+1. **Snapshot manual en Neon** (restore point de cuenta, restaurable desde la consola): consola Neon → proyecto → Branches → `main` → Create snapshot, o vía API/MCP (`create_snapshot` con `project_id=icy-union-17389410`, `branch_id=br-sweet-surf-axpwi30f`). Verificado funcional en plan free el 2026-09-21 (`manual-backup-probe-2026-09-21`).
+2. **Respaldo lógico local con pg_dump**: `DATABASE_URL=... npm run db:backup` (script `scripts/db-backup.mjs`, sin dependencias). Escribe `backups/pescamar-backup-<fecha>.sql.gz` (directorio gitignored) con `--no-owner --no-privileges`, esquema + datos; `--schema-only` para solo esquema. **Requisito: pg_dump 18.x en el PATH** — debe coincidir con la versión mayor del servidor (PostgreSQL 18); el script falla con instrucciones si falta pg_dump, es de otra versión mayor, o falta `DATABASE_URL` (nunca se imprime).
+
+Dónde viven los archivos: snapshots en Neon (vida útil según plan; revisar en Snapshots del proyecto); pg_dump en `./backups/` local (copiar a almacenamiento externo si se requiere retención larga — contienen datos operacionales completos, tratar como secretos).
+
+Caveat honesto: la ventana PITR de 6 h del plan free es la única restauración autónoma sin snapshot previo; **un snapshot manual o un pg_dump tomado antes del cambio riesgoso es la red de seguridad real**. Fuera de ventana y sin snapshot, no hay copia.
+
 - `pg_stat_statements` está instalado (v1.12): para consultas lentas, revisar la consola de Neon (Monitoring / query insights) o `select * from pg_stat_statements order by total_exec_time desc limit 20;` desde el SQL editor.
 - Consumo/límites del plan en la consola de Neon → proyecto → Usage.
 
@@ -98,7 +114,7 @@ Notas: no existen `AI_GATEWAY_API_KEY` ni `AUTH_BYPASS` en el código — cualqu
 
 **Datos / esquema:**
 - [ ] Verificar `schema_migrations` vs `db/migrations/` (deben coincidir exactamente; `db/README.md`).
-- [ ] Pérdida de datos: restauración solo dentro de la ventana PITR de 6 h (crear rama desde punto-en-el-tiempo en Neon y extraer; fuera de ventana, no hay copia). Por eso el export manual antes de cambios riesgosos.
+- [ ] Pérdida de datos: restauración dentro de la ventana PITR de 6 h (crear rama desde punto-en-el-tiempo en Neon y extraer). Si hay un snapshot manual previo (§6), restaurar desde ese restore point aunque esté fuera de ventana. Fuera de ventana y sin snapshot ni pg_dump, no hay copia.
 
 **Comunicación:** registrar hora (America/Santiago), SHA afectado, y avisar al responsable técnico con lo verificado arriba (hechos, no hipótesis).
 

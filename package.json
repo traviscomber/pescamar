@@ -12,7 +12,8 @@
     "build": "tsc -b && npm run typecheck:api && vite build",
     "lint": "eslint .",
     "quality": "npm run lint && npm run build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "db:backup": "node scripts/db-backup.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
