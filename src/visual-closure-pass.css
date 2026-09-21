@@ -89,7 +89,7 @@ input,select,textarea{min-height:40px}.button{min-height:40px}.button.compact{mi
   .main-content{padding-inline:16px!important}.workspace-tabs+.main-content{padding-top:24px!important}.page-header{gap:12px!important;margin-bottom:18px!important}.page-header h1{font-size:clamp(1.85rem,9vw,2.25rem)!important}.page-header p{max-width:42rem!important}
   .page-header .page-actions,.page-actions{gap:8px!important}.page-actions .button,.page-header .button{min-height:44px!important}
   .panel{border-radius:9px!important;padding:16px!important}.main-content>.panel:has(.data-table),.main-content>.panel:has(.compact-ledger){padding-left:0!important;padding-right:0!important;border-left:0!important;border-right:0!important;border-radius:0!important}
-  .table-scroll{width:100%!important;margin-inline:0!important;padding-inline:0!important}.data-table{min-width:640px!important}.data-table th,.data-table td{padding:11px 9px!important}
+  .table-scroll{width:100%!important;margin-inline:0!important;padding-inline:0!important}.data-table:not(.mobile-card-table){min-width:640px!important}.data-table th,.data-table td{padding:11px 9px!important}
   .summary-strip{border-radius:0!important}.summary-strip>div{padding:14px 0!important}.signal-grid{grid-template-columns:1fr!important}.signal-card{min-height:0!important;padding:15px 0!important;border-left:0!important;border-right:0!important;border-radius:0!important;background:transparent!important}
   .contextual-guidance{grid-template-columns:1fr!important}.contextual-guidance>div,.contextual-guidance-ai{padding:13px 0!important;border-right:0!important;border-bottom:1px solid var(--line)!important}.contextual-guidance-ai{min-height:44px}.contextual-guidance>*:last-child{border-bottom:0!important}
   .modal-panel{border-radius:10px 10px 0 0!important;padding:18px 16px calc(16px + env(safe-area-inset-bottom))!important}.modal-panel footer,.line-editor>footer{border-radius:0!important}
@@ -104,4 +104,4 @@ input,select,textarea{min-height:40px}.button{min-height:40px}.button.compact{mi
   .lot360-hero h2{font-size:2.55rem!important}.lot360-signals article{padding:16px 0!important}.main-content{padding-top:20px!important;padding-bottom:32px!important}
   .topbar-context b{max-width:38vw!important}.sidebar{width:min(88vw,300px)!important}.floating-action{left:12px!important;right:12px!important;border-radius:9px!important}
 }
-@media(max-width:390px){.main-content{padding-inline:12px!important}.page-header h1{font-size:1.85rem!important}.data-table{min-width:600px!important}.topbar-context b{max-width:34vw!important}}
+@media(max-width:390px){.main-content{padding-inline:12px!important}.page-header h1{font-size:1.85rem!important}.data-table:not(.mobile-card-table){min-width:600px!important}.topbar-context b{max-width:34vw!important}}
