@@ -21,16 +21,36 @@ const cases=[
  {id:'en_orders',q:'Which customer orders are pending?',route:'fast_evidence',required:['orders']},
  {id:'es_finance',q:'¿Cuál es el costo actual?',route:'fast_evidence',required:['finance']},
  {id:'en_finance',q:'What is our current margin?',route:'fast_evidence',required:['finance']},
- {id:'es_source_coverage',q:'¿Qué cobertura tiene el archivo fuente?',route:'fast_evidence',required:['canonical_sources']},
- {id:'en_source_coverage',q:'What coverage does the source spreadsheet have?',route:'fast_evidence',required:['canonical_sources']},
- {id:'es_packing',q:'¿Cuántas cajas hay en packing?',route:'fast_evidence',required:['canonical_inventory']},
- {id:'en_packing',q:'How many boxes are in packing?',route:'fast_evidence',required:['canonical_inventory']},
+ {id:'es_finance_history',q:'¿Cuál es la tendencia del margen por cliente?',route:'investigative',intent:'investigate_historical_comparison',required:['finance','orders','historical_lineage','canonical_intelligence','ml_intelligence'],humanGate:'material_action_review'},
+ {id:'en_finance_history',q:'What is the margin trend by customer?',route:'investigative',intent:'investigate_historical_comparison',required:['finance','orders','historical_lineage','canonical_intelligence','ml_intelligence'],humanGate:'material_action_review'},
+ {id:'es_dispatch_orders',q:'¿Qué órdenes de venta puedo despachar hoy?',route:'fast_evidence',intent:'direct_orders',required:['orders'],humanGate:'material_action_review'},
+ {id:'en_dispatch_orders',q:'Which sales orders can I dispatch today?',route:'fast_evidence',intent:'direct_orders',required:['orders'],humanGate:'material_action_review'},
+ {id:'es_release_hold',q:'¿Puedo despachar este lote con hold regulatorio?',hasLot:true,route:'deterministic',intent:'lot_operational_status',required:['lot_control','operational_intelligence'],humanGate:'material_action_review'},
+ {id:'en_release_hold',q:'Can I dispatch this lot with the regulatory hold?',hasLot:true,route:'deterministic',intent:'lot_operational_status',required:['lot_control','operational_intelligence'],humanGate:'material_action_review'},
+ {id:'es_quality_rejections',q:'¿Hay rechazos de calidad pendientes?',route:'fast_evidence',required:['quality','operational_intelligence','orders','inventory'],humanGate:'material_action_review'},
+ {id:'en_quality_rejections',q:'Are there pending quality rejections?',route:'fast_evidence',required:['quality','operational_intelligence','orders','inventory'],humanGate:'material_action_review'},
+ {id:'es_priority_why',q:'¿Por qué subieron las prioridades P1 esta semana?',route:'investigative',intent:'investigate_operational_intelligence_quality_orders_inventory',required:['operational_intelligence','quality','orders','inventory'],humanGate:'material_action_review'},
+ {id:'en_priority_why',q:'Why did P1 priorities go up this week?',route:'investigative',intent:'investigate_operational_intelligence_quality_orders_inventory',required:['operational_intelligence','quality','orders','inventory'],humanGate:'material_action_review'},
+ {id:'es_ml_pattern',q:'¿Qué patrones detectó el modelo esta semana?',route:'investigative',intent:'ml_pattern_analysis',required:['ml_intelligence'],humanGate:'material_action_review'},
+ {id:'en_ml_pattern',q:'What patterns did the model detect this week?',route:'investigative',intent:'ml_pattern_analysis',required:['ml_intelligence'],humanGate:'material_action_review'},
+ {id:'es_urchin_ml',q:'¿Hay outliers en el rendimiento de erizo?',route:'investigative',intent:'ml_pattern_analysis',required:['production','ml_intelligence','urchin_graph'],humanGate:'material_action_review'},
+ {id:'en_urchin_ml',q:'Are there outliers in urchin yield?',route:'investigative',intent:'ml_pattern_analysis',required:['production','ml_intelligence','urchin_graph'],humanGate:'material_action_review'},
+ {id:'es_forecast',q:'¿Cuánto vamos a producir la próxima semana?',route:'investigative',intent:'predictive_readiness_check',required:['production','canonical_intelligence','ml_intelligence'],humanGate:'material_action_review'},
+ {id:'en_forecast',q:'How much will we produce next week?',route:'investigative',intent:'predictive_readiness_check',required:['production','canonical_intelligence','ml_intelligence'],humanGate:'material_action_review'},
+ {id:'es_packing_history',q:'¿Qué tan completo está el histórico de packing?',route:'investigative',intent:'investigate_historical_comparison',required:['canonical_inventory','historical_lineage','canonical_intelligence','ml_intelligence'],forbidden:['canonical_sources'],humanGate:'material_action_review'},
+ {id:'en_packing_history',q:'How complete is the packing history?',route:'investigative',intent:'investigate_historical_comparison',required:['canonical_inventory','historical_lineage','canonical_intelligence','ml_intelligence'],forbidden:['canonical_sources'],humanGate:'material_action_review'},
+ {id:'es_provenance',q:'¿Qué provenance tiene la planilla de fuentes?',route:'fast_evidence',intent:'direct_canonical_sources',required:['canonical_sources'],forbidden:['canonical_inventory','historical_lineage','canonical_intelligence']},
+ {id:'en_provenance',q:'What provenance does the source spreadsheet have?',route:'fast_evidence',intent:'direct_canonical_sources',required:['canonical_sources'],forbidden:['canonical_inventory','historical_lineage','canonical_intelligence']},
+ {id:'es_source_coverage',q:'¿Qué cobertura tiene el archivo fuente?',route:'fast_evidence',required:['canonical_sources'],forbidden:['canonical_inventory','historical_lineage']},
+ {id:'en_source_coverage',q:'What coverage does the source spreadsheet have?',route:'fast_evidence',required:['canonical_sources'],forbidden:['canonical_inventory','historical_lineage']},
+ {id:'es_packing',q:'¿Cuántas cajas hay en packing?',route:'fast_evidence',required:['canonical_inventory'],forbidden:['canonical_sources']},
+ {id:'en_packing',q:'How many boxes are in packing?',route:'fast_evidence',required:['canonical_inventory'],forbidden:['canonical_sources']},
  {id:'es_lot_why',q:'¿Por qué bajó el rendimiento de este lote?',hasLot:true,route:'investigative',required:['production','lot_control','operational_intelligence'],forbidden:['historical_lineage']},
  {id:'en_lot_why',q:'Why did this lot yield drop?',hasLot:true,route:'investigative',required:['production','lot_control','operational_intelligence'],forbidden:['historical_lineage']},
  {id:'es_supplier_compare',q:'Compara el rendimiento de este proveedor con el histórico',route:'investigative',required:['production','historical_lineage','canonical_intelligence']},
  {id:'en_supplier_compare',q:'Compare this supplier yield with historical performance',route:'investigative',required:['production','historical_lineage','canonical_intelligence']},
- {id:'es_traceability',q:'Investiga la trazabilidad histórica de este proveedor',route:'investigative',required:['historical_lineage','canonical_intelligence']},
- {id:'en_traceability',q:'Investigate the historical lineage for this supplier',route:'investigative',required:['historical_lineage','canonical_intelligence']},
+ {id:'es_traceability',q:'Investiga la trazabilidad histórica de este proveedor',route:'investigative',required:['historical_lineage','canonical_intelligence'],forbidden:['canonical_sources']},
+ {id:'en_traceability',q:'Investigate the historical lineage for this supplier',route:'investigative',required:['historical_lineage','canonical_intelligence'],forbidden:['canonical_sources']},
  {id:'es_photo',q:'Revisa esta foto del color del erizo',hasPhotos:true,route:'fast_evidence',required:['photo_observation','urchin_graph'],humanGate:'material_action_review'},
  {id:'en_photo',q:'Review this sea urchin photo for color',hasPhotos:true,route:'fast_evidence',required:['photo_observation','urchin_graph'],humanGate:'material_action_review'},
  {id:'es_attention',q:'¿Qué requiere atención hoy?',route:'fast_evidence',required:['operational_intelligence','quality','orders','inventory']},
@@ -43,8 +63,8 @@ const cases=[
  {id:'en_blocked',q:'What is blocked?',route:'fast_evidence',required:['operational_intelligence','quality','orders','inventory']},
  {id:'es_close',q:'¿Qué falta para cerrar?',route:'fast_evidence',required:['operational_intelligence','quality','orders','inventory']},
  {id:'en_close',q:'What is missing to close?',route:'fast_evidence',required:['operational_intelligence','quality','orders','inventory']},
- {id:'es_anomaly',q:'Investiga una anomalía de calidad',route:'investigative',required:['quality']},
- {id:'en_anomaly',q:'Investigate a quality anomaly',route:'investigative',required:['quality']},
+ {id:'es_anomaly',q:'Investiga una anomalía de calidad',route:'investigative',intent:'ml_pattern_analysis',required:['quality','ml_intelligence'],humanGate:'material_action_review'},
+ {id:'en_anomaly',q:'Investigate a quality anomaly',route:'investigative',intent:'ml_pattern_analysis',required:['quality','ml_intelligence'],humanGate:'material_action_review'},
  {id:'es_profit_history',q:'Compara la rentabilidad histórica por proveedor',route:'investigative',required:['historical_lineage','canonical_intelligence']},
  {id:'en_profit_history',q:'Compare historical profitability by supplier',route:'investigative',required:['historical_lineage','canonical_intelligence']},
 ]
@@ -57,16 +77,16 @@ const containsNone=(actual,forbidden=[])=>{const set=toSet(actual);return forbid
 
 for(const test of cases){
  const result=routeSeafoodQuery({question:test.q,hasLot:Boolean(test.hasLot),hasPhotos:Boolean(test.hasPhotos),seniorUrchin:Boolean(test.seniorUrchin)})
- const ok=result.version===SEAFOOD_QUERY_ROUTER_VERSION&&result.route===test.route&&containsAll(result.requiredCapabilities,test.required)&&containsNone(result.requiredCapabilities,test.forbidden)&&result.writesAllowed===false&&(!test.humanGate||result.humanGate===test.humanGate)
+ const ok=result.version===SEAFOOD_QUERY_ROUTER_VERSION&&result.route===test.route&&(!test.intent||result.intent===test.intent)&&containsAll(result.requiredCapabilities,test.required)&&containsNone(result.requiredCapabilities,test.forbidden)&&result.writesAllowed===false&&(!test.humanGate||result.humanGate===test.humanGate)
  results.push({id:test.id,ok,result})
- if(!ok)failures.push(`${test.id}: expected ${test.route} required=[${test.required.join(',')}]${test.forbidden?.length?` forbidden=[${test.forbidden.join(',')}]`:''}${test.humanGate?` humanGate=${test.humanGate}`:''}; got ${result.route} required=[${result.requiredCapabilities.join(',')}] humanGate=${result.humanGate}`)
+ if(!ok)failures.push(`${test.id}: expected ${test.route}${test.intent?`/${test.intent}`:''} required=[${test.required.join(',')}]${test.forbidden?.length?` forbidden=[${test.forbidden.join(',')}]`:''}${test.humanGate?` humanGate=${test.humanGate}`:''}; got ${result.route}/${result.intent} required=[${result.requiredCapabilities.join(',')}] humanGate=${result.humanGate}`)
 }
 
 const parityPairs=[]
 for(let index=0;index<cases.length;index+=2){
  const left=results[index],right=results[index+1]
  if(!right)continue
- const same=left.result.route===right.result.route&&left.result.humanGate===right.result.humanGate&&[...left.result.requiredCapabilities].sort().join('|')===[...right.result.requiredCapabilities].sort().join('|')
+ const same=left.result.route===right.result.route&&left.result.intent===right.result.intent&&left.result.humanGate===right.result.humanGate&&[...left.result.requiredCapabilities].sort().join('|')===[...right.result.requiredCapabilities].sort().join('|')
  parityPairs.push(same)
  if(!same)failures.push(`bilingual parity: ${left.id} and ${right.id} diverged`)
 }
@@ -78,6 +98,14 @@ const insufficient=evaluateEvidenceSufficiency(deterministic,[{id:'lot_control',
 if(sufficient.status!=='sufficient'||sufficient.coveragePct!==100)failures.push('evidence gate: complete evidence must be sufficient at 100% coverage')
 if(limited.status!=='limited'||limited.coveragePct!==100||!limited.empty.includes('operational_intelligence'))failures.push('evidence gate: present-but-empty required evidence must be limited')
 if(insufficient.status!=='insufficient'||insufficient.coveragePct!==50||!insufficient.missing.includes('operational_intelligence'))failures.push('evidence gate: missing required evidence must be insufficient with reduced coverage')
+
+const crossDomain=routeSeafoodQuery({question:'¿Cuál es la tendencia del margen por cliente?',hasLot:false,hasPhotos:false,seniorUrchin:false})
+const crossSufficient=evaluateEvidenceSufficiency(crossDomain,[{id:'finance',rows:3},{id:'orders',rows:2},{id:'historical_lineage',rows:2},{id:'canonical_intelligence',rows:1},{id:'ml_intelligence',rows:1}])
+const crossLimited=evaluateEvidenceSufficiency(crossDomain,[{id:'finance',rows:3},{id:'orders',rows:2},{id:'historical_lineage',rows:0},{id:'canonical_intelligence',rows:1},{id:'ml_intelligence',rows:1}])
+const crossInsufficient=evaluateEvidenceSufficiency(crossDomain,[{id:'finance',rows:3},{id:'orders',rows:2},{id:'historical_lineage',rows:2},{id:'canonical_intelligence',rows:1}])
+if(crossSufficient.status!=='sufficient'||crossSufficient.coveragePct!==100||crossSufficient.required.length!==5)failures.push('evidence gate: multi-source investigative route must be sufficient only when every required source has rows')
+if(crossLimited.status!=='limited'||crossLimited.coveragePct!==100||!crossLimited.empty.includes('historical_lineage'))failures.push('evidence gate: present-but-empty historical evidence on investigative route must be limited')
+if(crossInsufficient.status!=='insufficient'||crossInsufficient.coveragePct!==80||!crossInsufficient.missing.includes('ml_intelligence'))failures.push('evidence gate: missing ml evidence on investigative route must be insufficient at 80% coverage')
 
 const accuracy=Math.round(results.filter(item=>item.ok).length/results.length*1000)/10
 const parity=Math.round(parityPairs.filter(Boolean).length/parityPairs.length*1000)/10
