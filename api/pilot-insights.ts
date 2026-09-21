@@ -31,11 +31,12 @@ export default async function handler(request:Request,response:Response){
     limit 12`,
    sql`select to_char(created_at::date,'YYYY-MM-DD') "day",count(distinct operator_id)::int operators
     from pilot_events
-    where created_at>=now()-interval '14 days'
+    where event='route_visited' and created_at>=now()-interval '14 days'
     group by created_at::date
     order by created_at::date asc`,
    sql`select e.created_at,e.operator_id,o.full_name operator_name,e.role,e.event,e.path
     from pilot_events e left join operators o on o.id=e.operator_id
+    where e.event='route_visited'
     order by e.id desc
     limit 50`,
    sql`select count(*)::int total,

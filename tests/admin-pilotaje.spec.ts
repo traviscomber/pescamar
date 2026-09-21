@@ -87,11 +87,39 @@ test('client beacon batches a route visit without query strings',async({page})=>
  const beacons=await page.evaluate(()=>(window as unknown as {__pilotBeacons:{url:string;body:string}[]}).__pilotBeacons)
  const payload=JSON.parse(beacons[0].body) as {events?:Array<{event:string;path:string}>}
  expect(payload.events?.length).toBeGreaterThan(0)
- for(const event of payload.events??[]){
-  expect(event.event).toBe('route_visited')
+ const routes=(payload.events??[]).filter(event=>event.event==='route_visited')
+ const heartbeats=(payload.events??[]).filter(event=>event.event==='instrumentation_heartbeat')
+ expect(routes.length).toBeGreaterThan(0)
+ expect(heartbeats).toHaveLength(1)
+ for(const event of routes){
   expect(event.path.startsWith('/')).toBe(true)
   expect(event.path).not.toContain('?')
   expect(event.path).not.toContain('plantId')
   expect(event.path).not.toContain('secreto')
  }
+ for(const event of heartbeats){
+  expect(event.path.startsWith('/')).toBe(true)
+  expect(event.path).not.toContain('?')
+ }
+})
+
+test('build watcher reloads once when the served shell references a newer main asset',async({page})=>{
+ let shellRequests=0
+ await page.route('**/*',async route=>{
+  const url=new URL(route.request().url())
+  if(url.pathname.startsWith('/api/')){
+   const json=(body:unknown,status=200)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)})
+   if(url.pathname==='/api/auth')return json({ok:true,operator:{id:'qa-watcher',fullName:'QA Watcher',email:'watcher@example.test',role:'admin',plantIds:['ancud']}})
+   if(url.pathname==='/api/status')return json({ok:true,platform:'vercel-functions',environment:'test',persistence:{database:true,files:true},metrics:{pendingDecisions:0,pendingCredits:0,activeOperators:1,receptions:0},commit:'qa12345',checkedAt:new Date().toISOString()})
+   if(url.pathname==='/api/pilot-events')return json({ok:true,received:1},201)
+   return json({ok:true})
+  }
+  if(url.pathname.startsWith('/assets/'))return route.continue()
+  shellRequests+=1
+  if(shellRequests<=1)return route.continue()
+  return route.fulfill({status:200,contentType:'text/html',body:'<!doctype html><html><head><script type="module" crossorigin src="/assets/main-NEWERBUILD99.js"></script></head><body><div id="root"></div></body></html>'})
+ })
+ await page.goto('/recepciones')
+ await page.waitForSelector('.app-shell')
+ await page.waitForFunction(()=>Boolean(window.sessionStorage.getItem('pescamar-build-reload-at')),{timeout:20_000})
 })

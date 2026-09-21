@@ -5,7 +5,7 @@ type Request={method?:string;headers?:Record<string,string|string[]|undefined>;b
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void}
 type BeaconEvent={event?:unknown;path?:unknown;locale?:unknown}
 
-const ALLOWED_EVENTS=['route_visited'] as const
+const ALLOWED_EVENTS=['route_visited','instrumentation_heartbeat'] as const
 const MAX_BATCH=20
 const PATH_MAX=200
 const WINDOW_MS=60_000
