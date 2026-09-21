@@ -149,6 +149,13 @@ Pescamar remains a named implementation inside the broader Seafood Intelligence 
 
 The rollout and productization plan is maintained in [`ROADMAP.md`](./ROADMAP.md). Pilot acceptance remains governed by [`PILOT_ACCEPTANCE.md`](./PILOT_ACCEPTANCE.md).
 
+### Alta de usuarios piloto
+
+1. Un administrador entra a **Operadores** (`/operadores`) y crea la identidad con nombre, correo, rol y plantas (Ancud/Quellón) asignando una **contraseña temporal**; el servidor la marca siempre como temporal (`must_change_password`) y registra el alta en `auth_events`.
+2. Se entrega el correo y la contraseña temporal al usuario por un canal privado (no hay envío de correo automático ni tokens de invitación).
+3. Al primer login la aplicación exige definir contraseña propia antes de mostrar nada (`/api/password` verifica la temporal, limpia el flag y audita `password_changed`); después muestra una bienvenida mínima con los caminos primarios del rol.
+4. Roles del piloto: operador de planta → `operations` (o `quality` para calidad), responsable comercial/administrativo → `finance`, gestión por excepción → `admin` (o `viewer` para sólo lectura). Altas y cambios de contraseña quedan en **Auditoría de acceso** (`/modulos`).
+
 ---
 
 ## Product principles

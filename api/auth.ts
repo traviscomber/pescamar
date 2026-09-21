@@ -35,8 +35,8 @@ export default async function handler(request:Request,response:Response){
         return response.status(429).json({ok:false,error:"Demasiados intentos. Intenta nuevamente más tarde."});
       }
 
-      const rows=await getSql()`select id,full_name,email,role,password_hash,plant_ids from operators where lower(email)=${email} and active=true limit 1`;
-      const row=Array.isArray(rows)?rows[0] as {id:string;full_name:string;email:string;role:string;password_hash:string|null;plant_ids:string[]}|undefined:undefined;
+      const rows=await getSql()`select id,full_name,email,role,password_hash,plant_ids,must_change_password from operators where lower(email)=${email} and active=true limit 1`;
+      const row=Array.isArray(rows)?rows[0] as {id:string;full_name:string;email:string;role:string;password_hash:string|null;plant_ids:string[];must_change_password:boolean}|undefined:undefined;
       const passwordOk=verifyPassword(password,row?.password_hash??DUMMY_PASSWORD_HASH);
       if(!row||!passwordOk){
         await recordLoginFailure(request,email);
@@ -51,7 +51,7 @@ export default async function handler(request:Request,response:Response){
         recordAuthEvent("login_success",request,email,row.id,{role:row.role,organizationId:organization.organizationId}),
       ]);
       response.setHeader("Set-Cookie",sessionCookie(session.token,session.maxAge));
-      return response.status(200).json({ok:true,operator:{id:row.id,fullName:row.full_name,email:row.email,role:row.role,plantIds:row.plant_ids??[],organizationId:organization.organizationId,executiveExperience:executiveExperienceFor(row)}});
+      return response.status(200).json({ok:true,operator:{id:row.id,fullName:row.full_name,email:row.email,role:row.role,plantIds:row.plant_ids??[],organizationId:organization.organizationId,executiveExperience:executiveExperienceFor(row),mustChangePassword:row.must_change_password===true}});
     }
     if(request.method==="DELETE"){
       const operator=await requireOperator(request);
@@ -67,7 +67,7 @@ export default async function handler(request:Request,response:Response){
   }catch(error){
     const message=error instanceof Error?error.message:"";
     const configuration=message.includes("DATABASE_URL");
-    const migration=message.includes("operator_sessions")||message.includes("password_hash")||message.includes("auth_login_limits")||message.includes("auth_events");
+    const migration=message.includes("operator_sessions")||message.includes("password_hash")||message.includes("auth_login_limits")||message.includes("auth_events")||message.includes("must_change_password");
     return response.status(configuration||migration?503:500).json({ok:false,error:configuration?"Base de datos no conectada":migration?"Faltan migraciones de autenticación":"No fue posible autenticar"});
   }
 }

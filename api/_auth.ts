@@ -6,7 +6,7 @@ type Headers = Record<string, string | string[] | undefined>;
 declare const process: { env: Record<string, string | undefined> };
 export type AuthRequest = { headers?: Headers };
 export type OperatorRole = "admin" | "operations" | "finance" | "quality" | "viewer";
-export type SessionOperator = { id: string; fullName: string; email: string; role: OperatorRole; plantIds: string[]; organizationId: string; executiveExperience: boolean };
+export type SessionOperator = { id: string; fullName: string; email: string; role: OperatorRole; plantIds: string[]; organizationId: string; executiveExperience: boolean; mustChangePassword: boolean };
 
 // The executive (CEO) experience is determined server-side so the client bundle never
 // carries the identifying email. Override with the CEO_OPERATOR_EMAIL env var when needed.
@@ -81,10 +81,10 @@ export async function requireOperator(request: AuthRequest, roles?: OperatorRole
 
   const hash = tokenHash(token);
   const rows = await getSql()`
-    select o.id,o.full_name,o.email,o.role,o.plant_ids,s.last_seen_at
+    select o.id,o.full_name,o.email,o.role,o.plant_ids,o.must_change_password,s.last_seen_at
     from operator_sessions s join operators o on o.id=s.operator_id
     where s.token_hash=${hash} and s.expires_at>now() and o.active=true limit 1`;
-  const row = Array.isArray(rows) ? rows[0] as {id:string;full_name:string;email:string;role:OperatorRole;plant_ids:string[];last_seen_at:string|Date|null}|undefined : undefined;
+  const row = Array.isArray(rows) ? rows[0] as {id:string;full_name:string;email:string;role:OperatorRole;plant_ids:string[];must_change_password:boolean;last_seen_at:string|Date|null}|undefined : undefined;
   if (!row || (roles && !roles.includes(row.role))) return null;
 
   const lastSeenMs = row.last_seen_at ? new Date(row.last_seen_at).getTime() : 0;
@@ -92,5 +92,5 @@ export async function requireOperator(request: AuthRequest, roles?: OperatorRole
     await getSql()`update operator_sessions set last_seen_at=now() where token_hash=${hash}`;
   }
 
-  return { id: row.id, fullName: row.full_name, email: row.email, role: row.role, plantIds: row.plant_ids ?? [], organizationId: organization.organizationId, executiveExperience: executiveExperienceFor(row) } satisfies SessionOperator;
+  return { id: row.id, fullName: row.full_name, email: row.email, role: row.role, plantIds: row.plant_ids ?? [], organizationId: organization.organizationId, executiveExperience: executiveExperienceFor(row), mustChangePassword: row.must_change_password === true } satisfies SessionOperator;
 }

@@ -1,5 +1,5 @@
 import {readFile} from 'node:fs/promises'
-const [access,api,page,shell,modules,securityApi,securityUi]=await Promise.all([
+const [access,api,page,shell,modules,securityApi,securityUi,operatorsApi,passwordApi,migration058]=await Promise.all([
   readFile(new URL('../src/access.ts',import.meta.url),'utf8'),
   readFile(new URL('../api/audit.ts',import.meta.url),'utf8'),
   readFile(new URL('../src/pages/Audit.tsx',import.meta.url),'utf8'),
@@ -7,6 +7,9 @@ const [access,api,page,shell,modules,securityApi,securityUi]=await Promise.all([
   readFile(new URL('../src/pages/Modules.tsx',import.meta.url),'utf8'),
   readFile(new URL('../api/security-audit.ts',import.meta.url),'utf8'),
   readFile(new URL('../src/components/SecurityAudit.tsx',import.meta.url),'utf8'),
+  readFile(new URL('../api/operators.ts',import.meta.url),'utf8'),
+  readFile(new URL('../api/password.ts',import.meta.url),'utf8'),
+  readFile(new URL('../db/migrations/058_operator_password_rotation.sql',import.meta.url),'utf8'),
 ])
 const failures=[]
 const check=(ok,msg)=>{if(!ok)failures.push(msg)}
@@ -26,5 +29,13 @@ check(modules.includes("to:'/auditoria'")||modules.includes('to:"/auditoria"')||
 check(!securityApi.includes('e.metadata'),'security audit API must not select auth event metadata for the browser')
 check(!securityUi.includes('metadata?:'),'security audit client DTO must not accept hidden auth metadata')
 check(securityApi.includes('e.event_type,e.occurred_at,o.full_name as operator_name'),'security audit browser event projection must remain minimal and explicit')
+check(operatorsApi.includes('must_change_password'),'operator creation must flag management-set passwords as temporary')
+check(operatorsApi.includes('allowClientIp'),'operator creation must be rate limited')
+check(operatorsApi.includes('"operator_created"')&&operatorsApi.includes('"password_reset"'),'operator creation and reset must be audit-logged')
+check(operatorsApi.includes('roles.has(role)'),'operator roles must be validated server-side against the allowlist')
+check(passwordApi.includes('verifyPassword(currentPassword'),'password change must verify the current credential')
+check(passwordApi.includes('must_change_password=false'),'password change must clear the forced-rotation flag')
+check(passwordApi.includes('"password_changed"'),'password change must be audit-logged')
+check(migration058.includes('add column if not exists must_change_password')&&migration058.includes("'058_operator_password_rotation.sql'")&&migration058.includes("'applied'"),'migration 058 must add the rotation flag and record the canonical attestation')
 if(failures.length){console.error('Operational audit smoke FAILED');failures.forEach(f=>console.error(`- ${f}`));process.exit(1)}
 console.log('Operational audit smoke PASS')

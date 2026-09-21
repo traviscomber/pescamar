@@ -13,3 +13,5 @@
 .operator-identity{min-width:0}
 .operator-plants{display:flex;align-items:center;gap:5px;margin-top:5px;color:var(--muted);font-size:.72rem;line-height:1.35}
 @media(max-width:760px){.plant-scope-grid{grid-template-columns:1fr}.operator-entry{grid-template-columns:auto minmax(0,1fr)!important}.operator-entry>em,.operator-entry>i{grid-column:2}}
+.operator-entry i.pending{color:var(--warn,#9a6200)}
+.field-hint{display:block;margin-top:4px;color:var(--muted);font-size:.74rem;line-height:1.4}

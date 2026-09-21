@@ -1,0 +1,4 @@
+.welcome-paths{list-style:none;margin:0 0 1rem;padding:0;display:grid;gap:.5rem}
+.welcome-paths a{display:flex;align-items:center;gap:.5rem;padding:.6rem .8rem;border:1px solid var(--border-subtle,rgba(15,42,51,.14));border-radius:8px;color:var(--ink,#0f2a33);text-decoration:none;font-weight:600}
+.welcome-paths a:hover{background:rgba(21,94,107,.08)}
+.welcome-paths svg{flex:none;color:var(--teal,#155e6b)}

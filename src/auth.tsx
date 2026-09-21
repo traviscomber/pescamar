@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type FormE
 import { organizationContext } from "./organization";
 import {useLocale} from './i18n';
 
-type Operator = {
+export type Operator = {
   id: string;
   fullName: string;
   email: string;
@@ -10,6 +10,7 @@ type Operator = {
   plantIds: string[];
   organizationId: string;
   executiveExperience?: boolean;
+  mustChangePassword?: boolean;
 };
 
 type AuthOperatorPayload = Omit<Operator, "organizationId"> & { organizationId?: string };

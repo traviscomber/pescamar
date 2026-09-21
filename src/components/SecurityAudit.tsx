@@ -6,7 +6,7 @@ type Summary={successful_logins:number;failed_logins:number;logouts:number;activ
 type Event={event_type:string;occurred_at:string;operator_name:string|null};
 type Payload={summary?:Summary;events?:Event[];error?:string};
 
-const labels:Record<string,string>={login_success:"Inicio correcto",login_failure:"Intento fallido",login_rate_limited:"Acceso bloqueado",logout:"Cierre de sesión"};
+const labels:Record<string,string>={login_success:"Inicio correcto",login_failure:"Intento fallido",login_rate_limited:"Acceso bloqueado",logout:"Cierre de sesión",operator_created:"Alta de operador",password_reset:"Contraseña restablecida",password_changed:"Contraseña actualizada"};
 
 export function SecurityAudit(){
   const [summary,setSummary]=useState<Summary|null>(null);

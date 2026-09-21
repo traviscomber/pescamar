@@ -1,6 +1,8 @@
 import { hashPassword, requireOperator } from "./_auth.js";
+import { recordAuthEvent } from "./_auth-security.js";
 import { normalizePlantIds } from "./_plants.js";
 import { getSql } from "./_db.js";
+import { allowClientIp } from "./_rate-limit.js";
 
 type Request={method?:string;body?:unknown;headers?:Record<string,string|string[]|undefined>};
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void};
@@ -18,12 +20,13 @@ export default async function handler(request:Request,response:Response){
 
     if(request.method==="GET"){
       const rows=isAdmin
-        ? await getSql()`select id,full_name,email,role,active,plant_ids,created_at,(password_hash is not null) as credentials_ready from operators order by active desc,full_name asc`
-        : await getSql()`select id,full_name,email,role,active,plant_ids,created_at,(password_hash is not null) as credentials_ready from operators where role in ('operations','quality','viewer') and plant_ids && ${actor.plantIds}::text[] order by active desc,full_name asc`;
+        ? await getSql()`select id,full_name,email,role,active,plant_ids,must_change_password,created_at,(password_hash is not null) as credentials_ready from operators order by active desc,full_name asc`
+        : await getSql()`select id,full_name,email,role,active,plant_ids,must_change_password,created_at,(password_hash is not null) as credentials_ready from operators where role in ('operations','quality','viewer') and plant_ids && ${actor.plantIds}::text[] order by active desc,full_name asc`;
       return response.status(200).json({ok:true,operators:rows});
     }
 
     if(request.method==="POST"){
+      if(!allowClientIp(request,60_000,10))return response.status(429).json({ok:false,error:"Demasiados altas o restablecimientos por minuto"});
       const input=(request.body??{}) as OperatorInput;
       const name=String(input.name??"").trim();
       const email=String(input.email??"").trim().toLowerCase();
@@ -41,8 +44,12 @@ export default async function handler(request:Request,response:Response){
       }
       if(name.length<2||name.length>120||!emailPattern.test(email)||email.length>254||!roles.has(role)||password.length<12||password.length>256)return response.status(400).json({ok:false,error:"Nombre, correo, rol y contraseña de 12 a 256 caracteres son obligatorios"});
       const passwordHash=hashPassword(password);
-      const rows=await getSql()`insert into operators (full_name,email,role,password_hash,plant_ids) values (${name},${email},${role},${passwordHash},${plantIds}) on conflict (lower(email)) do update set full_name=excluded.full_name,role=excluded.role,password_hash=excluded.password_hash,plant_ids=excluded.plant_ids,active=true,updated_at=now() returning id,full_name,email,role,active,plant_ids,created_at,true as credentials_ready`;
-      return response.status(201).json({ok:true,operator:Array.isArray(rows)?rows[0]:null});
+      // Contraseñas definidas por gestión son siempre temporales: el servidor
+      // exige el cambio al primer login (operators.must_change_password).
+      const rows=await getSql()`insert into operators (full_name,email,role,password_hash,plant_ids,must_change_password) values (${name},${email},${role},${passwordHash},${plantIds},true) on conflict (lower(email)) do update set full_name=excluded.full_name,role=excluded.role,password_hash=excluded.password_hash,plant_ids=excluded.plant_ids,must_change_password=excluded.must_change_password,active=true,updated_at=now() returning id,full_name,email,role,active,plant_ids,created_at,(password_hash is not null) as credentials_ready,(xmax=0) as inserted`;
+      const saved=Array.isArray(rows)?rows[0] as {id?:string;inserted?:boolean}|undefined:undefined;
+      await recordAuthEvent(saved?.inserted===true?"operator_created":"password_reset",request,email,saved?.id??null,{role,actorId:actor.id,actorRole:actor.role});
+      return response.status(201).json({ok:true,operator:saved??null});
     }
 
     response.setHeader("Allow","GET, POST");
@@ -50,7 +57,7 @@ export default async function handler(request:Request,response:Response){
   }catch(error){
     const message=error instanceof Error?error.message:"";
     const configuration=message.includes("DATABASE_URL");
-    const migration=message.includes("password_hash")||message.includes("operator_sessions");
+    const migration=message.includes("password_hash")||message.includes("operator_sessions")||message.includes("must_change_password");
     return response.status(configuration||migration?503:500).json({ok:false,error:configuration?"Base de datos no conectada":migration?"Falta aplicar la migración 003_operator_auth.sql":"No fue posible administrar operadores"});
   }
 }

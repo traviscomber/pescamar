@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { getSql } from "./_db.js";
 
 type Request = { headers?: Record<string, string | string[] | undefined> };
-type EventType = "login_success" | "login_failure" | "login_rate_limited" | "logout";
+type EventType = "login_success" | "login_failure" | "login_rate_limited" | "logout" | "operator_created" | "password_reset" | "password_changed";
 
 const WINDOW_MINUTES = 15;
 const PAIR_LIMIT = 5;
