@@ -27,7 +27,7 @@ function Answer({text,sources,isEs}:{text:string;sources:Source[];isEs:boolean})
 }
 
 export function Copilot(){
- const {operator}=useAuth(),{lots}=useLots(),{locale}=useLocale(),isEs=locale==='es',tag=localeTag(locale),[params]=useSearchParams()
+ const {operator}=useAuth(),{lots}=useLots(),{locale,t}=useLocale(),isEs=locale==='es',tag=localeTag(locale),[params]=useSearchParams()
  const available=useMemo(()=>operator?.role==='admin'?plants:plants.filter(plant=>operator?.plantIds.includes(plant.id)),[operator])
  const operationsMode=operator?.role==='operations',ceoMode=isCeoOperator(operator),executiveMode=operationsMode||ceoMode
  const operationsPrompts=isEs?['Prioridades de hoy','¿Qué requiere atención?','¿Qué está bloqueado?']:['Today’s priorities','What requires attention?','What is blocked?']
@@ -40,7 +40,7 @@ export function Copilot(){
  const humanCapability=(id:string)=>capabilityLabels[id]??id.replaceAll('_',' ')
  const requestedPlantId=params.get('plantId')??'',requestedReceptionId=params.get('receptionId')??'',requestedPrompt=(params.get('prompt')??'').trim(),requestedSource=params.get('source')??''
  const allowedRequestedPlant=available.some(plant=>plant.id===requestedPlantId)?requestedPlantId:''
- const [plantId,setPlantId]=useState(allowedRequestedPlant),[receptionId,setReceptionId]=useState(''),[question,setQuestion]=useState(''),[turns,setTurns]=useState<Turn[]>([]),[loading,setLoading]=useState(false),[error,setError]=useState(''),[brief,setBrief]=useState<CanonicalBrief|null>(null)
+ const [plantId,setPlantId]=useState(allowedRequestedPlant),[receptionId,setReceptionId]=useState(''),[question,setQuestion]=useState(''),[turns,setTurns]=useState<Turn[]>([]),[loading,setLoading]=useState(false),[error,setError]=useState(''),[brief,setBrief]=useState<CanonicalBrief|null>(null),[feedbackCounts,setFeedbackCounts]=useState<{total:number;thisMonth:number}|null>(null)
  const inputRef=useRef<HTMLTextAreaElement>(null),deepLinkHandled=useRef('')
  const selectableLots=useMemo(()=>lots.filter(lot=>Boolean(lot.receptionId)&&(!plantId||lot.plantId===plantId)),[lots,plantId])
  const memoryKey=operator?`pescamar:seafood-ai:scope:${operator.id}`:''
@@ -51,6 +51,7 @@ export function Copilot(){
  useEffect(()=>{if(receptionId&&!selectableLots.some(lot=>lot.receptionId===receptionId)){setReceptionId('');setTurns([])}},[receptionId,selectableLots])
  useEffect(()=>{if(executiveMode)return;let active=true;void fetch('/api/canonical-intelligence-brief').then(async response=>response.ok?response.json() as Promise<BriefPayload>:null).then(payload=>{if(active&&payload?.brief)setBrief(payload.brief)}).catch(()=>undefined);return()=>{active=false}},[executiveMode])
  const ask=useCallback(async(value=question)=>{const clean=value.trim();if(!clean||loading)return;setLoading(true);setError('');setQuestion('');try{const response=await fetch('/api/copilot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:clean,plantId:plantId||null,receptionId:receptionId||null,history:turns.slice(-6).map(turn=>({question:turn.question,answer:turn.answer}))})}),payload=await response.json() as Payload;if(!response.ok||!payload.answer||!payload.generatedAt||!payload.scope)throw new Error(payload.error??(isEs?'No fue posible obtener una respuesta':'Unable to get a response'));setTurns(current=>[...current,{id:crypto.randomUUID(),question:clean,answer:payload.answer!,sources:payload.sources??[],generatedAt:payload.generatedAt!,scope:payload.scope!,engine:payload.engine??'Seafood AI',policyVersion:payload.policyVersion??'seafood.ai.evidence.v13',router:payload.router,evidenceGate:payload.evidenceGate}])}catch(cause){setError(cause instanceof Error?cause.message:(isEs?'No fue posible obtener una respuesta':'Unable to get a response'))}finally{setLoading(false);requestAnimationFrame(()=>inputRef.current?.focus())}},[question,loading,plantId,receptionId,turns,isEs])
+ useEffect(()=>{let active=true;void fetch('/api/ml-feedback',{credentials:'same-origin',cache:'no-store'}).then(async response=>{if(!response.ok)return null;return response.json() as Promise<{ok?:boolean;counts?:{total?:number;thisMonth?:number}}>}).then(payload=>{const counts=payload?.ok?payload.counts:null;if(active&&counts&&Number.isFinite(counts.total)&&Number.isFinite(counts.thisMonth))setFeedbackCounts({total:counts.total!,thisMonth:counts.thisMonth!})}).catch(()=>undefined);return()=>{active=false}},[])
  useEffect(()=>{if(!requestedPrompt||loading)return;const key=[requestedSource,requestedPlantId,requestedReceptionId,requestedPrompt].join('|');if(deepLinkHandled.current===key)return;if(requestedPlantId&&plantId!==requestedPlantId)return;if(requestedReceptionId&&receptionId!==requestedReceptionId)return;deepLinkHandled.current=key;void ask(requestedPrompt)},[requestedPrompt,requestedSource,requestedPlantId,requestedReceptionId,plantId,receptionId,loading,ask])
  function patchTurn(id:string,patch:Partial<Turn>){setTurns(current=>current.map(turn=>turn.id===id?{...turn,...patch}:turn))}
  async function saveFeedback(turn:Turn){
@@ -117,6 +118,7 @@ export function Copilot(){
     {loading?<div className="copilot-thinking"><span/><span/><span/>{ceoMode?(isEs?'Sintetizando Pescamar…':'Summarizing Pescamar…'):(isEs?'Revisando la operación…':'Reviewing operations…')}</div>:null}
     {error?<div className="system-banner error" role="alert">{error}</div>:null}
    </div>
+   {feedbackCounts?<small className="copilot-feedback-count">{t('copilot.feedbackCounter',{total:feedbackCounts.total,month:feedbackCounts.thisMonth})}</small>:null}
    <form className="copilot-composer" onSubmit={submit}>
     <label htmlFor="copilot-question" className="sr-only">{isEs?'Pregunta':'Question'}</label>
     <textarea ref={inputRef} id="copilot-question" rows={2} value={question} maxLength={1800} onChange={event=>setQuestion(event.target.value)} onKeyDown={event=>{if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();void ask()}}} placeholder={selectedLot?(isEs?'Pregunta por este lote…':'Ask about this lot…'):ceoMode?(isEs?'Pregunta por resultados, riesgo, rentabilidad o decisiones…':'Ask about outcomes, risk, profitability or decisions…'):operationsMode?(isEs?'Pregunta qué requiere atención o revisa un bloqueo…':'Ask what needs attention or review a blocker…'):(isEs?'Pregunta por Pescamar…':'Ask about Pescamar…')} disabled={loading}/>

@@ -1,6 +1,7 @@
 import {requireOperator} from './_auth.js'
 import {getSql} from './_db.js'
 import {activeOrganization} from './_organization.js'
+import {allowClientIp} from './_rate-limit.js'
 
 type Request={method?:string;headers?:Record<string,string|string[]|undefined>;body?:unknown}
 type Response={status:(code:number)=>Response;setHeader:(name:string,value:string)=>void;json:(body:unknown)=>void}
@@ -11,11 +12,20 @@ const receptionUuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}
 
 export default async function handler(request:Request,response:Response){
  response.setHeader('Cache-Control','no-store')
- if(request.method!=='POST'){response.setHeader('Allow','POST');return response.status(405).json({ok:false,error:'Método no permitido'})}
  try{
   const operator=await requireOperator(request)
   if(!operator)return response.status(401).json({ok:false,error:'Sesión requerida'})
   if(operator.organizationId!==activeOrganization.organizationId)return response.status(403).json({ok:false,error:'Organización fuera de alcance'})
+  if(request.method==='GET'){
+   // Safe aggregate only: counts, never content. Any authenticated role may
+   // read it so the Copilot can show that human feedback is real and counted.
+   if(!allowClientIp(request,60_000,30))return response.status(429).json({ok:false,error:'Demasiadas solicitudes de feedback por minuto'})
+   const rows=await getSql()`select count(*)::int total,count(*) filter (where created_at>=(date_trunc('month',now() at time zone 'America/Santiago') at time zone 'America/Santiago'))::int this_month from ml_feedback`
+   const counts=Array.isArray(rows)?rows[0] as {total:number;this_month:number}|undefined:undefined
+   if(!counts)throw new Error('ml_feedback counts unavailable')
+   return response.status(200).json({ok:true,counts:{total:counts.total,thisMonth:counts.this_month}})
+  }
+  if(request.method!=='POST'){response.setHeader('Allow','POST');return response.status(405).json({ok:false,error:'Método no permitido'})}
   const body=(request.body&&typeof request.body==='object'?request.body:{}) as Body
   const rating=body.rating==='good'?'good':body.rating==='bad'?'bad':null
   const comment=text(body.comment,1200),question=text(body.question,1800),answer=text(body.answer,12000),plantId=text(body.plantId,120),receptionId=text(body.receptionId,80),policyVersion=text(body.policyVersion,120),engine=text(body.engine,120),routerIntent=text(body.routerIntent,160)

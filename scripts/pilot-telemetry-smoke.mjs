@@ -3,7 +3,7 @@ import {readFile} from 'node:fs/promises'
 const failures=[]
 const assert=(condition,message)=>{if(!condition)failures.push(message)}
 
-const [events,insights,beacon,access,vercel,app,migration,migration057]=await Promise.all([
+const [events,insights,beacon,access,vercel,app,migration,migration057,mlFeedback]=await Promise.all([
  readFile(new URL('../api/pilot-events.ts',import.meta.url),'utf8'),
  readFile(new URL('../api/pilot-insights.ts',import.meta.url),'utf8'),
  readFile(new URL('../src/hooks/usePilotTelemetry.ts',import.meta.url),'utf8'),
@@ -12,6 +12,7 @@ const [events,insights,beacon,access,vercel,app,migration,migration057]=await Pr
  readFile(new URL('../src/App.tsx',import.meta.url),'utf8'),
  readFile(new URL('../db/migrations/056_pilot_events.sql',import.meta.url),'utf8'),
  readFile(new URL('../db/migrations/057_pilot_heartbeat.sql',import.meta.url),'utf8'),
+ readFile(new URL('../api/ml-feedback.ts',import.meta.url),'utf8'),
 ])
 
 // Ingest endpoint: session-authenticated, session-stamped, rate-limited, minimal data.
@@ -50,9 +51,19 @@ assert(migration.includes("insert into schema_migrations")&&migration.includes("
 assert(migration057.includes('alter table pilot_events')&&migration057.includes("'instrumentation_heartbeat'"),'migration 057 must relax the pilot_events event check for the heartbeat')
 assert(migration057.includes("insert into schema_migrations")&&migration057.includes("'057_pilot_heartbeat.sql'")&&migration057.includes("'applied'"),'migration 057 must record the canonical applied attestation')
 
+// ML feedback aggregate read: any authenticated role, counts only, rate-limited,
+// zero feedback content or PII leaves the server.
+assert(mlFeedback.includes("request.method==='GET'"),'ml feedback must expose a GET aggregate read')
+assert(mlFeedback.includes('requireOperator(request)')&&!/requireOperator\(request,\[/.test(mlFeedback),'ml feedback read must be available to any authenticated role, not admin-gated')
+assert(mlFeedback.includes('allowClientIp(request,60_000,30)')&&mlFeedback.includes("response.status(429)"),'ml feedback read must be rate-limited')
+assert(mlFeedback.includes('count(*)::int total')&&mlFeedback.includes('this_month')&&mlFeedback.includes('counts:{total:counts.total,thisMonth:counts.this_month}'),'ml feedback read must return only {total,thisMonth} counts')
+const mlFeedbackGetBranch=mlFeedback.split("request.method==='GET'").at(-1)??''
+assert(!/\b(rating|comment|question|answer|operator_id|email|full_name)\b/.test(mlFeedbackGetBranch.slice(0,mlFeedbackGetBranch.indexOf("request.method!=='POST'"))),'ml feedback GET branch must never select or return feedback content or PII')
+assert(mlFeedback.includes("request.method!=='POST'")&&mlFeedback.includes('Feedback incompleto'),'ml feedback POST validation must stay untouched')
+
 if(failures.length){
  console.error('Pilot telemetry contract FAILED')
  for(const failure of failures)console.error(`- ${failure}`)
  process.exit(1)
 }
-console.log('Pilot telemetry contract PASS: beacon module, ingest endpoint, admin insights, access gate and migration 056 verified')
+console.log('Pilot telemetry contract PASS: beacon module, ingest endpoint, admin insights, ml feedback aggregate read, access gate and migrations 056/057 verified')
