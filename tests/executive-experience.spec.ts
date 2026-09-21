@@ -38,3 +38,12 @@ test('admin without executive flag keeps the standard daily view',async({page},t
  await expect(page.getByRole('navigation',{name:'Trabajo diario'})).toBeVisible()
  await expect(page.getByRole('navigation',{name:'Dirección'})).toHaveCount(0)
 })
+
+test('english locale renders keyed navigation labels instead of Spanish defaults',async({page},testInfo)=>{
+ await mockSession(page,{id:'op-admin',fullName:'Admin QA',email:'admin@example.test',role:'admin',plantIds:['ancud']})
+ await page.goto('/en/')
+ await openNavigation(page,testInfo.project.name)
+ await expect(page.getByRole('navigation',{name:'Daily work'})).toBeVisible()
+ await expect(page.getByRole('navigation',{name:'Reference and settings'})).toBeVisible()
+ await expect(page.getByRole('navigation',{name:'Trabajo diario'})).toHaveCount(0)
+})

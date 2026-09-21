@@ -17,7 +17,7 @@ test('station administration reuses canonical Plant Execution API and stays admi
  expect(access).toContain('"/estaciones":["admin"]')
  expect(app).toContain('path="/estaciones"')
  expect(app).toContain('path="/estaciones/detalle"')
- expect(vercel).toContain('"source": "/estaciones"')
+ expect(vercel).toContain('"/:path((?!api/).*)"')
 })
 
 async function mock(page:Page,role:'admin'|'operations',writesEnabled=true){
