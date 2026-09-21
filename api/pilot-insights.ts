@@ -29,7 +29,7 @@ export default async function handler(request:Request,response:Response){
     group by path
     order by visits_30d desc,path asc
     limit 12`,
-   sql`select to_char(created_at::date,'YYYY-MM-DD') day,count(distinct operator_id)::int operators
+   sql`select to_char(created_at::date,'YYYY-MM-DD') "day",count(distinct operator_id)::int operators
     from pilot_events
     where created_at>=now()-interval '14 days'
     group by created_at::date

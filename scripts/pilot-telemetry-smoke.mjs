@@ -26,6 +26,7 @@ assert(!/email|fullName|full_name|searchParams/.test(events),'pilot events must 
 assert(insights.includes("request.method!=='GET'")&&insights.includes('405'),'pilot insights endpoint must be GET-only')
 assert(insights.includes("operator.role!=='admin'")&&insights.includes("response.status(403)"),'pilot insights must be admin-only')
 assert(insights.includes('from pilot_events')&&insights.includes('from ml_feedback'),'pilot insights must aggregate pilot events and ML feedback')
+assert(insights.includes(`'YYYY-MM-DD') "day"`),'pilot insights daily-active query must quote the day alias (reserved word in PostgreSQL)')
 assert(!/\b(insert|update|delete)\s+(into|from|[a-z_]+\s+set)\b/i.test(insights),'pilot insights must not mutate data')
 
 // Client beacon: invisible, batched, beacon-first, no-op without sendBeacon.
