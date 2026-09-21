@@ -88,7 +88,14 @@ El inventario anterior describe el repositorio actual. Si se agrega una migraci�
 
 ## Contrato SQL de endpoints (CI)
 
-`scripts/pilot-insights-sql-smoke.mjs` ejecuta las consultas de solo lectura de `api/pilot-insights.ts` (fuente canónica: `scripts/pilot-insights-queries.mjs`, generada del endpoint y verificada contra él) contra una **rama efímera de Neon** creada desde la rama por defecto: aplica todas las migraciones de `db/migrations/` en orden canónico con `psql -v ON_ERROR_STOP=1` (idem al ejemplo de arriba), corre las 5 consultas del endpoint y borra la rama siempre, incluso ante fallo. Así un SQL inválido del endpoint (por ejemplo un alias con palabra reservada) falla en CI antes de desplegar.
+`scripts/endpoint-sql-contracts.mjs` ejecuta las consultas de solo lectura de los endpoints de mayor riesgo contra **una única rama efímera de Neon** por corrida (creada desde la rama por defecto): aplica todas las migraciones de `db/migrations/` en orden canónico con `psql -v ON_ERROR_STOP=1` (idem al ejemplo de arriba), corre cada consulta y borra la rama siempre, incluso ante fallo. Así un SQL inválido de un endpoint (por ejemplo un alias con palabra reservada, como el `day` que 500'eó `/api/pilot-insights` en producción) falla en CI antes de desplegar.
+
+Endpoints cubiertos (módulos canónicos `scripts/<endpoint>-queries.mjs`, extraídos programáticamente del endpoint y verificados contra él en la fase 0, que corre siempre y falla CI ante cualquier deriva):
+
+- `api/pilot-insights.ts` — agregaciones y funciones de fecha sobre `pilot_events`/`ml_feedback`.
+- `api/schema-preflight.ts` — gate de esquema; SQL totalmente estático.
+- `api/operational-intelligence-overview.ts` — Seafood Event Graph multi-join; las plantillas compartidas también se verifican contra `api/_copilot-operational-overview.ts`. Los placeholders runtime (`${ids}`, `${plantId}`, `${operator.plantIds}`) se sustituyen con literales neutrales para la ejecución; lo que se valida es la validez del SQL, no la semántica de los parámetros.
+- `api/profitability.ts` — CTEs, lateral joins y agregaciones con filtros. Las consultas corporate de cobertura que dependen de objetos idempotentes de runtime ausentes de `db/migrations` (`canonical_packing_boxes`, `canonical_account_entries`, `canonical_transfers_received`) se verifican contra el endpoint pero no se ejecutan (límite documentado del contrato).
 
 Configuración en GitHub (Settings → Secrets and variables → Actions):
 
