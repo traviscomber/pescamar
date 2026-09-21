@@ -85,6 +85,7 @@ Desde `041_schema_migration_baseline.sql`, Neon conserva un registro explícito 
 | `056_pilot_events.sql` | telemetría de fricción de pilotaje: beacon de rutas visitadas autenticado por sesión, sin query strings ni PII, rol siempre server-side, sólo lectura para el criterio de reactivación UX |
 | `057_pilot_heartbeat.sql` | relaja el check de `pilot_events.event` para admitir `instrumentation_heartbeat` (uno por sesión montada) como red de detección de pipeline muerto, sin estado operacional ni PII |
 | `058_operator_password_rotation.sql` | ciclo de vida de credenciales: `operators.must_change_password` fuerza cambio al primer login y `auth_events` admite `operator_created`/`password_reset`/`password_changed` para auditar altas y cambios |
+| `059_edgevision_dataset_batches.sql` | intake de datasets EdgeVision: lotes con planta, capacidad planificada, ventana de captura, referencia de almacenamiento y QA `pending_review`/`validated`/`rejected` (validado exige notas); metadato sin blobs ni activación predictiva |
 
 El inventario anterior describe el repositorio actual. Si se agrega una migración, debe agregarse también a esta tabla; CI verifica esa correspondencia y que los landmarks del preflight sigan alineados con el manifiesto runtime.
 

@@ -112,6 +112,8 @@ jobs:
         run: node scripts/public-health-smoke.mjs
       - name: Pilot telemetry contract
         run: node scripts/pilot-telemetry-smoke.mjs
+      - name: EdgeVision QA gate
+        run: node scripts/edgevision-qa-smoke.mjs
       - name: Endpoint SQL contracts (ephemeral Neon)
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}

@@ -3,6 +3,7 @@ import {Link} from 'react-router-dom'
 import {canAccessPath} from '../access'
 import {useAuth} from '../auth'
 import {AutoPrepareUniReferences} from '../components/AutoPrepareUniReferences'
+import {EdgeVisionDatasetBatches} from '../components/EdgeVisionDatasetBatches'
 import {PageHeader} from '../components/PageHeader'
 import {UniReferenceReviewQueue} from '../components/UniReferenceReviewQueue'
 import {UniVisionQaBench} from '../components/UniVisionQaBench'
@@ -23,6 +24,7 @@ export function EdgeVision(){
  <AutoPrepareUniReferences/>
  <UniVisionQaBench/>
  <UniReferenceReviewQueue/>
+ <EdgeVisionDatasetBatches/>
  <section className="panel"><div className="section-heading"><div><span className="overline teal">Capability registry</span><h2>Qué debe observar Uni</h2></div><span>{edgeVisionCapabilities.length} capacidades</span></div><div className="compact-ledger">{edgeVisionCapabilities.map(capability=><div className="alert-row static" key={capability.id}><span><ScanLine size={15}/></span><div><b>{capability.label}</b><small>{capability.outcome}</small><p className="source-note">{capability.currentEvidence}</p></div><span className={`status ${statusClass[capability.status]}`}>{statusLabel[capability.status]}</span></div>)}</div></section>
  <section className="panel"><div className="section-heading"><div><span className="overline teal">Adapter activo</span><h2>{organizationContext.implementationName} · Uni Vision</h2></div><Link className="source-link compact" to="/proceso-erizo">Abrir proceso erizo <ArrowRight size={13}/></Link></div>{edgeVisionAdapters.map(adapter=><div className="governance-note" key={adapter.id}><ShieldCheck size={19}/><div><b>{adapter.label}</b><p>{adapter.executionMode} Capacidades: {adapter.capabilities.join(' · ')}. Autoridad: revisión humana obligatoria. Versionado reusable de modelo/engine: {adapter.modelVersioning==='implemented'?'implementado':'pendiente'}.</p><small>{adapter.notes} Evidencia fuente: {adapter.evidenceEntity}. Organización: {adapter.implementationId}.</small></div></div>)}</section>
  <section className="panel"><div className="section-heading"><div><span className="overline teal">Evidence contract</span><h2>Todo resultado visual debe poder explicarse</h2></div></div><div className="os-stage-modules">{edgeVisionEvidenceContract.map((field,index)=><div className="alert-row static" key={field}><span className="os-module-step">{String(index+1).padStart(2,'0')}</span><div><b>{field}</b><small>{index<4?'Contexto operacional':'Provenance, medición y autoridad'}</small></div></div>)}</div><div className="notice"><ShieldCheck size={16}/><div><b>Guardrail de producto</b><small>Uni no libera calidad, regula ni toma decisiones financieras por sí solo. Un modelo sólo puede automatizar una decisión después de tener dataset real, métricas, threshold, versionado, análisis de errores y fallback humano aprobados.</small></div></div></section>

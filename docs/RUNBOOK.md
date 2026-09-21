@@ -25,6 +25,8 @@ curl -s https://<dominio-producción>/api/public-health
 
 **(c) Telemetría de pilotaje `/admin/pilotaje`** (solo admin) + gate de esquema. Verde = los cuatro paneles cargan sin banner de error (rutas 7/30 d, operadores activos 14 d, últimos eventos, feedback Seafood AI) y `/api/schema-preflight` reporta `pilotGate: pass`. Un `hold` del gate indica esquema no reconciliado (ver §3).
 
+**(d) Gate QA EdgeVision.** Contrato CI `scripts/edgevision-qa-smoke.mjs` (step «EdgeVision QA gate»). Verde = el step pasa: pinea el esquema de intake de datasets (migración 059), la API admin-only de lotes en `/uni`, el seam de promoción inerte (responde 409 con la explicación de política) y la frontera predictiva (`predictiveBaselineAvailable: false`). Un rojo aquí significa que alguien tocó el camino predictivo sin pasar los gates de Grade A.
+
 ## 3. Aplicar migraciones
 
 **No existe endpoint que aplique migraciones.** El flujo canónico (`db/README.md`): ejecutar los archivos de `db/migrations/` en orden ascendente por prefijo, con parada inmediata ante error:
@@ -47,7 +49,7 @@ En Neon, la práctica segura es crear una rama efímera desde `main`, aplicar ah
 Workflow `Quality` (`.github/workflows/quality.yml`), corre en cada push a `main` y en PRs hacia `main`, `feat/**` y `docs/**`:
 
 1. `npm ci` → `npm run quality` (lint 0 warnings + typecheck + build).
-2. ~39 contratos en `scripts/*.mjs` (inventario de migraciones, contratos de UI, contrato SQL de endpoints contra Neon efímero).
+2. ~40 contratos en `scripts/*.mjs` (inventario de migraciones, contratos de UI, gate QA EdgeVision, contrato SQL de endpoints contra Neon efímero).
 3. Playwright desktop + mobile (Chromium) con artefactos de evidencia adjuntos al run. Incluye el gate de accesibilidad `tests/a11y-axe.spec.ts` (axe-core, reglas `wcag2a`/`wcag2aa`): escanea 8 rutas autenticadas de alto tráfico y falla sólo en violaciones `critical`/`serious`; los warnings `moderate`/`minor` se reportan en la salida sin bloquear.
 
 **Regla same-SHA:** un cambio solo se considera desplegado cuando CI está en `success` **y** Vercel reporta `Deployment has completed` **sobre el mismo SHA**. Comprobar: API de GitHub Actions (`actions/runs?branch=main`) y Deployments del repo.

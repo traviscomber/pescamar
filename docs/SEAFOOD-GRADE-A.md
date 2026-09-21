@@ -182,3 +182,16 @@ La primera capa Grade A se calcula dentro de Operational Intelligence: yield des
 `predictiveBaselineAvailable` permanece `false` hasta recibir y validar datos reales del piloto.
 
 Estado de madurez actual: `tested` para las capacidades técnicas ya cerradas; `validated-by-pescamar` permanece bloqueado hasta ejecutar los gates con evidencia y sign-off real de Pescamar.
+## Appendix — Cómo promover un dataset a línea de base validada
+
+Este es el procedimiento operativo del camino predictivo. Su primer efecto es organizar la evidencia; su efecto deliberado es que la frontera predictiva (`predictiveBaselineAvailable: false`) siga cerrada hasta que los gates se ejecuten con sign-off real.
+
+1. **Registrar el lote.** Un admin registra el dataset real de planta en `/uni` (sección «Lotes de dataset EdgeVision»): planta, capacidad (`count`, `calibre`, `size`, `defects`, `biomass`, `anomaly`), etiqueta de fuente, ventana de captura, número de imágenes, etiquetas confirmadas por operador y referencia de almacenamiento externo (nunca binarios en la base de datos). La migración 059 (`edgevision_dataset_batches`) guarda sólo metadatos y queda `qa_status = pending_review`.
+2. **Revisar con QA.** QA cambia el estado del lote a `validated` o `rejected` con notas. Validar exige notas de al menos 10 caracteres (CHECK de esquema); la revisión humana sigue siendo la autoridad.
+3. **Contrastar umbrales de evidencia.** Para considerar una promoción, el lote validado debe cumplir los umbrales mínimos por capacidad definidos en `api/_edgevision-baseline.ts` (`baselineEvidenceRequirements`): imágenes, etiquetas confirmadas por operador y días de captura distintos. Son mínimos de intake, nunca una afirmación de accuracy.
+4. **Registrar provenance.** El endpoint admin `/api/edgevision-baseline` invoca `promoteCapabilityBaseline`: si el lote cumple, marca `promoted_at`/`promoted_by` en el lote. Esto **sólo registra provenance**: no activa modelo, no publica métrica predictiva ni cambia ningún pin. Mientras no exista lote validado que cumpla, el endpoint responde `409` con la explicación de política — ese comportamiento está pineado por `scripts/edgevision-qa-smoke.mjs` en CI.
+5. **Ejecutar Gate 5.** Con la línea de base registrada, contrastar el baseline con muestra real acordada con Pescamar (métricas, threshold, versionado, análisis de errores y fallback humano por capacidad).
+6. **Ejecutar Gate 7.** Sign-off `PASS` de Pescamar vinculado al SHA exacto desplegado.
+7. **Recién entonces** se puede proponer, en un cambio separado con su propia revisión y validación, abrir el tipo `predictiveBaselineAvailable`. Hasta ese momento el pin permanece `false` y cualquier respuesta 409 del paso 4 es el comportamiento correcto, no un error.
+
+Registro técnico del scaffolding: migración `059_edgevision_dataset_batches.sql`, API admin-only `api/edgevision-datasets.ts` (GET/POST/PATCH, rate limit 10/min), seam `api/_edgevision-baseline.ts` (deshabilitado por defecto), sección admin en `/uni`, contrato CI `scripts/edgevision-qa-smoke.mjs` y spec `tests/edgevision-datasets.spec.ts`.
