@@ -8,9 +8,7 @@ export type RoleExperience={
  primaryPaths:string[]
  assistantPrompts:{es:string[];en:string[]}
 }
-export type OperatorExperienceIdentity={id:string;fullName:string;email:string;role:AppRole}
-
-const CEO_OPERATOR_EMAIL='rene.anania@pescamarchile.cl'
+export type OperatorExperienceIdentity={id:string;fullName:string;email:string;role:AppRole;executiveExperience?:boolean}
 
 export const ceoExperience:RoleExperience={
  mission:{es:'Dirigir Pescamar desde resultados, riesgo y decisiones que requieren intervención ejecutiva.',en:'Lead Pescamar through outcomes, risk and decisions that require executive intervention.'},
@@ -52,7 +50,7 @@ export const roleExperiences:Record<AppRole,RoleExperience>={
  },
 }
 
-export function isCeoOperator(operator:OperatorExperienceIdentity|null|undefined){return Boolean(operator&&operator.role==='admin'&&operator.email.trim().toLowerCase()===CEO_OPERATOR_EMAIL)}
+export function isCeoOperator(operator:OperatorExperienceIdentity|null|undefined){return Boolean(operator&&operator.role==='admin'&&operator.executiveExperience)}
 export function getRoleExperience(role:AppRole){return roleExperiences[role]}
 export function getOperatorExperience(operator:OperatorExperienceIdentity){return isCeoOperator(operator)?ceoExperience:roleExperiences[operator.role]}
 export function roleCopy(role:AppRole,locale:Locale){const experience=roleExperiences[role];return {mission:experience.mission[locale],valueRule:experience.valueRule[locale],assistantPrompts:experience.assistantPrompts[locale]}}

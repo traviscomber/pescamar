@@ -9,6 +9,7 @@ type Operator = {
   role: "admin" | "operations" | "finance" | "quality" | "viewer";
   plantIds: string[];
   organizationId: string;
+  executiveExperience?: boolean;
 };
 
 type AuthOperatorPayload = Omit<Operator, "organizationId"> & { organizationId?: string };

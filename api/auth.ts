@@ -1,4 +1,4 @@
-import { createSession, clearSessionCookie, destroySession, requireOperator, sessionCookie, verifyPassword } from "./_auth.js";
+import { createSession, clearSessionCookie, destroySession, executiveExperienceFor, requireOperator, sessionCookie, verifyPassword } from "./_auth.js";
 import { clearSuccessfulPair, loginRateState, recordAuthEvent, recordLoginFailure } from "./_auth-security.js";
 import { getSql } from "./_db.js";
 import { activeOrganization, resolveRequestOrganization } from "./_organization.js";
@@ -47,7 +47,7 @@ export default async function handler(request:Request,response:Response){
         recordAuthEvent("login_success",request,email,row.id,{role:row.role,organizationId:organization.organizationId}),
       ]);
       response.setHeader("Set-Cookie",sessionCookie(session.token,session.maxAge));
-      return response.status(200).json({ok:true,operator:{id:row.id,fullName:row.full_name,email:row.email,role:row.role,plantIds:row.plant_ids??[],organizationId:organization.organizationId}});
+      return response.status(200).json({ok:true,operator:{id:row.id,fullName:row.full_name,email:row.email,role:row.role,plantIds:row.plant_ids??[],organizationId:organization.organizationId,executiveExperience:executiveExperienceFor(row)}});
     }
     if(request.method==="DELETE"){
       const operator=await requireOperator(request);

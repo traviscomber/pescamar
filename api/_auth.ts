@@ -3,9 +3,18 @@ import { getSql } from "./_db.js";
 import { activeOrganization, resolveRequestOrganization } from "./_organization.js";
 
 type Headers = Record<string, string | string[] | undefined>;
+declare const process: { env: Record<string, string | undefined> };
 export type AuthRequest = { headers?: Headers };
 export type OperatorRole = "admin" | "operations" | "finance" | "quality" | "viewer";
-export type SessionOperator = { id: string; fullName: string; email: string; role: OperatorRole; plantIds: string[]; organizationId: string };
+export type SessionOperator = { id: string; fullName: string; email: string; role: OperatorRole; plantIds: string[]; organizationId: string; executiveExperience: boolean };
+
+// The executive (CEO) experience is determined server-side so the client bundle never
+// carries the identifying email. Override with the CEO_OPERATOR_EMAIL env var when needed.
+const CEO_OPERATOR_EMAIL = process.env.CEO_OPERATOR_EMAIL ?? "rene.anania@pescamarchile.cl";
+
+export function executiveExperienceFor(operator: { role: string; email: string }): boolean {
+  return operator.role === "admin" && operator.email.trim().toLowerCase() === CEO_OPERATOR_EMAIL.trim().toLowerCase();
+}
 
 const COOKIE = "pescamar_session";
 const SESSION_DAYS = 7;
@@ -83,5 +92,5 @@ export async function requireOperator(request: AuthRequest, roles?: OperatorRole
     await getSql()`update operator_sessions set last_seen_at=now() where token_hash=${hash}`;
   }
 
-  return { id: row.id, fullName: row.full_name, email: row.email, role: row.role, plantIds: row.plant_ids ?? [], organizationId: organization.organizationId } satisfies SessionOperator;
+  return { id: row.id, fullName: row.full_name, email: row.email, role: row.role, plantIds: row.plant_ids ?? [], organizationId: organization.organizationId, executiveExperience: executiveExperienceFor(row) } satisfies SessionOperator;
 }
