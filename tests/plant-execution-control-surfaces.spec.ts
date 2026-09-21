@@ -12,8 +12,9 @@ test('Plant Execution control surfaces remain routed and authorized without dire
  for(const route of ['/pallets','/frio','/control-regulatorio']){
   expect(app).toContain(`path="${route}"`)
   expect(access).toContain(`"${route}"`)
-  expect(vercel).toContain(`"source": "${route}"`)
  }
+ expect(vercel).toContain('"/:path((?!api/).*)"')
+ expect(vercel).toContain('"/index.html"')
  expect(shell).toContain("{to:`/floor?${plantQuery}`,labelKey:'nav.packing',step:4}")
  expect(shell).toContain("{to:`/pallets?${plantQuery}`,labelKey:'nav.pallets',step:5}")
  expect(shell).toContain("{to:`/frio?${plantQuery}`,labelKey:'nav.cold',step:6}")

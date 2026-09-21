@@ -1,76 +1,71 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
-    { "path": "/api/cron-operational-health", "schedule": "17 * * * *" }
+    {
+      "path": "/api/cron-operational-health",
+      "schedule": "17 * * * *"
+    }
   ],
   "rewrites": [
-    { "source": "/es", "destination": "/index.html" },
-    { "source": "/es/:path*", "destination": "/index.html" },
-    { "source": "/en", "destination": "/en.html" },
-    { "source": "/en/:path*", "destination": "/en.html" },
-    { "source": "/inicio/detalle", "destination": "/index.html" },
-    { "source": "/timeline", "destination": "/index.html" },
-    { "source": "/lineage", "destination": "/index.html" },
-    { "source": "/lotes", "destination": "/index.html" },
-    { "source": "/lotes/:receptionId", "destination": "/index.html" },
-    { "source": "/uni", "destination": "/index.html" },
-    { "source": "/edgevision", "destination": "/index.html" },
-    { "source": "/organization", "destination": "/index.html" },
-    { "source": "/integrations", "destination": "/index.html" },
-    { "source": "/identidades-gs1", "destination": "/index.html" },
-    { "source": "/pescamar-ia", "destination": "/index.html" },
-    { "source": "/comunicaciones", "destination": "/index.html" },
-    { "source": "/comunicaciones/detalle", "destination": "/index.html" },
-    { "source": "/auditoria", "destination": "/index.html" },
-    { "source": "/admin/salud", "destination": "/index.html" },
-    { "source": "/observabilidad", "destination": "/index.html" },
-    { "source": "/rollout", "destination": "/index.html" },
-    { "source": "/floor", "destination": "/index.html" },
-    { "source": "/floor/detalle", "destination": "/index.html" },
-    { "source": "/pallets", "destination": "/index.html" },
-    { "source": "/pallets/detalle", "destination": "/index.html" },
-    { "source": "/frio", "destination": "/index.html" },
-    { "source": "/frio/detalle", "destination": "/index.html" },
-    { "source": "/control-regulatorio", "destination": "/index.html" },
-    { "source": "/estaciones", "destination": "/index.html" },
-    { "source": "/estaciones/detalle", "destination": "/index.html" },
-    { "source": "/impresion-etiquetas", "destination": "/index.html" },
-    { "source": "/impresion-etiquetas/detalle", "destination": "/index.html" },
-    { "source": "/operacion-2025", "destination": "/index.html" },
-    { "source": "/planificacion", "destination": "/index.html" },
-    { "source": "/etiquetas", "destination": "/index.html" },
-    { "source": "/proceso", "destination": "/index.html" },
-    { "source": "/proceso-erizo", "destination": "/index.html" },
-    { "source": "/proceso-erizo/detalle", "destination": "/index.html" },
-    { "source": "/proceso-erizo/grafo", "destination": "/index.html" },
-    { "source": "/erizo/camara", "destination": "/index.html" },
-    { "source": "/plantas", "destination": "/index.html" },
-    { "source": "/plantas/:plantId", "destination": "/index.html" },
-    { "source": "/identidades-plantas", "destination": "/index.html" },
-    { "source": "/importaciones", "destination": "/index.html" },
-    { "source": "/creditos", "destination": "/index.html" },
-    { "source": "/liquidaciones", "destination": "/index.html" },
-    { "source": "/despachos-ventas", "destination": "/index.html" },
-    { "source": "/ordenes-venta", "destination": "/index.html" },
-    { "source": "/inventario", "destination": "/index.html" },
-    { "source": "/inventario/detalle", "destination": "/index.html" },
-    { "source": "/inventario-materiales", "destination": "/index.html" },
-    { "source": "/inventario-materiales/detalle", "destination": "/index.html" },
-    { "source": "/proveedores-clientes", "destination": "/index.html" },
-    { "source": "/rentabilidad", "destination": "/index.html" },
-    { "source": "/rentabilidad/detalle", "destination": "/index.html" },
-    { "source": "/costos-transformacion", "destination": "/index.html" },
-    { "source": "/costos-transformacion/detalle", "destination": "/index.html" },
-    { "source": "/cierre-diario", "destination": "/index.html" },
-    { "source": "/aprobaciones", "destination": "/index.html" },
-    { "source": "/modulos", "destination": "/index.html" },
-    { "source": "/lineas", "destination": "/index.html" },
-    { "source": "/lineas/detalle", "destination": "/index.html" },
-    { "source": "/recepciones", "destination": "/index.html" },
-    { "source": "/operadores", "destination": "/index.html" }
+    {
+      "source": "/en",
+      "destination": "/en.html"
+    },
+    {
+      "source": "/en/:path*",
+      "destination": "/en.html"
+    },
+    {
+      "source": "/:path((?!api/).*)",
+      "destination": "/index.html"
+    }
   ],
   "headers": [
-    {"source":"/api/(.*)","headers":[{"key":"Cache-Control","value":"no-store, max-age=0"}]},
-    {"source":"/(.*)","headers":[{"key":"Content-Security-Policy","value":"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://pescamarchile.cl; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"},{"key":"Referrer-Policy","value":"strict-origin-when-cross-origin"},{"key":"X-Content-Type-Options","value":"nosniff"},{"key":"X-Frame-Options","value":"DENY"},{"key":"Cross-Origin-Opener-Policy","value":"same-origin"},{"key":"Cross-Origin-Resource-Policy","value":"same-origin"},{"key":"X-Permitted-Cross-Domain-Policies","value":"none"},{"key":"Permissions-Policy","value":"camera=(self), microphone=(), geolocation=()"}]}
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://pescamarchile.cl; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin"
+        },
+        {
+          "key": "Cross-Origin-Resource-Policy",
+          "value": "same-origin"
+        },
+        {
+          "key": "X-Permitted-Cross-Domain-Policies",
+          "value": "none"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(self), microphone=(), geolocation=()"
+        }
+      ]
+    }
   ]
 }

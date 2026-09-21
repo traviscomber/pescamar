@@ -67,7 +67,7 @@ assert(app.includes('path="/identidades-gs1"'),'GS1 identity page must be routed
 assert(access.includes('"/identidades-gs1":["admin","operations"]'),'GS1 route must be restricted')
 assert(modules.includes("to:'/identidades-gs1'")&&modules.includes("label:'Identidades estándar (GS1)'")&&modules.includes("label:'Standard identities (GS1)'"),'admin console must expose GS1 identities with human-first labels in ES/EN')
 assert(modules.includes('Códigos de producto, ubicación, empresa y pallet'),'admin entry must explain GS1 without requiring acronym knowledge')
-assert(vercel.includes('"source": "/identidades-gs1"'),'Vercel must deep-link GS1 registry')
+assert(vercel.includes('"/:path((?!api/).*)"')&&vercel.includes('"/index.html"'),'Vercel SPA catch-all must serve the GS1 registry route')
 
 assert(gdst.includes("id:'gs1-identity-registry',state:'foundation'"),'GDST profile must recognize GS1 identity foundation')
 assert(gdst.includes("id:'master-data-resolution',state:'missing'"),'GS1 registry must not promote master-data resolution prematurely')
